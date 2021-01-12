@@ -1,0 +1,65 @@
+module.exports = {
+  apps : [ 
+  //--------------------------------------------------------
+  //-------------------------Leader-------------------------
+  //--------------------------------------------------------
+  //pm2 start ecosystem.config.js --only "leader,leader_explorer,leader_cashier,leader_pos_miner,leader_stat,leader_syncer,leader_transport"
+  {
+    "name": "leader",
+    "script": "index.js",
+    "watch": false,
+    "args": "--explorer 0 --cashier_interval_ms 0 --indexer_interval_ms 0 --load -1 --transport_on 0 --poa_port 3000 --id d14745f8e0ac4ee9e890e0daf1719d935acd6011456cf1c8ef1c57da5fdf5689 --dbhost 172.17.0.2",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader.log"
+  },{
+    "name": "leader_explorer",
+    "script": "iexplorer.js",
+    "watch": false,
+    "args": "--explorer 80 --dbhost 172.17.0.2",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-explorer.log"
+  },{
+    "name": "leader_nodeapi",
+    "script": "inodeapi.js",
+    "args": "--id d14745f8e0ac4ee9e890e0daf1719d935acd6011456cf1c8ef1c57da5fdf5689 --dbhost 172.17.0.2",
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-nodeapi.log"
+  },{
+    "name": "leader_cashier",
+    "script": "icashier.js",
+    "watch": false,
+    "args": "--cashier_interval_ms 10 --indexer_mode 1 --dbhost 172.17.0.2",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-cashier.log"
+  },{
+    "name": "leader_pos_miner",
+    "script": "iminer.js",
+    "watch": false,
+    "args": "--pos_share 'pos_leader' --load 0 --id d14745f8e0ac4ee9e890e0daf1719d935acd6011456cf1c8ef1c57da5fdf5689 --dbhost 172.17.0.2",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-pos-miner.log"
+  },{
+    "name": "leader_stat",
+    "script": "istat.js",  
+    "args": "--dbhost 172.17.0.2",
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-stat.log"        
+  },{
+    "name": "leader_syncer",
+    "script": "isyncer.js",
+    "watch": false,
+    "args": "--id d14745f8e0ac4ee9e890e0daf1719d935acd6011456cf1c8ef1c57da5fdf5689 --dbhost 172.17.0.2",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-syncer.log"
+  },{
+    "name": "leader_transport",
+    "script": "itransport.js",
+    "args": "--port 7000 --id d14745f8e0ac4ee9e890e0daf1719d935acd6011456cf1c8ef1c57da5fdf5689 --dbhost 172.17.0.2",
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-transport.log"
+  }
+]
+};

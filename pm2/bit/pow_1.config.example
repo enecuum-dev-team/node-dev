@@ -1,0 +1,39 @@
+module.exports = {
+  apps : [
+  {
+    "name": "pow_1_nodeapi",
+    "script": "inodeapi.js",
+    "args": "--id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbhost 172.17.0.3",
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-nodeapi.log"
+  },{
+    "name": "pow_1_cashier",
+    "script": "icashier.js",
+    "watch": false,
+    "args": "--cashier_interval_ms 10  --dbhost 172.17.0.3",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-cashier.log"
+  },{
+    "name": "pow_1_miner",
+    "script": "iminer.js",
+    "watch": false,
+    "args": "--load 40 --id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbhost 172.17.0.3",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-miner.log"
+  },{
+    "name": "pow_1_syncer",
+    "script": "isyncer.js",
+    "watch": false,
+    "args": "--id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbhost 172.17.0.3",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-syncer.log"
+  },{
+    "name": "pow_1_transport",
+    "script": "itransport.js", 
+    "args": "--port 7001 --peer 95.216.246.116:7000 --id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea  --dbhost 172.17.0.3",
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-transport.log"        
+  }]
+};

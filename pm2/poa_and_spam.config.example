@@ -1,0 +1,45 @@
+module.exports = {
+  apps : [ 
+  
+  //--------------------------------------------------------
+  //-------------------------PoA----------------------------
+  //--------------------------------------------------------
+  //keys.json for poa - genesis acc
+  //[
+  //{
+  //  "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
+  //  "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
+  //}
+  //]
+  {
+    "name": "poa",
+    "script": "../poa-check/index.js", 
+    "args": "--url localhost:3000 --keyfile ../poa-check/keys.json",  
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-poa.log"        
+  }
+
+  //--------------------------------------------------------
+  //-----------------------Spam Bot-------------------------
+  //--------------------------------------------------------
+  //keys.json for Spam Bot - ginesis acc send to pos
+  //[
+  //{
+  //  "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
+  //  "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
+  //},
+  //{
+  //  "prvkey" : "b0d57e66e65c4059dc75d3a41b52e6ddac9a82722db836c6cf3e2a9b935a616a",
+  //  "pubkey" : "034b4875bf08ffd5a4f0b06c21f951aa3e2f979d2d9f1bb4a64e0600eac2350beb"
+  //}
+  //}
+  ,{
+    "name": "spam_bot",
+    "script": "test/spamBot.js", 
+    "args": "--size 10 --keys test/keys.json",  
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-SpamBot.log"        
+  }]
+};

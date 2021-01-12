@@ -1,0 +1,260 @@
+module.exports = {
+    apps : [ 
+    //--------------------------------------------------------
+    //-------------------------Leader-------------------------
+    //--------------------------------------------------------
+    //pm2 start ecosystem.config.js --only "leader,leader_explorer,leader_cashier,leader_indexer,leader_syncer,leader_stat,leader_transport"
+    //pm2 stop  leader leader_explorer leader_cashier leader_indexer leader_syncer leader_stat leader_transport
+    //pm2 restart  leader leader_explorer leader_cashier leader_indexer leader_syncer leader_stat leader_transport
+    //pm2 delete  leader leader_explorer leader_cashier leader_indexer leader_syncer leader_stat leader_transport
+    {
+      "name": "leader",
+      "script": "ext/index.js",
+      "watch": false,
+      "args": "--explorer 0 --cashier_interval_ms 0 --indexer_interval_ms 0 --load -1 --transport_on 0 --poa_port 3000 --id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4000 --loglevel info",
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader.log"
+    },{
+      "name": "leader_explorer",
+      "exec_mode": "cluster",
+                  "instances" : 1,
+      "script": "iexplorer.js",
+      "watch": false,
+      "args": "--explorer 80 --dbport 4000 --id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986",
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-explorer.log"
+    },{
+      "name": "leader_cashier",
+      "script": "icashier.js",
+      "watch": false,
+      "args": "--cashier_interval_ms 10 --dbport 4000",
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-cashier.log"
+    },{
+      "name": "leader_indexer",
+      "script": "ext/iindexer.js",
+      "watch": false,
+      "args": "--indexer_interval_ms 10 --dbport 4000 --loglevel silly",
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-indexer.log"
+    },{
+      "name": "leader_syncer",
+      "script": "isyncer.js",
+      "watch": false,
+      "args": "--id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4000 --loglevel info",
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-syncer.log"
+    },{
+      "name": "leader_stat",
+      "script": "istat.js",  
+      "args": "--loglevel debug --dbport 4000",   
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-stat.log"        
+    },{
+      "name": "leader_transport",
+      "script": "itransport.js", 
+      "args": "--port 8100 --id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4000",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-leader-transport.log"        
+    },{
+      "name": "leader_nodeapi",
+      "script": "inodeapi.js",
+      "args": "--id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4000",
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-fullnode-fullnode_nodeapi.log"
+    }
+    //--------------------------------------------------------
+    //-------------------------PoW----------------------------
+    //--------------------------------------------------------
+    //pm2 start ecosystem.config.js --only "pow_cashier,pow_miner,pow_syncer,pow_transport"
+    //pm2 stop pow_cashier pow_miner pow_syncer pow_transport
+    //pm2 restart pow_cashier pow_miner pow_syncer pow_transport
+    //pm2 delete pow_cashier pow_miner pow_syncer pow_transport
+    ,{
+      "name": "pow_cashier",
+      "script": "icashier.js",
+      "watch": false,
+      "args": "--cashier_interval_ms 10  --dbport 4001",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pow-cashier.log"
+    },{
+      "name": "pow_miner",
+      "script": "ext/iminer.js",
+      "watch": false,
+      "args": "--load 40 --id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbport 4001",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pow-miner.log"
+    },{
+      "name": "pow_syncer",
+      "script": "isyncer.js",
+      "watch": false,
+      "args": "--id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbport 4001",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pow-syncer.log"
+    },{
+      "name": "pow_transport",
+      "script": "itransport.js", 
+      "args": "--port 8101 --peer 127.0.0.1:8100 --id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbport 4001",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-pow-transport.log"        
+    },{
+      "name": "pow_nodeapi",
+      "script": "inodeapi.js",
+      "args": `--id 03a3a059b05feb9443c9cc352161f1873b97e0dff61c939e77f1923113631cf8ea --dbport 4001`,
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-pow-nodeapi.log"
+    }
+    //--------------------------------------------------------
+    //-------------------------PoS----------------------------
+    //--------------------------------------------------------
+    //pm2 start ecosystem.config.js --only "pos_cashier,pos_syncer, pos_miner,pos_transport"
+    //pm2 stop pos_cashier pos_miner pos_syncer pos_transport
+    //pm2 restart pos_cashier pos_miner pos_syncer pos_transport
+    //pm2 delete pos_cashier pos_miner pos_syncer pos_transport
+    ,{
+      "name": "pos_cashier",
+      "script": "icashier.js",
+      "watch": false,
+      "args": "--cashier_interval_ms 10 --dbport 4002",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pos-cashier.log"
+    },{
+      "name": "pos_miner",
+      "script": "ext/iminer.js",
+      "watch": false,
+      "args": "--load 0 --pos_share 'pos_1' --leader_socket 127.0.0.1:8100 --id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4002",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pos-miner.log"
+    },{
+      "name": "pos_syncer",
+      "script": "isyncer.js",
+      "watch": false,
+      "args": "--id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4002",
+      "merge_logs": true,
+      "log_file" : "log/pm2-pos-syncer.log"
+    },{
+      "name": "pos_transport",
+      "script": "itransport.js", 
+      "args": "--port 8102 --peer 127.0.0.1:8100 --id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4002",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-pos-transport.log"        
+    },{
+      "name": "pos_nodeapi",
+      "script": "inodeapi.js",
+      "args": `--id fea9f62a50a8e637f867553863aab1fee02d32f4ae1f3b2134b5cc4dcb07c986 --dbport 4002`,
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-pos-nodeapi.log"
+    }
+    //--------------------------------------------------------
+    //----------------------FULL Node-------------------------
+    //--------------------------------------------------------
+    //pm2 start ecosystem.config.js --only "full_explorer,full_cashier,full_indexer,full_syncer,full_transport"
+    //pm2 stop full_explorer full_cashier full_indexer full_syncer full_transport
+    //pm2 restart full_explorer full_cashier full_indexer full_syncer full_transport
+    //pm2 delete full_explorer full_cashier full_indexer full_syncer full_transport
+    ,{
+      "name": "full_explorer",
+      "exec_mode": "cluster",
+                  "instances" : 1,
+      "script": "iexplorer.js",
+      "watch": false,
+      "args": "--explorer 81 --id fullnode --dbport 4003",
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-explorer.log"
+    },{
+      "name": "full_cashier",
+      "script": "icashier.js",
+      "watch": false,
+      "args": "--cashier_interval_ms 10 --dbport 4003",
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-cashier.log"
+    },{
+      "name": "full_indexer",
+      "script": "ext/iindexer.js",
+      "watch": false,
+      "args": "--indexer_interval_ms 10 --dbport 4003",
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-indexer.log"
+    },{
+      "name": "full_syncer",
+      "script": "isyncer.js",
+      "watch": false,
+      "args": "--id fullnode --dbport 4003 --loglevel trace",
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-syncer.log"
+    },{
+      "name": "full_stat",
+      "script": "istat.js",  
+      "args": "--dbport 4003",   
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-stat.log"        
+    },{
+      "name": "full_transport",
+      "script": "itransport.js", 
+      "args": "--port 8103 --peer 127.0.0.1:8100 --id fullnode  --dbport 4003",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-transport.log"        
+    },{
+      "name": "full_nodeapi",
+      "script": "inodeapi.js",
+      "args": `--id fullnode --dbport 4003`,
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-full-nodeapi.log"
+    }
+  
+  
+    //--------------------------------------------------------
+    //-------------------------PoA----------------------------
+    //--------------------------------------------------------
+    //keys.json for poa - ginesis acc
+    //[
+    //{
+    //  "prvkey": "c82a714a175689e86605e0badee0daad00a8643b3e4fec2444bcd4c389aace7c",
+    //  "pubkey": "02b2bdbc5c2cd94288afc8bfb601b8378610c115b973fade16165727449a9036d7"
+    //}
+    //]
+    //pm2 start ecosystem.config.js --only poa
+    ,{
+      "name": "poa",
+      "script": "../../POA/poa-check/index.js", 
+      "args": "--url localhost:3000 --keyfile ../../POA/poa-check/keys.json",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-poa.log"        
+    }
+  
+    //--------------------------------------------------------
+    //-----------------------Spam Bot-------------------------
+    //--------------------------------------------------------
+    //keys.json for Spam Bot - ginesis acc send to pos
+    //[
+    //{
+    //  "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
+    //  "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
+    //},
+    //{
+    //  "prvkey" : "b0d57e66e65c4059dc75d3a41b52e6ddac9a82722db836c6cf3e2a9b935a616a",
+    //  "pubkey" : "034b4875bf08ffd5a4f0b06c21f951aa3e2f979d2d9f1bb4a64e0600eac2350beb"
+    //}
+    //]
+    //pm2 start ecosystem.config.js --only spam_bot
+    ,{
+      "name": "spam_bot",
+      "script": "test/spamBot.js", 
+      "args": "--size 1 --keys test/keys.json",  
+      "watch": false,
+      "merge_logs": true,
+      "log_file" : "log/pm2-SpamBot.log"        
+    }]
+  };
+  

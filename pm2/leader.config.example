@@ -1,0 +1,72 @@
+module.exports = {
+  apps : [ 
+  //--------------------------------------------------------
+  //-------------------------Leader-------------------------
+  //--------------------------------------------------------
+  //pm2 start ecosystem.config.js --only "leader,leader_explorer,leader_cashier,leader_indexer,leader_miner,leader_stat,leader_transport"
+  {
+    "name": "leader",
+    "script": "index.js",
+    "watch": false,
+    "args": "--explorer 0 --cashier_interval_ms 0 --indexer_interval_ms 0 --load -1 --transport_on 0 --poa_port 3000 --id 018f23b3fd60c28e12bd428296b98250394b44839d438b5022a9a20686ebd99d --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader.log"
+  },{
+    "name": "leader_explorer",
+    "script": "iexplorer.js",
+    "watch": false,
+    "args": "--explorer 80 --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-explorer.log"
+  },{
+    "name": "leader_cashier",
+    "script": "icashier.js",
+    "watch": false,
+    "args": "--cashier_interval_ms 10 --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-cashier.log"
+  },{
+    "name": "leader_indexer",
+    "script": "iindexer.js",
+    "watch": false,
+    "args": "--indexer_interval_ms 10 --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-indexer.log"
+  },{
+    "name": "leader_pos_miner",
+    "script": "iminer.js",
+    "watch": false,
+    "args": "--pos_share 'pos_leader' --load 0 --id 018f23b3fd60c28e12bd428296b98250394b44839d438b5022a9a20686ebd99d --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-pos-miner.log"
+  },{
+    "name": "leader_stat",
+    "script": "istat.js",  
+    "args": "--dbport 4000",   
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-stat.log"        
+  },{
+    "name": "leader_transport",
+    "script": "itransport.js", 
+    "args": "--port 8000 --id 018f23b3fd60c28e12bd428296b98250394b44839d438b5022a9a20686ebd99d --dbport 4000",  
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-transport.log"        
+  },{
+    "name": "leader_syncer",
+    "script": "isyncer.js",
+    "watch": false,
+    "args": "--id 018f23b3fd60c28e12bd428296b98250394b44839d438b5022a9a20686ebd99d --dbport 4000",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-syncer.log"
+  },{
+    "name": "leader_miner",
+    "script": "iminer.js",
+    "watch": false,
+    "args": "--load 0 --pos_share 'pos_leader' --leader_socket 127.0.0.1:8100 --id fe39837f57f263181ac028db0a54b9109b1ad1d44f55d1b92c29b9eb090f4c86 --dbname trinity",
+    "merge_logs": true,
+    "log_file" : "log/pm2-leader-pos-miner.log"
+  }
+]
+};

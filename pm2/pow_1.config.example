@@ -1,0 +1,33 @@
+module.exports = {
+  apps : [ 
+  
+  {
+    "name": "pow_1_cashier",
+    "script": "icashier.js",
+    "watch": false,
+    "args": "--cashier_interval_ms 10  --dbport 4001",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-cashier.log"
+  },{
+    "name": "pow_1_miner",
+    "script": "iminer.js",
+    "watch": false,
+    "args": "--load 40 --id 022e50c3cbbb926ce70d38a233a2015acad82424c16813a536c025baaa41db1c83 --dbport 4001 --loglevel trace",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-miner.log"
+  },{
+    "name": "pow_1_syncer",
+    "script": "isyncer.js",
+    "watch": false,
+    "args": "--id 022e50c3cbbb926ce70d38a233a2015acad82424c16813a536c025baaa41db1c83 --dbport 4001 --loglevel trace",
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-syncer.log"
+  },{
+    "name": "pow_1_transport",
+    "script": "itransport.js", 
+    "args": "--port 8001 --peer localhost:8000 --id 022e50c3cbbb926ce70d38a233a2015acad82424c16813a536c025baaa41db1c83  --dbport 4001",  
+    "watch": false,
+    "merge_logs": true,
+    "log_file" : "log/pm2-pow-1-transport.log"        
+  }]
+};
