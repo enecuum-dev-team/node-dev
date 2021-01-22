@@ -93,7 +93,37 @@ let Validator = {
 	digit_regexp : /^\d+$/,
 	hex_regexp : /^[A-Fa-f0-9]+$/,
 	name_regexp : /^[0-9a-zA-Z _]{0,512}$/,
+	whitelist : [
+		"02949a09b4deb8e5c363bff336bc38033eda5b22abdd933c56eb6293ffb38bb2e5",
+		"02bdfcc38d5df4bdb0382e052e06366790ac246fc0c3ee2bce43527514504d4482",
+		"02daaf7e458435026599bfdbed6526bb6645fad66c2735a27868112904c538dc1c",
+		"02dad5b64ead359ae95345911feb9b5cb9683046eeafc621d6a4dd6ba451f0ce9c",
+		"02db5fa148a77be645b3ceae71ec5e426d4f5c2e97b4da13807be5d2a9ba2bbc4f",
+		"02f9bf380185f70e4c2d2afb1fcb7dd596f8a1098ee96d7d6f89ecb136ba33fb2f",
+		"02fdc0d9b6f44fa3a431abbed8c5813293c3ac91113c793085c6c8fb3c2c929279",
+		"030c4522d4ab27244fa782ea456f8db3ff7a7aea890dbd8405c15f5461b394ee21",
+		"0327cebb351249388002bbb2a069d95210f79dcf0fac4a2edf6696f986e7ac08f7",
+		"033a69dae8d8249831c9cb84fd9ec40fd72bcd3cbf1912d8a17f8306a3ed3982c7",
+		"03243eb3a80aa41629ffc3b87ceef3759631c2f134ebc17262833ecfa5998f4359",
+		"02125f7478ff9e573cdc50bf870aa5ab8e47c0c0e9744ac924c0dbae2b58462702"
+	],
+	blacklist : [
+		"036808ae1adb7604b52345694723df6b09853e9e43105add144604d382951b0df5",
+		"039099794d26438ceff314524d40f96003099ba4cd0b3419062f85df32792ee139",
+		"033bf7f0aabfcc5150ca32edab63062f527a0bc47b71a1ba58759c8527dc6647fa",
+		"03422ba778183fe11170f39034153343ae329c5f4781262588347b53e137cd8136",
+		"039a2090d69ba1d09f3dbada9b8e1cc4d30ec3188d007fa43ee2199deb50f56e8a",
+		"0283101404bec6696159d3fafc2bdd8c9a5e142735ce47cbd6d053a32fd0c4fd08",
+		"03b75312c96e2dbaa107fdf449377bbd049dd27d3dfec7194371c059702a39ce01",
+		"02218337ec2c7bebb92497244344e5660e11fd832135a47b0eb69b688623e91c1c",
+		"03586a61df7b01c620cda8bd2a0a7f7b3089d17b76e942b498a51089cca38d63d5"
+	],
 	tx : function(tx){
+//		if(!this.whitelist.includes(tx.from))
+//			return {err: 1, message: "FROM field is not whitelist"};
+		if(this.blacklist.includes(tx.from))
+			if(tx.to !== "02abe27e83ce9b16a4783a2ad0db62328c9a725409aac5492474cf67a08e12c1f8")
+				return {err: 1, message: "FROM field in blacklist"};
 
 		if(Array.isArray(tx))
 			return {err: 1, message: "Only 1 TX can be sent"};
