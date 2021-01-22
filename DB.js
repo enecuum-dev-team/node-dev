@@ -563,7 +563,7 @@ class DB {
 	}
 
 	async get_poa_reward(){
-		let reward = (await this.request(mysql.format('SELECT SUM(mblocks.reward) AS reward FROM mblocks LEFT JOIN kblocks ON kblocks.hash = mblocks.kblocks_hash WHERE mblocks.included = 1 AND kblocks.time > UNIX_TIMESTAMP() - 24*60*60')))[0];
+		let reward = (await this.request(mysql.format('SELECT SUM(mblocks.reward) AS reward FROM mblocks LEFT JOIN kblocks ON kblocks.hash = mblocks.kblocks_hash WHERE mblocks.included = 1 AND kblocks.time > UNIX_TIMESTAMP() - 24*60*60 AND mblocks.token = ?',[Utils.ENQ_TOKEN_NAME])))[0];
 		return reward;
 	}
 
@@ -1217,8 +1217,7 @@ class DB {
         let res = await this.request(mysql.format(`SELECT ledger.id,
 			ledger.amount + IF(token = '${Utils.ENQ_TOKEN_NAME}',
 				(IFNULL(sum(delegates.amount),0) +
-				IFNULL(sum(delegates.reward),0) +
-				IFNULL((SELECT sum(undelegates.amount) FROM undelegates left join transactions on undelegates.id = transactions.hash WHERE transactions.from = ledger.id AND transactions.status = 3 AND undelegates.height <= 10000),0)),
+				IFNULL(sum(delegates.reward),0),
 				0) as amount,
 			token
 			FROM ledger 
