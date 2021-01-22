@@ -149,7 +149,8 @@ class Transport {
 			let request = {
 				"jsonrpc": "2.0",
 				method : method,
-				params : (data !== undefined) ? data : {}
+				params : (data !== undefined) ? data : {},
+				data : (data !== undefined) ? data : {}
 			};
 
 			//append service information
@@ -194,9 +195,11 @@ class Transport {
 					return;
 				}
 				// TODO: заменить по коду data на params
-				request.data = request.params;
-				delete(request.params);
-
+				if(request.params){
+					request.data = request.params;
+					delete(request.params);
+				}
+				request.host = req.connection.remoteAddress;
 				if(call_list[request.method])
                     call_list[request.method]++;
 				else
@@ -225,6 +228,7 @@ class Transport {
 					};
 					res.write(JSON.stringify(response));
 				}
+/*
 				else if (request.data === undefined) {
 					console.debug(`Ignore request, no params field provided. method ${request.method}, from ${request.host}:${request.port}`);
 					response.error = {
@@ -233,6 +237,7 @@ class Transport {
 					};
 					res.write(JSON.stringify(response));
 				}
+*/
 				else if (this.events_map[request.method]) {
 					console.silly(`got request ${request.method} from ${request.host}:${request.port}`);
 					let result = '';
