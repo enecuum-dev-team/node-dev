@@ -1,4 +1,4 @@
-# Prerequisites 
+# Do not merge me
 
 After cloning the repository, make sure you have the following installed.
 
