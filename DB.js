@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * DB.js
+ * Database access layer
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const mysql = require('mysql');
 const Utils = require('./Utils');
 const {DatabaseError} = require('./errors');

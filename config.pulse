@@ -25,7 +25,9 @@
   "max_txs_per_microblock": 1,
   "min_txs_per_microblock": 1,
   "dbhost": "localhost",
+  "dbname" : "trinity_fullnode",
   "dbport": 3306,
+  "dbuser" : "root",
   "dbpass": "root",
   "difficulty": 0,
   "mode": "verify",
@@ -38,6 +40,10 @@
   "ORIGIN": {
     "publisher": "02833f453fb8bf10cc5e8fd362d563851543559f3ea6e662ef114d8db8f72dda19",
     "reward" : 1898805637500000000
+  },
+  "randomx": {
+    "mode" : "verify",
+    "key" : "0410591dc8b3bba89f949212982f05deeb4a1947e939c62679dfc7610c62"
   },
   "fee_shares":  {
       "gen_share": 300,

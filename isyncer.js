@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * isyncer.js
+ * Launcher for synchronization module
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const argv = require('yargs').argv;
 const fs = require('fs');
 
