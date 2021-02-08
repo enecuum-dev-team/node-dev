@@ -567,6 +567,34 @@ class DB {
 		return {txs};
 	}
 
+	async get_successful_txs_by_height(height) {
+		let error = {code: 0, msg: 'successfully'};
+		let txs = [];
+		try {
+			let status = (await this.request(mysql.format(`SELECT IFNULL(sum(IFNULL(included,0)),-1) AS included, IFNULL(sum(IFNULL(calculated,0)),-1) AS calculated FROM mblocks inner join kblocks ON kblocks.hash = mblocks.kblocks_hash WHERE n = ?`, height)))[0];
+			if (status.included <= 0) {
+				error.code = 1;
+				error.msg = 'block not found';
+				return;
+			}
+			if (status.calculated <= 0) {
+				error.code = 2;
+				error.msg = 'block not calculated';
+				return;
+			}
+			txs = await this.request(mysql.format(`SELECT transactions.* FROM transactions 
+													LEFT JOIN mblocks ON mblocks.hash = transactions.mblocks_hash AND mblocks.included = 1 AND calculated = 1
+													LEFT JOIN kblocks ON kblocks.hash = mblocks.kblocks_hash  WHERE status = 3 AND kblocks.n = ?`, height));
+		}
+		catch(e){
+			console.error(e);
+			error = {code: 3, msg: 'exaption'};
+		}
+		finally {
+			return {error, data: {txs}};
+		}
+	}
+
 	async get_tx_count_ranged(limit){
 		let res = await this.request(mysql.format(`SELECT count(*) as count FROM transactions as T
 			left join mblocks as M ON T.mblocks_hash = M.hash
@@ -841,7 +869,7 @@ class DB {
 	}
 
 	async get_tokens_count(){
-		let cnt = (await this.request(mysql.format("SELECT count(*) as count FROM tokens")))[0];
+		let cnt = (await this.request(mysql.format(`SELECT count(*) as count,  SUM(if(reissuable = 0 AND minable = 0, 1, 0)) as non_reissuable, SUM(if(reissuable = 1, 1, 0)) as reissuable, SUM(if(minable = 1, 1, 0)) as minable FROM tokens`)))[0];
 		return cnt;
 	}
 
@@ -1219,7 +1247,10 @@ class DB {
 	async get_tokens_all(hashes){
 		if(!hashes.length)
 			return [];
-		let res = await this.request(mysql.format('SELECT * FROM tokens WHERE hash in (?)', [hashes]));
+		let res = await this.request(mysql.format(`SELECT tokens.*, IFNULL(txs_count, 0) as txs_count
+														FROM tokens
+														LEFT JOIN tokens_index ON tokens.hash = tokens_index.hash 
+														WHERE tokens.hash in (?)`, [hashes]));
 		return res;
 	}
 
@@ -1247,17 +1278,45 @@ class DB {
         return {total:total, accounts:res, page_count : Math.ceil(Number(count / page_size))};
     }
 
-    async get_token_info_page(page_num, page_size){
-		let count = (await this.get_tokens_count()).count;
-        let res = await this.request(mysql.format(`SELECT tokens.hash as token_hash, total_supply, fee_type, fee_value, fee_min, 
-			count(ledger.amount) as token_holders_count,
-			IFNULL(txs_count, 0) as txs_count
-			FROM tokens 
-			LEFT JOIN tokens_index ON tokens.hash = tokens_index.hash
-			LEFT JOIN ledger ON tokens.hash = ledger.token 
-			WHERE tokens.hash != ?
-			GROUP BY token_hash
-			ORDER BY token_holders_count DESC LIMIT ?, ?`, [Utils.ENQ_TOKEN_NAME, page_num * page_size, page_size]));
+    async get_token_info_page(page_num, page_size, type){
+		let where = '';
+		let count_info = await this.get_tokens_count();
+		let count = count_info.count;
+
+		switch (type) {
+			case 'minable':
+				where = ` WHERE minable = 1 `;
+				count = count_info.minable;
+				break;
+			case 'reissuable':
+				where = ` WHERE reissuable = 1 `;
+				count = count_info.reissuable;
+				break;
+			case 'non_reissuable':
+				where = ` WHERE minable = 0 AND reissuable = 0 `;
+				count = count_info.non_reissuable;
+				break;
+			default:
+				break;
+		}
+
+		let owner_slots = await this.get_mining_tkn_owners(this.app_config.mblock_slots.size - this.app_config.mblock_slots.reserve.length, this.app_config.mblock_slots.reserve, this.app_config.mblock_slots.min_stake);
+		owner_slots = owner_slots.concat(this.app_config.mblock_slots.reserve.map(function(item) {
+			return {id:item};
+		}));
+		let in_slot = '0';
+		if(owner_slots.length > 0)
+			in_slot = mysql.format(`IF(owner in (?) AND minable = 1, 1, 0)`, owner_slots.map(item => item.id));
+
+        let res = await this.request(mysql.format(`SELECT tokens.hash as token_hash, total_supply, fee_type, fee_value, fee_min, decimals, minable, reissuable,
+														(SELECT count(amount) FROM ledger WHERE ledger.token = tokens.hash) as token_holders_count,
+														IFNULL(txs_count, 0) as txs_count,
+														${in_slot} as in_slot
+														FROM tokens 
+														LEFT JOIN tokens_index ON tokens.hash = tokens_index.hash
+														${where}
+														GROUP BY tokens.hash
+														ORDER BY token_holders_count DESC, token_hash LIMIT ?, ?`, [page_num * page_size, page_size]));
         return {tokens:res, page_count : Math.ceil(Number(count) / page_size)};
     }
 
@@ -1272,16 +1331,14 @@ class DB {
 	}
 
 	async get_tx(hash){
-		return await this.request(mysql.format(`SELECT max(T.status) as 'status', T.from, T.to, T.amount as total_amount, 		
-			TKN.fee_min,
- 			T.ticker as token_hash, TKN.fee_value, TKN.fee_type, T.data, T.hash, M.kblocks_hash, M.hash as mblocks_hash 
-			FROM transactions T, mblocks M, tokens TKN
-			WHERE 
-			M.hash = T.mblocks_hash AND 
-			T.status IS NOT NULL AND
-			T.ticker = TKN.hash AND
-		    T.hash =? 
-			GROUP BY T.hash;`, hash));
+		return await this.request(mysql.format(`SELECT T.status, T.from, T.to, T.amount as total_amount, TKN.fee_min, T.ticker as token_hash, TKN.fee_value, TKN.fee_type, T.data, T.hash, M.kblocks_hash, M.hash as mblocks_hash
+													FROM transactions as T
+													INNER JOIN (SELECT MAX(status) AS status
+														FROM transactions
+														WHERE transactions.hash = ?
+													   GROUP BY hash) MaxStatus ON MaxStatus.status = T.status and  T.hash = ?
+													INNER JOIN tokens AS TKN ON TKN.hash = T.ticker
+													INNER JOIN mblocks AS M ON M.hash = T.mblocks_hash`, [hash,hash]));
 	}
 
 	async get_duplicates(hashes){
