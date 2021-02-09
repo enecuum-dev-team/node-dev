@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const enq = require('./Enq');
+const config = require('./config.json');
 const rsasign = require('jsrsasign');
 let rx = require('./node_modules/node-randomx/addon');
 const fs = require('fs');
@@ -66,7 +67,7 @@ function apiRequest(options){
 }
 
 let utils = {
-	ENQ_TOKEN_NAME : "0000000000000000000000000000000000000000000000000000000000000000",
+	ENQ_TOKEN_NAME : config.native_token_hash,
 	TX_STATUS : {
 		DUPLICATE : 1,
 		REJECTED  : 2,
