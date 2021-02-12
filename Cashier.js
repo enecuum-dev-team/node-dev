@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * Cashier.js
+ * Module for processing blockchain and calculating ledger
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const Utils = require('./Utils');
 const ContractMachine = require('./SmartContracts');
 const {ContractError} = require('./errors');
@@ -433,7 +447,6 @@ class Cashier {
 			accounts.push(kblock.publisher);
 		}
 
-		// TODO: костыль. Вынести валидацию в explorer. Ужадить из кассира после вайпа истории
 		let filtered_tickers = chunk.txs.map(function (tx) {
 			let hash_regexp = /^[0-9a-fA-F]{64}$/i;
 			if (hash_regexp.test(tx.ticker))

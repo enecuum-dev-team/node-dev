@@ -40,6 +40,10 @@
     "publisher": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d",
     "reward": "3437266354815106572"
   },
+  "randomx": {
+    "mode" : "verify",
+    "key" : "0410591dc8b3bba89f949212982f05deeb4a1947e939c62679dfc7610c62"
+  },
   "fee_shares":  {
       "gen_share": 3000,
       "pow_share": 3000,

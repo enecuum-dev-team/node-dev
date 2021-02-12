@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * nodeapi.service.js
+ * Node service business logic
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const Transport = require('./Transport').Tip;
 const ExplorerService = require('./explorer.service').ExplorerService;
 const NodeapiService = require('./nodeapi.service').NodeapiService;

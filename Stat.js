@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * Stat.js
+ * Module for collecting blockchain data and caching
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const StatService = require('./stat.service').StatService;
 const StakeCalc = require('./stakecalc.js').StakeCalc;
 
