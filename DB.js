@@ -196,13 +196,13 @@ class DB {
 		let kblocks = await this.request(mysql.format('SELECT hash FROM kblocks WHERE n >= ?', [height]));
 		let kblock_hashes = kblocks.map(k => k.hash);
 		if (kblock_hashes.length > 0) {
-			let mblocks = mysql.format(`UPDATE mblocks SET calculated = 0, indexed = 0 WHERE kblocks_hash in (?)`,[kblock_hashes]);
-			let sblocks = mysql.format(`UPDATE sblocks SET calculated = 0, indexed = 0 WHERE kblocks_hash in (?)`,[kblock_hashes]);
-			let mblocks_data = await this.request(mysql.format('SELECT hash FROM mblocks WHERE kblocks_hash in (?)', [kblock_hashes]));
+			let mblocks = mysql.format(`UPDATE mblocks SET calculated = 0, indexed = 0 WHERE kblocks_hash in (SELECT hash FROM kblocks WHERE n >= ?) AND calculated = 1`,[height]);
+			let sblocks = mysql.format(`UPDATE sblocks SET calculated = 0, indexed = 0 WHERE kblocks_hash in (SELECT hash FROM kblocks WHERE n >= ?) AND calculated = 1`,[height]);
+			let mblocks_data = await this.request(mysql.format('SELECT hash FROM mblocks WHERE kblocks_hash in (SELECT hash FROM kblocks WHERE n >= ?)', [height]));
 			let mblock_hashes = mblocks_data.map(m => m.hash);
 			let transactions = '';
 			if (mblock_hashes.length > 0)
-				transactions = mysql.format(`UPDATE transactions SET status = null WHERE mblocks_hash in (?)`,[mblock_hashes]);	
+				transactions = mysql.format(`UPDATE transactions SET status = null WHERE mblocks_hash in (SELECT hash FROM mblocks WHERE kblocks_hash in (SELECT hash FROM kblocks WHERE n >= ?) AND calculated = 1)`,[height]);
 			return this.transaction([mblocks, sblocks, transactions].join(';'));
 		}
 		return 0;
@@ -238,7 +238,7 @@ class DB {
 		let kblock_hashes_to_remove = kblocks.map(k => k.hash);
         let kblock_hashes = kblock_hashes_to_remove.concat(fork_kblock_hash);
         if (kblock_hashes.length > 0) {
-			let locs = mysql.format(`LOCK TABLES kblocks WRITE, mblocks WRITE, sblocks WRITE, snapshots WRITE, transactions WRITE, eindex WRITE`);
+			//let locs = mysql.format(`LOCK TABLES kblocks WRITE, mblocks WRITE, sblocks WRITE, snapshots WRITE, transactions WRITE, eindex WRITE`);
 			let mblocks = await this.request(mysql.format('SELECT hash FROM mblocks WHERE kblocks_hash in (?)', [kblock_hashes]));
 			let mblock_hashes = mblocks.map(m => m.hash);
 			let delete_transactions = '';
@@ -253,9 +253,9 @@ class DB {
 				delete_kblocks.push(mysql.format('DELETE FROM kblocks WHERE hash = ?', item));
 			});
 			//TODO: delete eindex
-			let unlock = mysql.format(`UNLOCK TABLES`);
+			//let unlock = mysql.format(`UNLOCK TABLES`);
 			console.debug(`Delete kblocks: ${kblock_hashes}, mblocks: ${mblock_hashes}`);
-			return this.transaction([locs, delete_transactions, delete_mblocks, delete_sblocks, delete_snapshots, delete_kblocks.join(';'), unlock].join(';'));
+			return this.transaction([/*locs,*/ delete_transactions, delete_mblocks, delete_sblocks, delete_snapshots, delete_kblocks.join(';')/*, unlock*/].join(';'));
 		}
 		return 0;
 	}
@@ -508,39 +508,22 @@ class DB {
 		return snapshot;
 	};
 
+	get_chain_start_macroblock(){
+	    //get ferst of chain macroblock
+        let block = this.request(mysql.format(`SELECT sprout, n, kblocks.hash, time, publisher, nonce, link, m_root, reward FROM kblocks 
+                                                    LEFT JOIN snapshots ON kblocks.hash = snapshots.kblocks_hash WHERE kblocks.hash = link AND snapshots.hash IS NOT NULL ORDER BY n DESC LIMIT 1;`));
+        return block;
+    }
+
 	async peek_tail(timeout){
 		let now = new Date();
 		let span = now - this.last_tail;
 		if ((span > timeout) || (this.cached_tail === null) || (timeout === undefined)) {
-			let tail = await this.request(mysql.format("SELECT  sprout, n, hash, time, publisher, nonce, link, m_root, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
+			let tail = await this.request(mysql.format("SELECT sprout, n, hash, time, publisher, nonce, link, m_root, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
 			if (tail)
 				tail = tail[0];
 			else
 				return;
-			if (!tail) {
-				console.info("Initializing database...");
-				let snapshot = Utils.load_snapshot_from_file(this.app_config.snapshot_file);
-				//TODO: validation snapshot
-				if (snapshot === undefined) {
-					console.error(`Snapshot is undefined`);
-					return;
-				}
-				tail = snapshot.kblock;
-				snapshot.hash = Utils.hash_snapshot(snapshot);
-				let init_result = await this.init_snapshot(snapshot);
-				if (!init_result) {
-					console.error(`Failed initialize Database.`);
-					return;
-				}
-				delete snapshot.kblock;
-				let hash = Utils.hash_snapshot(snapshot);
-				let put_result = await this.put_snapshot(snapshot, hash);
-				if (!put_result) {
-					console.error(`Failed put snapshot.`);
-					return;
-				}
-				console.info("Database initialized");
-			}
 			this.cached_tail = tail;
 			this.last_tail = now;
 			return tail;
@@ -548,6 +531,30 @@ class DB {
 			return this.cached_tail;
 		}
 	};
+
+	async init_database() {
+        console.info("Initializing database...");
+        let snapshot = Utils.load_snapshot_from_file(this.app_config.snapshot_file);
+        //TODO: validation snapshot
+        if (snapshot === undefined) {
+            console.error(`Snapshot is undefined`);
+            return;
+        }
+        snapshot.hash = Utils.hash_snapshot(snapshot);
+        let init_result = await this.init_snapshot(snapshot);
+        if (!init_result) {
+            console.error(`Failed initialize Database.`);
+            return;
+        }
+        delete snapshot.kblock;
+        let hash = Utils.hash_snapshot(snapshot);
+        let put_result = await this.put_snapshot(snapshot, hash);
+        if (!put_result) {
+            console.error(`Failed put snapshot.`);
+            return;
+        }
+        console.info("Database initialized");
+    }
 
 	peek_range(min, max) {
 		let sql = mysql.format("SELECT n, hash, time, publisher, nonce, link, m_root, reward FROM kblocks WHERE n >= ? AND n <= ? ORDER BY n ASC", [min, max]);
