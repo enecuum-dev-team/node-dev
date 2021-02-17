@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * icashier.js
+ * Launcher for cashier module
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const argv = require('yargs').argv;
 const fs = require('fs');
 
