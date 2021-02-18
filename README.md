@@ -1,169 +1,146 @@
-# Prerequisites 
+# Node-main
+
+Node-main is a part of Enecuum's blockchain protocol. It is a Fullnode with the Blockchain Explorer functionality. 
+
+## What is this project?
+
+[Enecuum](https://enecuum.com/) is a Blockchain Mobile Network for decentralized application. We create a decentralized ecosystem able to bring the blockchain and cryptocurrencies to the real mainstream, involving a crowd with regular mobile and desktop devices into the blockchain network, as well as providing the powerful toolkit for the dApps developers to create fast and low cost applications for millions of people.
+
+To help new people with understanding our products, Enecuum maintains a [Vuepress-powered](https://vuepress.vuejs.org) website with tutorials, [Enecuum User Guides.](https://guides.enecuum.com/)
+
+# Run Fullnode
+
+## Prerequisites 
+
+You need a public IP to run Fullnode.
 
 After cloning the repository, make sure you have the following installed.
 
 MySQL:
+
 ```
 sudo apt install mysql-server -y
 ```
 
 NodeJS:
+
 ```sh
 curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
 PM2:
+
 ```
 sudo npm i -g pm2
 ```
 
-Docker:
+## Install
 
-```
-sudo apt install docker.io
-```
-
-Use [Docker official documentation](https://docs.docker.com/install/) for any issues.
-
-# Install
-
-1. In `package.json`, set URL for add-on binaries `enecuum-crypto` and `node-randomx` depending on OS (set `linux64` or `win64`).
-
-2. Install the packages: 
+1. Install the packages: 
 
    ```
    npm i
    ```
 
-3. Start DB:
+2. Initialize DB:
 
    ```
-   docker run -d --name bit_db_leader -p 4000:3306 -e MYSQL_ROOT_PASSWORD=root enecuum/bit_db
-   
-   docker run -d --name bit_db_pow -p 4001:3306 -e MYSQL_ROOT_PASSWORD=root enecuum/bit_db
-   
-   docker run -d --name bit_db_pos -p 4002:3306 -e MYSQL_ROOT_PASSWORD=root enecuum/bit_db
+   mysql -uroot -e "DROP DATABASE IF EXISTS trinity_fullnode; CREATE DATABASE trinity_fullnode;"
    ```
 
-# Run
-
-## Prerequisites 
-
-1. Create a copy of `config.json.example` and name it `config.json`. 
-
-2. For Linux, in `config.json`, set the `dbhost` parameter to localhost: `"dbhost": "localhost"`. For Windows, find out the IP address of the virtual machine:
+3. Create DB schema from dump:
 
    ```
-   docker-machine ip default
+   mysql -uroot trinity_fullnode < sql/db.sql
+   ```
+
+## Configure 
+
+Before proceeding, make sure you have a public IP to run Fullnode.
+
+1. Create a copy of `config.pulse` and name it `config.json`. 
+
+   ```
+   cp config.pulse config.json
    ```
    
-   and set this IP address in `config.json` with `"dbhost": "<ip address>"`.
+2. In `config.json`, set the `dbport`, `dbuser` according to your MySQL settings. You can also specify `dbhost` property if it is not `localhost`.
+
+3. Create a copy of `pm2/fullnode.config.example` and name it `pm2/fullnode.config.js`. 
+
+   ```
+   cp pm2/fullnode.config.example pm2/fullnode.config.js
+   ```
    
-3. For Linux, in `ecosystem.config.js`, change the following ports:
+3. Optionally, in `pm2/fullnode.config.js`, change the following ports:
 
-   - In Leader section, change explorer's port 80 to 1025:
+	- In `fullnode_explorer` section:
+     - set the `--explorer` as one of your open ports for your Blockchain Explorer:
+	 
+       ```
+       --explorer 80
+       ```
+	   
+       To turn off the Explorer, just remove the `--explorer 80` key from arguments list.
 
-     ```
-     "args": "--explorer 1025 --dbport 4000"
-     ```
+   - In `fullnode_transport` section:
+     - set the `--peer` as an existing Enecuum node IP address, preferably the Enecuum LPoS IP address:
 
-   - In SpamBot section, change localhost port 80 to 1025:
+       ```
+       --peer=95.216.68.221:8000
+       ```
+       
+     - set the `--port` as one of your open ports for other's nodes sync, preferably `8000`:
+	 
+       ```
+       --port=8000
+       ```
 
-     ```
-     "args": "--host localhost:1025 --size 10 --keys test/keys.json"
-     ```
+4. To run Explorer, make a copy of `explorer/config-enq.js` and name it `explorer/config.js`. 
+                         
+    ```
+    cp explorer/config-enq.js explorer/config.js
+    ```
 
-## PoS-leader 
+## Start
 
-You can run PoS-leader using the following command:
+Start Fullnode:
 
 ```
-pm2 start ecosystem.config.js --only "leader,leader_explorer,leader_cashier,leader_indexer,leader_miner,leader_stat,leader_transport"
+pm2 start pm2/fullnode.config.js
 ```
 
-## PoA 
+## Check
 
-1. Create PoA emulator:
+To check if your Fullnode is successfully running, you can optionally do the following.
 
-   ```
-   git clone --branch develop https://github.com/Enecuum/poa-check.git
-   ```
-
-2. Create `keys.json` file into the PoA directory:
+1. Open MySQL command line:
 
    ```
-   [
-     {
-       "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
-       "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
-     }
-   ]
+   mysql -u root -p
    ```
 
-3. Run PoA with Genesis account:
+2. Check if your Fullnode is synchronizing:
 
    ```
-   pm2 start ecosystem.config.js --only poa
+   select count(*) from trinity_fullnode.kblocks;
    ```
 
-## Spam_Bot
+Alternatively, if you enable explorer in the config file, you can access it via your browser with the specified port number.
 
-Spam_Bot generates and sends transactions.
-
-1. Create `keys.json` file in `test` directory:
-
-   ```
-   [
-     {
-       "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
-       "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
-     },
-     {
-       "prvkey" : "b0d57e66e65c4059dc75d3a41b52e6ddac9a82722db836c6cf3e2a9b935a616a",
-       "pubkey" : "034b4875bf08ffd5a4f0b06c21f951aa3e2f979d2d9f1bb4a64e0600eac2350beb"
-     }
-   ]
-   ```
-
-2. Run spam_bot:
-
-   ```
-   pm2 start ecosystem.config.js --only spam_bot
-   ```
-   
-   You can change the number of transactions using key `--size N`.
-
-## PoW and PoS
-
-1. Create a PoS contract and delegate coins to it using [the following guide.](https://docs.google.com/document/d/1KSeLY7j12G5Kk44gBBwW4tcXbyAgNVVj4Wq67_BSvY8/edit)
-   
-2. Configure the following in `ecosystem.config.js` for PoW and PoS sections:
-
-   - For `pos_miner` process, add PoS contract address created earlier with the `--pos_id` key.
-   - For other processes, set the pubic key with `--id`.
-   - Set the port that PoW/PoS will use with `--port`.
-   - Set the leader's IP address and port to which PoW/PoS will connect with `--peer` using `0.0.0.0:0000` format.
-
-3. Start the processes:
-
-   - Start PoW:
-
-   ```
-   pm2 start ecosystem.config.js --only "pow_cashier,pow_miner,pow_transport"
-   ```
-
-   - Start PoS:
-
-   ```
-   pm2 start ecosystem.config.js --only "pos_cashier,pos_miner,pos_transport"
-   ```
-
-
-# Stop
+## Stop
 
 To stop the process, use the following:
 ```
 pm2 stop <process name | id>
 pm2 delete <process name | id>
 ```
+
+# Contribution
+
+See [Contributing.](CONTRIBUTING.md)
+
+# License
+
+[MIT](LICENSE.md)

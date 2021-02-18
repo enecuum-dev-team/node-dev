@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * Enq.js
+ * Enecuum crypto library wrapper
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 //let addon = require('./src/Build/Release/addon');
 let addon = require('./node_modules/enecuum-crypto/addon');
 var crypto = require('crypto');

@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * SmartContracts.js
+ * Enecuum smart contracts logic
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const Utils = require('./Utils');
 const {ContractError} = require('./errors');
 const {OutOfRangeError} = require('./errors');

@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * stat.service.js
+ * Stat module business logic
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const Utils = require('./Utils');
 
 let prev_max_tps = 0;
@@ -212,7 +226,9 @@ class StatService {
                                     .map(x => [x.query, x.country.replace(/[\\$'"]/g, "\\$&"),
                                         x.countryCode, x.city.replace(/[\\$'"]/g, "\\$&").substr(0,40),
                                         x.lat, x.lon]);
-                    this.db.update_iptable([values]);
+                    if(values.length > 0){
+                        this.db.update_iptable([values]);
+                    }
                 }
             }
             else {
