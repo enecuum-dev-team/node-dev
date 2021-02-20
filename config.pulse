@@ -25,19 +25,26 @@
   "max_txs_per_microblock": 1,
   "min_txs_per_microblock": 1,
   "dbhost": "localhost",
+  "dbname" : "trinity_fullnode",
   "dbport": 3306,
+  "dbuser" : "root",
   "dbpass": "root",
   "difficulty": 0,
   "mode": "verify",
   "transfer_lock": 8192,
   "pos_min_stake": 250010000000000,
   "top_poses_count": 100,
+  "native_token_hash" : "0000000000000000000000000000000000000000000000000000000000000000",
   "snapshot_interval": 256,
   "snapshot_file": "snapshot_pulse.json",
   "TRUNK": "ENQGENESIS",
   "ORIGIN": {
     "publisher": "02833f453fb8bf10cc5e8fd362d563851543559f3ea6e662ef114d8db8f72dda19",
     "reward" : 1898805637500000000
+  },
+  "randomx": {
+    "mode" : "verify",
+    "key" : "0410591dc8b3bba89f949212982f05deeb4a1947e939c62679dfc7610c62"
   },
   "fee_shares":  {
       "gen_share": 300,
@@ -108,5 +115,6 @@
       ]
   },
   "feader_watchdog": 12,
-  "enable_post_tx": false
+  "enable_post_tx": false,
+  "sync_validation_try_count": 10
 }

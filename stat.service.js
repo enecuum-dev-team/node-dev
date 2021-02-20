@@ -1,3 +1,17 @@
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * stat.service.js
+ * Stat module business logic
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
+
 const Utils = require('./Utils');
 
 let prev_max_tps = 0;

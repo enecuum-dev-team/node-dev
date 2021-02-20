@@ -1,5 +1,18 @@
-const Utils = require('./Utils');
+/**
+ * Node Trinity source code
+ * See LICENCE file at the top of the source tree
+ *
+ * ******************************************
+ *
+ * explorer.service.js
+ * Explorer service business logic
+ *
+ * ******************************************
+ *
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ */
 
+const Utils = require('./Utils');
 
 class ExplorerService {
 
