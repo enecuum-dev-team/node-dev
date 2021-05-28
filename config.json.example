@@ -7,7 +7,7 @@
     "dbuser" : "root",
     "dbpass" : "root",
     "dbport": 4000,
-    "loglevel" : "info",
+    "loglevel" : "silly",
     "feeder_interval_ms" : 100,
     "cashier_interval_ms" : 0,
     "cashier_chunk_size" : 2,
@@ -44,7 +44,7 @@
     "TRUNK": "BITGENESIS",
     "ORIGIN": {
         "publisher": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d",
-        "reward": 338348170e10
+        "reward": "3383891960000000000"
     },
     "fee_shares":  {
         "gen_share": 3000,
