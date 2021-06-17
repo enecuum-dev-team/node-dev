@@ -115,5 +115,6 @@
     "feader_watchdog": 12,
     "enable_post_tx": false,
     "validation_try_count": 10,
-    "downloading_try_count": 10
+    "downloading_try_count": 10,
+    "debug_short": 0
 }

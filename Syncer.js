@@ -682,6 +682,9 @@ class Syncer {
 	}
 
 	async valid_candidate(candidate, mblocks, sblocks, n, tail_kblock) {
+		if (this.config.debug_short){
+			return true;
+		}
 		if (n !== tail_kblock.n) {
 			console.debug(`Kblock N = ${n} not equal tail N = ${tail_kblock.n}`);
 			return false;
