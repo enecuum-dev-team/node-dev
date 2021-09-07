@@ -34,6 +34,7 @@ class ContractParser {
     constructor(config) {
         this.schema = schema;
         this.contract_pricelist = config.contract_pricelist;
+        this.MAX_CHUNK_SIZE = 0xFFFF;   // Max chunk size
     }
     get pricelist(){
         return this.contract_pricelist;
@@ -46,9 +47,8 @@ class ContractParser {
         return hex;
     }
     sizeMarker(size) {
-        let markerSize = 0xFFFF; // Max chunk size
-        if(size > markerSize)
-            throw new Error(`Size can't be bigger than ${markerSize}`);
+        if(size > this.MAX_CHUNK_SIZE)
+            throw new Error(`Size can't be bigger than ${this.MAX_CHUNK_SIZE}`);
         let marker = this.toHex(size);
         while (marker.length < 4) {
             marker = "0" + marker;
@@ -78,12 +78,13 @@ class ContractParser {
     }
 
     dataFromObject(obj){
+        if(!obj || !obj.hasOwnProperty('parameters') || Object.keys(obj.parameters).length === 0)
+            return "";
         let res = {
             parameters : []
         };
         for(let param in obj.parameters){
-
-            let type = undefined;
+            let type = undefined;   // Type values are not the same as typeof return values
             switch (typeof obj.parameters[param]){
                 case "bigint" : {
                     type = "bigint";
@@ -93,15 +94,21 @@ class ContractParser {
                     type = "string";
                     break;
                 }
-                default : type = "int";
+                case "number" : {
+                    if(!Number.isSafeInteger(obj.parameters[param])  )
+                        throw new Error("Non-safe integers are not supported");
+                    type = "int";
+                    break;
+                }
+                default : throw new Error("Unsupported type");
             }
-            //let type = (typeof obj.parameters[param] === "string") ? "string" : "int";
             res.parameters.push({key : param, [type] : obj.parameters[param]})
         }
         return this.serialize_object({
             [obj.type] : res
         });
     }
+
     serialize_object(obj){
         let binary = "";
         if((!(Array.isArray(obj))) && (typeof obj !== "object"))
@@ -116,6 +123,8 @@ class ContractParser {
         else {
             for (let key in obj) {
                 let code = this.schema[key];
+                if(!code)
+                    throw new Error(`Unexpected key: ${key}`);
                 let res = this.serialize_object(obj[key]);
                 binary += this.sizeMarker(res.length + 8) + code + res;
             }
@@ -126,13 +135,16 @@ class ContractParser {
         let arr = [];
         while(bin.length > 0){
             let chunk = this.getChunk(bin);
+            if(chunk.size === 0)
+                break;
             if(bin.length === chunk.size){
                 if((!this.contract_pricelist.hasOwnProperty(chunk.key))
                     && (chunk.key !== "parameters")
-                    && (chunk.key !== "object")){
-                    arr.push([chunk.key, chunk.data]);
-                    return arr;
-                }
+                    && (chunk.key !== "object"))
+                        {
+                            arr.push([chunk.key, chunk.data]);
+                            return arr;
+                        }
                 bin = bin.substring(8, bin.length);
             }
             if(bin.length > chunk.size)
@@ -171,7 +183,6 @@ class ContractParser {
         let input = (this.deserialize(raw))[0];
         data.type = input[0];
         input = this.prettify(input[1]);
-        //data.procedure_name = input[0].procedure_name;
         let params = input[0].parameters;
         data.parameters = {};
         for(let i = 0; i < params.length; i+=2){
