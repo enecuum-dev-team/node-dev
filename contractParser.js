@@ -35,6 +35,7 @@ class ContractParser {
         this.schema = schema;
         this.contract_pricelist = config.contract_pricelist;
         this.MAX_CHUNK_SIZE = 0xFFFF;   // Max chunk size
+        this.hex_regexp = /^[A-Fa-f0-9]+$/;
     }
     get pricelist(){
         return this.contract_pricelist;
@@ -56,8 +57,11 @@ class ContractParser {
         return marker;
     }
     getChunk(bin){
-        let size = parseInt(bin.substring(0, 4), 16);
-        let key = this.getkey(this.schema, bin.substring(4,8));
+        let sizeMarker = bin.substring(0, 4);
+        if(!this.hex_regexp.test(sizeMarker))
+            throw new Error("Incorrect size");
+        let size =  parseInt(sizeMarker, 16);
+        let key = this.getkey(this.schema, bin.substring(4, 8));
         return {
             size : size,
             key : key,
