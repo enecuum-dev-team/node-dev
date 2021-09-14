@@ -563,11 +563,22 @@ class DB {
 	async get_chain_start_macroblock(){
 	    //get first macroblock of the chain
         let block = await this.request(mysql.format(`SELECT sprout, n, kblocks.hash, time, publisher, nonce, link, m_root, leader_sign, reward FROM kblocks 
-                                                    LEFT JOIN snapshots ON kblocks.hash = snapshots.kblocks_hash WHERE kblocks.hash = link AND snapshots.hash IS NOT NULL ORDER BY n DESC LIMIT 1;`));
+                                                    LEFT JOIN snapshots ON kblocks.hash = snapshots.kblocks_hash WHERE kblocks.hash = link AND snapshots.hash IS NOT NULL ORDER BY n DESC LIMIT 1`));
         if(block[0] !== undefined)
             block[0].leader_sign = JSON.parse(block[0].leader_sign);
         return block[0];
     }
+
+	async get_parts_of_chain(){
+		//get first macroblock of the chain
+		let blocks = await this.request(mysql.format(`SELECT sprout, n, kblocks.hash, time, publisher, nonce, link, m_root, leader_sign, reward FROM kblocks 
+                                                    LEFT JOIN snapshots ON kblocks.hash = snapshots.kblocks_hash WHERE kblocks.hash = link AND snapshots.hash IS NOT NULL ORDER BY n DESC`));
+		//get length of the chain
+		for(let i = 0; i < blocks.length - 1; i++){
+			blocks[i].length = await this.request(mysql.format(`SELECT count(n) as length FROM kblocks where link != hash and n > ? and n < ?`, [blocks[i].n, blocks[i+1].n]))[0].length;
+		}
+		return blocks;
+	}
 
 	async peek_tail(timeout){
 		let now = new Date();

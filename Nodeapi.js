@@ -33,6 +33,7 @@ class NodeAPI {
         this.transport.on('snapshot_chunk', this.on_get_snapshot_chunk.bind(this));
         this.transport.on('get_macroblock', this.on_get_macroblock.bind(this));
         this.transport.on('get_chain_start', this.on_get_chain_start.bind(this));
+        this.transport.on('get_parts_of_chain', this.on_get_chain_start.bind(this));
     }
 
     async on_post_tx(msg) {
@@ -68,6 +69,12 @@ class NodeAPI {
     async on_get_chain_start(){
         console.debug(`on get_start_chain`);
         let res = await this.db.get_chain_start_macroblock();
+        return res;
+    };
+
+    async get_parts_of_chain(){
+        console.debug(`on get_parts_of_chain`);
+        let res = await this.db.get_parts_of_chain();
         return res;
     };
 
