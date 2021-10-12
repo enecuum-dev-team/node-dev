@@ -81,12 +81,8 @@ let db = new DB({
 BigInt.prototype.toJSON = function() { return this.toString() }
 
 let start_worker = function(config, db) {
-    if (config.enable_post_tx) {
-        console.info(`Starting worker process`);
-        let worker = new Worker(db, config);
-    } else {
-        console.info(`Worker is OFF`);
-    }
+    console.info(`Starting worker process`);
+    let worker = new Worker(db, config);
 };
 
 start_worker(config, db);

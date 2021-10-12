@@ -2122,6 +2122,14 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+
+    put_pow_stat(time, ipstring, id, uptime){
+        return this.request(mysql.format("INSERT INTO pow_stat (`time`, `ipstring`, `id`, `uptime`) VALUES (?, ?, ?, ?)", [time, ipstring, id, uptime]));
+    }
+
+    current_clients_list(){
+        return this.request(mysql.format(`SELECT * FROM clients WHERE count > 0 AND type != 2`));
+    }
 }
 
 module.exports.DB = DB;
