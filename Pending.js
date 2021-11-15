@@ -86,6 +86,9 @@ let Validator = {
 		"03243eb3a80aa41629ffc3b87ceef3759631c2f134ebc17262833ecfa5998f4359",
 		"02125f7478ff9e573cdc50bf870aa5ab8e47c0c0e9744ac924c0dbae2b58462702"
 	],
+	locklist:[
+		"03fd7ed9000c1c3bd65fdfed52a1136c59c39f966d3a315ee54c6ea2a93eb930ee"
+	],
 	blacklist : [
 		"036808ae1adb7604b52345694723df6b09853e9e43105add144604d382951b0df5",
 		"039099794d26438ceff314524d40f96003099ba4cd0b3419062f85df32792ee139",
@@ -101,8 +104,11 @@ let Validator = {
 //		if(!this.whitelist.includes(tx.from))
 //			return {err: 1, message: "FROM field is not whitelist"};
 		if(this.blacklist.includes(tx.from))
-			if(tx.to !== "02abe27e83ce9b16a4783a2ad0db62328c9a725409aac5492474cf67a08e12c1f8")
+			if(tx.to !== "02abe27e83ce9b16a4783a2ad0db62328c9a725409aac5492474cf67a08e12c1f8") //KuCoin
 				return {err: 1, message: "FROM field in blacklist"};
+		if(this.locklist.includes(tx.from))
+			if(tx.to !== "02833f453fb8bf10cc5e8fd362d563851543559f3ea6e662ef114d8db8f72dda19" && tx.to !== "03165142a92f3ff0d18567b78cc33a208145c32d1f71f51750a657dbc580118ecd") //Genesis
+				return {err: 1, message: "FROM field in locklist"};
 
 		if(Array.isArray(tx))
 			return {err: 1, message: "Only 1 TX can be sent"};
