@@ -313,6 +313,12 @@ class Syncer {
     }
 
 	async sync_chain(socket) {
+		let whitelist = ['127.0.0.1:8000', '127.0.0.1:8001', '95.216.68.221:8001', '95.216.68.221:8000' ];
+	        if (whitelist.indexOf(socket) === -1){
+			console.info(`socket ${socket} is not in whitelist, sync_chain aborted`);
+			return;
+		}
+
 		let peer_index = this.check_peer(socket);
 		if (peer_index < 0) {
 			console.debug(`Peer ignore timeout ${socket}`);
