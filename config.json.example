@@ -136,5 +136,10 @@
         "DEX_TRUSTED_TOKENS": [
               "824e7b171c01e971337c1b25a055023dd53c003d4aa5aa8b58a503d7c622651e"
         ]
+    },
+    "bridge" : {
+        "network_id" : "12345",
+        "validators_threshold" : 5,
+        "keys" : "./bridge.json"
     }
 }

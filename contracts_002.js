@@ -15,6 +15,7 @@
  */
 
 const Utils = require('./Utils');
+const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
 const ContractParser = require('./contractParser').ContractParser;
@@ -2286,11 +2287,313 @@ class FarmGetRewardContract extends Contract {
     }
 }
 
+class CrossChainSourceContract extends Contract {
+    constructor(data) {
+        super()
+        this.data = data
+        this.type = this.data.type
+        if(!this.validate())
+            throw new ContractError("Incorrect contract")
+    }
+
+    validate () {
+        if (!Utils.BRIDGE_ACTIVE)
+            throw new ContractError("Bridge is deactivated")
+
+        let paramsModel = {
+            dst_address : cTypes.hexStr64,
+            dst_network : cTypes.hexStr64,
+            amount : cTypes.bigInt,
+            hash : cTypes.hexStr64
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+    
+    async execute(tx, substate, kblock) {
+        let burn_tokens = async (hash, amount) => {
+            let burn_object = {
+                type : "burn",
+                parameters : {
+                    token_hash : hash,
+                    amount : amount
+                }
+            }
+
+            let burn_data = cparser.dataFromObject(burn_object)
+            let burn_contract = cfactory.createContract(burn_data)
+
+            let _tx = {
+                amount : tx.amount,
+                from : Utils.BRIDGE_ADDRESS,
+                data : burn_data,
+                ticker : tx.ticker,
+                to : tx.to
+            }
+            try {
+                return await burn_contract.execute(_tx, substate)
+            } catch (e) {
+                if (e instanceof ContractError) {
+                    console.log(e)
+                    return {
+                        amount_changes : [],
+                        pos_changes : [],
+                        post_action : []
+                    }
+                } else 
+                    throw e
+            }
+        }
+
+        let lock_tokens = async (hash, amount) => {
+            let userAmount = substate.get_balance(tx.from, hash).amount
+            let bridgeAmount = substate.get_balance(Utils.BRIDGE_ADDRESS, hash).amount
+            let newUserAmount = userAmount - amount
+            let newBridgeAmount = bridgeAmount + amount
+
+            if (newUserAmount < 0)
+                throw new ContractError(`Insufficient balance on the ${tx.from}`)
+            
+            substate.accounts_change({
+                id : tx.from,
+                amount : newUserAmount,
+                token : hash,
+            })
+            substate.accounts_change({
+                id : Utils.BRIDGE_ADDRESS,
+                amount : newBridgeAmount,
+                token : hash,
+            })
+            return {
+                amount_changes : [],
+                pos_changes : [],
+                post_action : []
+            }
+        }
+
+        let data = this.data.parameters
+        let wrappedToken = substate.get_minted_token(data.hash)
+
+        let res
+        if (wrappedToken) {
+            if (data.dst_network === wrappedToken.origin_hash) {
+                res = await burn_tokens(data.hash, data.amount)
+            } else {
+                res = await lock_tokens(data.hash, data.amount)
+            }
+        } else {
+            res = await lock_tokens(data.hash, data.amount)
+        }
+        let lastTransfer = substate.get_last_transfer()
+        substate.transfers_add({
+            src_address : tx.from,
+            dst_address : data.dst_address,
+            src_network : Utils.BRIDGE_NET_ID,
+            src_hash : data.hash,
+            nonce : lastTransfer ? lastTransfer.nonce + 1 : 0
+        })
+        return res
+    }
+}
+
+class CrossChainDestinationContract extends Contract {
+    constructor(data) {
+        super()
+        this.data = data
+        this.type = this.data.type
+        if(!this.validate())
+            throw new ContractError("Incorrect contract")
+    }
+
+    validate () {
+        if (!Utils.BRIDGE_ACTIVE)
+            throw new ContractError("Bridge is deactivated")
+
+        let validateTicket = (ticket) => {
+            let ticketModel = {
+                dst_address : cTypes.hexStr64,
+                dst_network : cTypes.hexStr64,
+                amount : cTypes.bigInt,
+                src_hash : cTypes.hexStr64,
+                src_address : cTypes.hexStr64,
+                src_network : cTypes.hexStr64,
+                origin_hash : cTypes.hexStr64,
+                origin_network : cTypes.hexStr64,
+                nonce : cTypes.number
+            }
+            return cValidate(ticket, ticketModel)
+        }
+        let validateSignatures = (signatures) => {
+            let signatureModel = {
+                validator_id : cTypes.hexStr64,
+                validator_sign : cTypes.hexStr64
+            }
+            return signatures.every(signature => cValidate(signature, signatureModel))
+        }
+        let paramsModel = {
+            ticket : cTypes.obj,
+            signatures : cTypes.array
+        }
+        if (cValidate(this.data.parameters, paramsModel)) {
+            validateTicket(this.data.parameters.ticket)
+            validateSignatures(this.data.parameters.signatures)
+        }
+        return true
+    }
+
+    async execute(tx, substate, kblock) {
+        let mint_tokens = async (hash, amount) => {
+            let mint_object = {
+                type : "mint",
+                parameters : {
+                    token_hash : hash,
+                    amount : amount
+                }
+            }
+
+            let mint_data = cparser.dataFromObject(mint_object)
+            let mint_contract = cfactory.createContract(mint_data)
+
+            let _tx = {
+                amount : tx.amount,
+                from : Utils.BRIDGE_ADDRESS,
+                data : mint_data,
+                ticker : tx.ticker,
+                to : tx.to
+            }
+            try {
+                return await mint_contract.execute(_tx, substate)
+            } catch (e) {
+                if (e instanceof ContractError) {
+                    console.log(e)
+                    return {
+                        amount_changes : [],
+                        pos_changes : [],
+                        post_action : []
+                    }
+                } else 
+                    throw e
+            }
+        }
+
+        let transfer = (hash, amount, dstAddress) => {
+            let userAmount = substate.get_balance(dstAddress, hash).amount
+            let bridgeAmount = substate.get_balance(Utils.BRIDGE_ADDRESS, hash).amount
+            let newUserAmount = userAmount + amount
+            let newBridgeAmount = bridgeAmount - amount
+
+            if (newBridgeAmount < 0)
+                throw new ContractError("Insufficient balance on the bridge")
+            
+            substate.accounts_change({
+                id : dstAddress,
+                amount : newUserAmount,
+                token : hash,
+            })
+            substate.accounts_change({
+                id : Utils.BRIDGE_ADDRESS,
+                amount : newBridgeAmount,
+                token : hash,
+            })
+            return {
+                amount_changes : [],
+                pos_changes : [],
+                post_action : []
+            }
+        }
+
+        let createToken = async (amount, originalTicker) => {
+            let token_create_object = {
+                type : "create_token",
+                parameters : {
+                    // fee_type : ,
+                    // fee_value : ,
+                    // ticker : "w" + originalTicker,
+                    // decimals : 10,
+                    // total_supply : amount,
+                    // name : "wrapped token",
+                    // minable : 0,
+                    // reissuable : 1,
+                }
+            }
+
+            let token_create_data = cparser.dataFromObject(token_create_object)
+            let token_create_contract = cfactory.createContract(token_create_data)
+
+            let _tx = {
+                amount : tx.amount + BigInt(Utils.CONTRACT_PRICELIST.create_token),
+                from : Utils.BRIDGE_ADDRESS,
+                data : token_create_data,
+                ticker : tx.ticker,
+                to : tx.to
+            }
+            try {
+                return await token_create_contract.execute(_tx, substate)
+            } catch (e) {
+                if (e instanceof ContractError) {
+                    console.log(e)
+                    return {
+                        amount_changes : [],
+                        pos_changes : [],
+                        post_action : []
+                    }
+                } else 
+                    throw e
+            }
+        }
+
+        // TODO - check signatures
+
+        let ticket = this.data.parameters.ticket
+        let {src_address, dst_address, src_network} = ticket
+        let transferred = substate.get_transfer(src_address, dst_address, src_network)
+
+        if (transferred && ticket.nonce !== transferred.nonce + 1)
+            throw new ContractError("Wrong nonce")
+        
+        if (substate.network_id !== ticket.dst_network)
+            throw new ContractError("Wrong network id")
+
+        let res
+        if (ticket.origin_network === ticket.src_network) {
+            let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)
+            if (minted) {
+                await mint_tokens(ticket.amount, minted.wrapped_hash)
+                res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
+            } else {
+                let tokenCreateRes = await createToken(amount)
+                substate.minted_add({
+                    wrapped_hash : tokenCreateRes.token_info.hash, 
+                    origin : ticket.origin_network, 
+                    origin_hash : ticket.origin_hash
+                })
+                res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
+            }
+        } else if (ticket.origin_network === substate.network_id) {
+            res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
+        } else {
+            // nothing
+            throw new ContractError("Wrong ticket.origin_network")
+        }
+        let lastTransfer = substate.get_last_transfer()
+        substate.transfers_add({
+            src_address : ticket.src_address,
+            dst_address : ticket.dst_address,
+            src_network : ticket.src_network,
+            src_hash : ticket.src_hash,
+            nonce : lastTransfer ? lastTransfer.nonce + 1 : 0
+        })
+        return res
+    }
+}
+
 module.exports.Contract = Contract;
 
 module.exports.TokenCreateContract = TokenCreateContract;
 module.exports.TokenMintContract = TokenMintContract;
 module.exports.TokenBurnContract = TokenBurnContract;
+
+module.exports.CrossChainSourceContract = CrossChainSourceContract;
+module.exports.CrossChainDestinationContract = CrossChainDestinationContract;
 
 module.exports.PosCreateContract = PosCreateContract;
 module.exports.PosDelegateContract = PosDelegateContract;

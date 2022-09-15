@@ -97,6 +97,7 @@ let utils = {
 	DEX_SPACE_STATION_ID : config.dex.DEX_SPACE_STATION_ID,
 	DEX_COMMANDER_FEE : BigInt(config.dex.DEX_COMMANDER_FEE),
 	DEX_POOL_FEE : BigInt(config.dex.DEX_POOL_FEE),
+    CONTRACT_PRICELIST : config.contract_pricelist,
 	MINER_INTERVAL : 1000,
 	M_ROOT_RESEND_INTERVAL : 40000,
 	POS_MINER_RESEND_INTERVAL : 30000,
@@ -820,6 +821,13 @@ let utils = {
 		return newtonIteration(value, BigInt(1));
 	}
 };
+
+if (config.bridge.active) {
+    utils.BRIDGE_ACTIVE = true
+    utils.BRIDGE_ADDRESS = config.bridge.address
+    utils.BRIDGE_VALIDATORS = config.bridge.validators
+    utils.BRIDGE_NET_ID = config.bridge.network_id
+}
 
 module.exports = utils;
 module.exports.ECC = ECC;

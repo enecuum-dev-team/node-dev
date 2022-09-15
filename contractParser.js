@@ -33,6 +33,8 @@ let schema = {
     "pool_sell_exact_routed" :  "2000",
     "pool_buy_exact" :          "2100",
     "pool_buy_exact_routed" :   "2200",
+    "token_send_over_bridge" :  "2300",
+    "token_get_over_bridge" :   "2400",
 };
 
 class ContractParser {

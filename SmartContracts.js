@@ -58,6 +58,8 @@ class ContractFactory{
             case "dex_cmd_distribute" :     return new Contracts[idx].DexCmdDistributeContract(data);
             case "pool_sell_exact_routed" : return new Contracts[idx].PoolLiquiditySellExactRoutedContract(data);
             case "pool_buy_exact_routed" :  return new Contracts[idx].PoolLiquidityBuyExactRoutedContract(data);
+            case "token_send_over_bridge" : return new Contracts[idx].CrossChainSourceContract(data);
+            case "token_get_over_bridge" :  return new Contracts[idx].CrossChainDestinationContract(data);
             default :                       return null;
         }
     }

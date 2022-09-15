@@ -133,6 +133,8 @@ class DB {
 			DELETE FROM  undelegates;
 			DELETE FROM  tokens_index;
 			DELETE FROM  dex_pools;
+            DELETE FROM  minted;
+            DELETE FROM  transferred;
 			DELETE FROM  farms;
 			DELETE FROM  farmers`);
 
@@ -198,11 +200,26 @@ class DB {
 				farms_chunks.forEach(chunk => {
 					farms.push(mysql.format("INSERT INTO farms (farm_id, stake_token, reward_token, emission, block_reward, level, total_stake, last_block, accumulator) VALUES ? ", [chunk.map(farm => [farm.farm_id, farm.stake_token, farm.reward_token, farm.emission, farm.block_reward, farm.level , farm.total_stake , farm.last_block, farm.accumulator])]));
 				});
-			}let farmers = [];
+			}
+            let farmers = [];
 			if (snapshot.farmers && snapshot.farmers.length > 0) {
 				let farmers_chunks = snapshot.farmers.chunk(INSERT_CHUNK_SIZE);
 				farmers_chunks.forEach(chunk => {
 					farmers.push(mysql.format("INSERT INTO farmers (farm_id, farmer_id, stake, level) VALUES ? ", [chunk.map(farmer => [farmer.farm_id, farmer.farmer_id, farmer.stake, farmer.level])]));
+				});
+			}
+            let minted = [];
+			if (snapshot.minted && snapshot.minted.length > 0) {
+                let minted_chunks = snapshot.minted.chunk(INSERT_CHUNK_SIZE);
+                minted_chunks.forEach(chunk => {
+					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin, origin_hash) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin, minted.origin_hash])]));
+				});
+			}
+            let transferred = [];
+			if (snapshot.transferred && snapshot.transferred.length > 0) {
+                let transferred_chunks = snapshot.transferred.chunk(INSERT_CHUNK_SIZE);
+                transferred_chunks.forEach(chunk => {
+					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, src_network, src_hash, nonce) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.src_network, transferred.src_hash, transferred.nonce])]));
 				});
 			}
 			let cashier_ptr = mysql.format("INSERT INTO stat (`key`, `value`) VALUES ('cashier_ptr', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(value)", snapshot.kblocks_hash);
@@ -570,12 +587,16 @@ class DB {
 		snapshot.dex_pools = [];
 		snapshot.farms = [];
 		snapshot.farmers = [];
+        snapshot.minted = [];
+        snapshot.transferred = [];
 		let kblock = await this.get_kblock(hash);
 		if(kblock && kblock.length > 0 && kblock[0].n >= this.app_config.FORKS.fork_block_002){
 			snapshot.dex_pools = await this.request(mysql.format("SELECT pair_id, asset_1, volume_1, asset_2, volume_2, pool_fee, token_hash FROM dex_pools ORDER BY pair_id"));
 			snapshot.farms = await this.request(mysql.format("SELECT farm_id, stake_token, reward_token, emission, block_reward, level, total_stake, last_block, accumulator FROM farms ORDER BY farm_id"));
 			snapshot.farmers = await this.request(mysql.format("SELECT farm_id, farmer_id, stake, level FROM farmers ORDER BY farmer_id"));
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
+            snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
+            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY src_address"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
@@ -1434,6 +1455,23 @@ class DB {
 		let res = await this.request(mysql.format('SELECT * FROM ledger WHERE id in (?)', [ids]));
 		return res;
 	}
+
+    async get_minted_all () {
+        return await this.request('SELECT * FROM minted');
+    }
+    async get_minted (wrapped_hash) {
+        if (!wrapped_hash)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash]));
+    }
+    async get_transferred_all () {
+        return await this.request('SELECT * FROM transferred');
+    }
+    async get_transferred (src_address, dst_address, src_network) {
+        if (!src_address || !dst_address || !src_network)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM transferred WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
+    }
 
 	async get_farms(ids){
 		if(!ids.length)
