@@ -107,7 +107,7 @@ class Substate {
         this.farmers = await this.db.get_farmers_by_farmer(this.farmers);
 
         this.minted = await this.db.get_minted_all();
-        this.transferred = await this.db.get_minted_all();
+        this.transferred = await this.db.get_transferred_all();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -282,12 +282,15 @@ class Substate {
             }
                 break;
             case "token_send_over_bridge" : {
+                this.tokens.push(contract.data.parameters.hash)
+                this.accounts.push(tx.from)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
             }
                 break;
             case "token_get_over_bridge" : {
-                this.validators = Utils.BRIDGE_VALIDATORS
-                this.network_id = Utils.BRIDGE_NET_ID
+                this.minted.push(contract.data.parameters.origin_hash)
+                this.tokens.push(contract.data.parameters.origin_hash)
+                this.accounts.push(contract.data.parameters.src_address)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
             }
                 break;

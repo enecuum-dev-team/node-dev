@@ -2301,7 +2301,7 @@ class CrossChainSourceContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            dst_address : cTypes.hexStr64,
+            dst_address : cTypes.hexStr66,
             dst_network : cTypes.hexStr64,
             amount : cTypes.bigInt,
             hash : cTypes.hexStr64
@@ -2408,36 +2408,18 @@ class CrossChainDestinationContract extends Contract {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
 
-        let validateTicket = (ticket) => {
-            let ticketModel = {
-                dst_address : cTypes.hexStr64,
-                dst_network : cTypes.hexStr64,
-                amount : cTypes.bigInt,
-                src_hash : cTypes.hexStr64,
-                src_address : cTypes.hexStr64,
-                src_network : cTypes.hexStr64,
-                origin_hash : cTypes.hexStr64,
-                origin_network : cTypes.hexStr64,
-                nonce : cTypes.number
-            }
-            return cValidate(ticket, ticketModel)
-        }
-        let validateSignatures = (signatures) => {
-            let signatureModel = {
-                validator_id : cTypes.hexStr64,
-                validator_sign : cTypes.hexStr64
-            }
-            return signatures.every(signature => cValidate(signature, signatureModel))
-        }
         let paramsModel = {
-            ticket : cTypes.obj,
-            signatures : cTypes.array
+            dst_address : cTypes.hexStr64,
+            dst_network : cTypes.hexStr64,
+            amount : cTypes.bigInt,
+            src_hash : cTypes.hexStr64,
+            src_address : cTypes.hexStr64,
+            src_network : cTypes.hexStr64,
+            origin_hash : cTypes.hexStr64,
+            origin_network : cTypes.hexStr64,
+            nonce : cTypes.number
         }
-        if (cValidate(this.data.parameters, paramsModel)) {
-            validateTicket(this.data.parameters.ticket)
-            validateSignatures(this.data.parameters.signatures)
-        }
-        return true
+        return cValidate(this.data.parameters, paramsModel)
     }
 
     async execute(tx, substate, kblock) {
@@ -2478,8 +2460,8 @@ class CrossChainDestinationContract extends Contract {
         let transfer = (hash, amount, dstAddress) => {
             let userAmount = substate.get_balance(dstAddress, hash).amount
             let bridgeAmount = substate.get_balance(Utils.BRIDGE_ADDRESS, hash).amount
-            let newUserAmount = userAmount + amount
-            let newBridgeAmount = bridgeAmount - amount
+            let newUserAmount = BigInt(userAmount) + amount
+            let newBridgeAmount = BigInt(bridgeAmount) - amount
 
             if (newBridgeAmount < 0)
                 throw new ContractError("Insufficient balance on the bridge")
@@ -2543,7 +2525,7 @@ class CrossChainDestinationContract extends Contract {
 
         // TODO - check signatures
 
-        let ticket = this.data.parameters.ticket
+        let ticket = this.data.parameters
         let {src_address, dst_address, src_network} = ticket
         let transferred = substate.get_transfer(src_address, dst_address, src_network)
 

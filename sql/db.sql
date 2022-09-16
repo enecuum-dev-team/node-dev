@@ -513,4 +513,24 @@ CREATE TABLE `undelegates` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+DROP TABLE IF EXISTS `minted`;
+
+CREATE TABLE `minted` (
+  `wrapped_hash` varchar(64) NOT NULL,
+  `origin` varchar(64) NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`wrapped_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `transferred`;
+
+CREATE TABLE `transferred` (
+  `nonce` bigint(20) NOT NULL,
+  `src_address` varchar(64) NOT NULL,
+  `dst_address` varchar(64) NOT NULL,
+  `src_network` varchar(64) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`nonce`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 -- Dump completed on 2020-04-14 15:09:51

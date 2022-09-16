@@ -596,7 +596,7 @@ class DB {
 			snapshot.farmers = await this.request(mysql.format("SELECT farm_id, farmer_id, stake, level FROM farmers ORDER BY farmer_id"));
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
             snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
-            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY src_address"));
+            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY nonce"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
