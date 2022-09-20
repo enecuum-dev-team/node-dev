@@ -385,6 +385,12 @@ class Substate {
         let len = this.transferred.length
         return len ? this.transferred[len - 1] : null
     }
+    transfers_add (changes) {
+        if (this.get_transferred(changes.src_address, changes.dst_address, changes.src_network))
+            throw new ContractError(`Bridge tx has already transferred`)
+        changes.changed = true
+        this.transferred.push(changes)
+    }
     minted_add (changes) {
         if (this.get_minted_token(changes.wrapped_hash))
             throw new ContractError(`Token ${changes.wrapped_hash} is already minted`)

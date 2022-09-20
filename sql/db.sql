@@ -526,8 +526,8 @@ DROP TABLE IF EXISTS `transferred`;
 
 CREATE TABLE `transferred` (
   `nonce` bigint(20) NOT NULL,
-  `src_address` varchar(64) NOT NULL,
-  `dst_address` varchar(64) NOT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
   `src_network` varchar(64) NOT NULL,
   `src_hash` varchar(64) NOT NULL,
   PRIMARY KEY (`nonce`)

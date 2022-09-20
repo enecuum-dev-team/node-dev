@@ -1,3 +1,5 @@
+const zlib = require("zlib")
+
 let schema = {
     "root" :            "0000",
     "custom" :          "0100",
@@ -73,6 +75,7 @@ class ContractParser {
     }
     // TODO: possible false-positive results because of data field format
     isContract(raw) {
+        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64")).toString();
         if(raw === undefined || raw === null)
             return false;
         let chunk = this.getChunk(raw);
@@ -105,9 +108,10 @@ class ContractParser {
             //let type = (typeof obj.parameters[param] === "string") ? "string" : "int";
             res.parameters.push({key : param, [type] : obj.parameters[param]})
         }
-        return this.serialize_object({
+        let serialized = this.serialize_object({
             [obj.type] : res
         });
+        return zlib.brotliCompressSync(serialized).toString("base64");
     }
     serialize_object(obj){
         let binary = "";
@@ -174,6 +178,7 @@ class ContractParser {
         return res;
     }
     parse(raw){
+        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64")).toString();
         let data = {};
         let input = (this.deserialize(raw))[0];
         data.type = input[0];

@@ -1118,7 +1118,15 @@ class DB {
 		if(substate.tokens.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO tokens (`hash`, `owner`, `fee_type`, `fee_value`, `fee_min`, `ticker`, `caption`, `decimals`, `total_supply`, `reissuable`, `minable`, `max_supply`, `block_reward`, `min_stake`, `referrer_stake`, `ref_share`) VALUES ? ON DUPLICATE KEY UPDATE `total_supply` = VALUES(total_supply)", [substate.tokens.map(a => [a.hash, a.owner, a.fee_type, a.fee_value, a.fee_min, a.ticker, a.caption, a.decimals, a.total_supply, a.reissuable, a.minable, a.max_supply, a.block_reward, a.min_stake, a.referrer_stake, a.ref_share ])]));
 
-		substate.poses = substate.poses.filter(a => a.changed === true);
+		substate.transferred = substate.transferred.filter(a => a.changed === true);
+        if(substate.transferred.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `src_network`, `src_hash`, `nonce`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.src_network, a.src_hash, a.nonce])]));
+    
+        substate.minted = substate.minted.filter(a => a.changed === true);
+        if(substate.minted.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin, a.origin_hash])]));
+
+        substate.poses = substate.poses.filter(a => a.changed === true);
 		if(substate.poses.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO poses (`id`, `owner`, `fee`, `name`) VALUES ? ", [substate.poses.map(a => [a.id, a.owner, a.fee, a.name])]));
 

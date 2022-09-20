@@ -2347,8 +2347,8 @@ class CrossChainSourceContract extends Contract {
         let lock_tokens = async (hash, amount) => {
             let userAmount = substate.get_balance(tx.from, hash).amount
             let bridgeAmount = substate.get_balance(Utils.BRIDGE_ADDRESS, hash).amount
-            let newUserAmount = userAmount - amount
-            let newBridgeAmount = bridgeAmount + amount
+            let newUserAmount = BigInt(userAmount) - amount
+            let newBridgeAmount = BigInt(bridgeAmount) + amount
 
             if (newUserAmount < 0)
                 throw new ContractError(`Insufficient balance on the ${tx.from}`)
@@ -2383,7 +2383,7 @@ class CrossChainSourceContract extends Contract {
         } else {
             res = await lock_tokens(data.hash, data.amount)
         }
-        let lastTransfer = substate.get_last_transfer()
+        let lastTransfer = substate.get_last_transferred()
         substate.transfers_add({
             src_address : tx.from,
             dst_address : data.dst_address,
@@ -2409,16 +2409,17 @@ class CrossChainDestinationContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            dst_address : cTypes.hexStr64,
+            dst_address : cTypes.hexStr66,
             dst_network : cTypes.hexStr64,
             amount : cTypes.bigInt,
             src_hash : cTypes.hexStr64,
-            src_address : cTypes.hexStr64,
+            src_address : cTypes.hexStr66,
             src_network : cTypes.hexStr64,
             origin_hash : cTypes.hexStr64,
             origin_network : cTypes.hexStr64,
             nonce : cTypes.number
         }
+
         return cValidate(this.data.parameters, paramsModel)
     }
 
@@ -2527,12 +2528,12 @@ class CrossChainDestinationContract extends Contract {
 
         let ticket = this.data.parameters
         let {src_address, dst_address, src_network} = ticket
-        let transferred = substate.get_transfer(src_address, dst_address, src_network)
+        let transferred = substate.get_transferred(src_address, dst_address, src_network)
 
         if (transferred && ticket.nonce !== transferred.nonce + 1)
             throw new ContractError("Wrong nonce")
         
-        if (substate.network_id !== ticket.dst_network)
+        if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
             throw new ContractError("Wrong network id")
 
         let res
@@ -2550,13 +2551,13 @@ class CrossChainDestinationContract extends Contract {
                 })
                 res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
             }
-        } else if (ticket.origin_network === substate.network_id) {
+        } else if (ticket.origin_network === Utils.BRIDGE_NET_ID) {
             res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
         } else {
             // nothing
             throw new ContractError("Wrong ticket.origin_network")
         }
-        let lastTransfer = substate.get_last_transfer()
+        let lastTransfer = substate.get_last_transferred()
         substate.transfers_add({
             src_address : ticket.src_address,
             dst_address : ticket.dst_address,
