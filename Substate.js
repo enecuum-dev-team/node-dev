@@ -284,6 +284,7 @@ class Substate {
             case "token_send_over_bridge" : {
                 this.tokens.push(contract.data.parameters.hash)
                 this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
             }
                 break;
@@ -386,7 +387,8 @@ class Substate {
         return len ? this.transferred[len - 1] : null
     }
     transfers_add (changes) {
-        if (this.get_transferred(changes.src_address, changes.dst_address, changes.src_network))
+        let data = this.transferred.find(el => Number(el.nonce) === changes.nonce)
+        if (data)
             throw new ContractError(`Bridge tx has already transferred`)
         changes.changed = true
         this.transferred.push(changes)

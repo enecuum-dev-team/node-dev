@@ -1,4 +1,4 @@
-const zlib = require("zlib")
+// const zlib = require("zlib")
 
 let schema = {
     "root" :            "0000",
@@ -65,17 +65,18 @@ class ContractParser {
         return marker;
     }
     getChunk(bin){
-        let size = parseInt(bin.substring(0, 4), 16);
-        let key = this.getkey(this.schema, bin.substring(4,8));
+        // let size = parseInt(bin.substring(0, 4), 16);
+        let size = parseInt(bin.slice(0, 2).toString("hex"), 16);
+        let key = this.getkey(this.schema, bin.slice(2, 4).toString("hex"));
         return {
             size : size,
             key : key,
-            data : bin.substr(8, size - 8)
+            data : bin.slice(4, size)
         }
     }
     // TODO: possible false-positive results because of data field format
     isContract(raw) {
-        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64")).toString();
+        // raw = zlib.brotliDecompressSync(Buffer.from(raw));
         if(raw === undefined || raw === null)
             return false;
         let chunk = this.getChunk(raw);
@@ -87,51 +88,72 @@ class ContractParser {
         return Object.keys(object).find(key => object[key] === value);
     }
 
-    dataFromObject(obj){
-        let res = {
-            parameters : []
-        };
-        for(let param in obj.parameters){
-
+    dataFromNestedObj(obj){
+        let res = []
+        for(let param in obj){
             let type = undefined;
-            switch (typeof obj.parameters[param]){
+            switch (typeof obj[param]){
                 case "bigint" : {
                     type = "bigint";
                     break;
                 }
                 case "string" : {
-                    type = "string";
+                    let value = obj[param]
+                    if (/^(?=[0-9a-fA-F]*$)(?:.{64}|.{66})$/.test(value)) {
+                        type = "hash";
+                        break;
+                    } else {
+                        type = "string";
+                        break;
+                    }
+                }
+                case "object" : {
+                    type = "object";
+                    obj[param] = this.dataFromNestedObj(obj[param])
                     break;
                 }
                 default : type = "int";
             }
-            //let type = (typeof obj.parameters[param] === "string") ? "string" : "int";
-            res.parameters.push({key : param, [type] : obj.parameters[param]})
+            //let type = (typeof obj[param] === "string") ? "string" : "int";
+            res.push({key : param, [type] : obj[param]})
         }
+        return res
+    }
+    dataFromObject(obj){
+        let res = {
+            parameters : []
+        };
+        res.parameters = this.dataFromNestedObj(obj.parameters)
         let serialized = this.serialize_object({
             [obj.type] : res
         });
-        return zlib.brotliCompressSync(serialized).toString("base64");
+        // return zlib.brotliCompressSync(serialized)
+        return serialized
     }
-    serialize_object(obj){
-        let binary = "";
-        if((!(Array.isArray(obj))) && (typeof obj !== "object"))
-            return obj.toString();
-
+    serialize_object(obj, objKey){
+        let binary = Buffer.alloc(0);
+        if((!(Array.isArray(obj))) && (typeof obj !== "object")) {
+            if (objKey === "hash")
+                return Buffer.from(obj, "hex");
+            return Buffer.from(obj.toString());
+        }
         if(Array.isArray(obj)){
             for (let el of obj){
                 let res = this.serialize_object(el);
-                binary += res;
+                binary = Buffer.concat([binary, res]);
             }
         }
         else {
             for (let key in obj) {
                 let code = this.schema[key];
-                let res = this.serialize_object(obj[key]);
-                binary += this.sizeMarker(res.length + 8) + code + res;
+                let res = this.serialize_object(obj[key], key);
+                binary = Buffer.concat([binary, Buffer.from(this.sizeMarker(res.length + 4), "hex"), Buffer.from(code, "hex"), res]);
             }
         }
         return binary;
+    }
+    fromBuffer(key, data){
+        return data.toString(key === "hash" ? "hex" : undefined)
     }
     deserialize(bin){
         let arr = [];
@@ -141,16 +163,18 @@ class ContractParser {
                 if((!this.contract_pricelist.hasOwnProperty(chunk.key))
                     && (chunk.key !== "parameters")
                     && (chunk.key !== "object")){
-                    arr.push([chunk.key, chunk.data]);
+                    arr.push([chunk.key, this.fromBuffer(chunk.key, chunk.data)]);
                     return arr;
                 }
-                bin = bin.substring(8, bin.length);
+                bin = bin.slice(4, bin.length);
             }
-            if(bin.length > chunk.size)
-                arr.push([chunk.key, chunk.data]);
-            else
+            if (chunk.key === "object") {
+                arr.push([chunk.key, this.deserialize(chunk.data)])
+            } else if (bin.length > chunk.size) {
+                arr.push([chunk.key, this.fromBuffer(chunk.key, chunk.data)]);
+            } else
                 arr.push([chunk.key, this.deserialize(chunk.data)]);
-            bin = bin.substring(chunk.size);
+            bin = bin.slice(chunk.size);
         }
         return arr;
     }
@@ -177,8 +201,31 @@ class ContractParser {
             return arr;
         return res;
     }
+    parseNestedObj(obj){
+        let res = {}
+        for(let i = 0; i < obj.length; i+=2) {
+            let value = (Object.keys(obj[i+1]))[0];
+            let insideVal = obj[i+1][value];
+            if(value === "int" || value === "bigint" || value === "float") {
+                if(value === "bigint") {
+                    value = BigInt(insideVal);
+                }
+                else {
+                    if(isNaN(insideVal))
+                        throw new Error("Not a number");
+                    value = parseInt(insideVal);
+                }
+            }
+            else if (value === "object") {
+                value = this.parseNestedObj(insideVal);
+            } else
+                value = insideVal;
+            res[obj[i].key] = value;
+        }
+        return res;
+    }
     parse(raw){
-        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64")).toString();
+        // raw = zlib.brotliDecompressSync(Buffer.from(raw));
         let data = {};
         let input = (this.deserialize(raw))[0];
         data.type = input[0];
@@ -186,22 +233,8 @@ class ContractParser {
         //data.procedure_name = input[0].procedure_name;
         let params = input[0].parameters;
         data.parameters = {};
-        for(let i = 0; i < params.length; i+=2){
-            let value = (Object.keys(params[i+1]))[0];
-            if(value === "int" || value === "bigint" || value === "float"){
-                if(value === "bigint"){
-                    value = BigInt(params[i+1][value]);
-                }
-                else {
-                    if(isNaN(params[i+1][value]))
-                        throw new Error("Not a number");
-                    value = parseInt(params[i+1][value]);
-                }
-            }
-            else
-                value = params[i+1][value];
-            data.parameters[params[i].key] = value;
-        }
+        data.parameters = this.parseNestedObj(params);
+        console.log(data)
         return data;
     }
 }

@@ -2299,14 +2299,17 @@ class CrossChainSourceContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-
         let paramsModel = {
             dst_address : cTypes.hexStr66,
             dst_network : cTypes.hexStr64,
             amount : cTypes.bigInt,
             hash : cTypes.hexStr64
         }
-        return cValidate(this.data.parameters, paramsModel)
+        try {
+            return cValidate(this.data.parameters, paramsModel)
+        } catch (e) {
+            console.log(e)
+        }
     }
     
     async execute(tx, substate, kblock) {
@@ -2372,7 +2375,6 @@ class CrossChainSourceContract extends Contract {
 
         let data = this.data.parameters
         let wrappedToken = substate.get_minted_token(data.hash)
-
         let res
         if (wrappedToken) {
             if (data.dst_network === wrappedToken.origin_hash) {
@@ -2389,7 +2391,7 @@ class CrossChainSourceContract extends Contract {
             dst_address : data.dst_address,
             src_network : Utils.BRIDGE_NET_ID,
             src_hash : data.hash,
-            nonce : lastTransfer ? lastTransfer.nonce + 1 : 0
+            nonce : lastTransfer ? Number(lastTransfer.nonce) + 1 : 0
         })
         return res
     }
@@ -2423,7 +2425,7 @@ class CrossChainDestinationContract extends Contract {
         return cValidate(this.data.parameters, paramsModel)
     }
 
-    async execute(tx, substate, kblock) {
+    async execute(tx, substate, kblock, config) {
         let mint_tokens = async (hash, amount) => {
             let mint_object = {
                 type : "mint",
@@ -2488,26 +2490,33 @@ class CrossChainDestinationContract extends Contract {
             let token_create_object = {
                 type : "create_token",
                 parameters : {
-                    // fee_type : ,
-                    // fee_value : ,
-                    // ticker : "w" + originalTicker,
-                    // decimals : 10,
-                    // total_supply : amount,
-                    // name : "wrapped token",
-                    // minable : 0,
-                    // reissuable : 1,
+                    fee_type : 2,
+                    fee_value : 100000000n,
+                    fee_min : 100000000n,
+                    ticker : "WRPD",
+                    decimals : 10n,
+                    total_supply : BigInt(amount),
+                    max_supply : BigInt(amount),
+                    name : "wrapped token",
+                    minable : 0,
+                    reissuable : 1,
+                    referrer_stake : 0n,
+                    ref_share : 0n,
+                    block_reward : 0n,
+                    min_stake : 0n,
                 }
             }
-
+            let cfactory = new ContractMachine.ContractFactory(config)
+            let cparser = new ContractParser(config)
             let token_create_data = cparser.dataFromObject(token_create_object)
             let token_create_contract = cfactory.createContract(token_create_data)
-
             let _tx = {
-                amount : tx.amount + BigInt(Utils.CONTRACT_PRICELIST.create_token),
+                amount : BigInt(Utils.CONTRACT_PRICELIST.create_token),
                 from : Utils.BRIDGE_ADDRESS,
                 data : token_create_data,
                 ticker : tx.ticker,
-                to : tx.to
+                to : tx.to,
+                hash : tx.hash
             }
             try {
                 return await token_create_contract.execute(_tx, substate)
@@ -2525,17 +2534,15 @@ class CrossChainDestinationContract extends Contract {
         }
 
         // TODO - check signatures
-
         let ticket = this.data.parameters
         let {src_address, dst_address, src_network} = ticket
         let transferred = substate.get_transferred(src_address, dst_address, src_network)
-
-        if (transferred && ticket.nonce !== transferred.nonce + 1)
+        if (transferred && ticket.nonce !== Number(transferred.nonce) + 1)
             throw new ContractError("Wrong nonce")
         
         if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
             throw new ContractError("Wrong network id")
-
+        
         let res
         if (ticket.origin_network === ticket.src_network) {
             let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)
@@ -2543,16 +2550,20 @@ class CrossChainDestinationContract extends Contract {
                 await mint_tokens(ticket.amount, minted.wrapped_hash)
                 res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
             } else {
-                let tokenCreateRes = await createToken(amount)
-                substate.minted_add({
-                    wrapped_hash : tokenCreateRes.token_info.hash, 
-                    origin : ticket.origin_network, 
-                    origin_hash : ticket.origin_hash
-                })
-                res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
+                let tokenCreateRes = await createToken(ticket.amount)
+                try {
+                    substate.minted_add({
+                        wrapped_hash : tokenCreateRes.token_info.hash, 
+                        origin : ticket.origin_network, 
+                        origin_hash : ticket.origin_hash
+                    })
+                    res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)
+                } catch (err) {
+                    console.log(err)
+                }
             }
         } else if (ticket.origin_network === Utils.BRIDGE_NET_ID) {
-            res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
+            res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
         } else {
             // nothing
             throw new ContractError("Wrong ticket.origin_network")
@@ -2563,7 +2574,7 @@ class CrossChainDestinationContract extends Contract {
             dst_address : ticket.dst_address,
             src_network : ticket.src_network,
             src_hash : ticket.src_hash,
-            nonce : lastTransfer ? lastTransfer.nonce + 1 : 0
+            nonce : lastTransfer ? Number(lastTransfer.nonce) + 1 : 0
         })
         return res
     }

@@ -1480,6 +1480,11 @@ class DB {
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
     }
+    async get_transferred_by_nonce (nonce) {
+        if (!nonce)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM transferred WHERE nonce = ?', [nonce]));
+    }
 
 	async get_farms(ids){
 		if(!ids.length)
