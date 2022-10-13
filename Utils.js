@@ -368,11 +368,11 @@ let utils = {
 			}
 
 			mblock.txs = mblock.txs.filter((tx)=>{
-				if(this.blacklist.includes(tx.from)){
+				if(this.blacklist.includes(tx.from) || this.blacklist.includes(tx.to)){
 					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} blacklisted address`);
 					return false;
 				}
-				if(this.locklist.includes(tx.from)){
+				if(this.locklist.includes(tx.from) || this.locklist.includes(tx.from)){
 					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} locklisted address`);
 					return false;
 				}
