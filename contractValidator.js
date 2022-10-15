@@ -28,6 +28,15 @@ const cTypes = {
         type : "string", 
         regexp : /^[0-9a-fA-F]{66}$/i
     },
+    hexStr142 : {
+        id : 0x6, 
+        type : "string",
+        regexp : /^[0-9a-fA-F]{142}$/i
+    },
+    str : {
+        id : 0x7, 
+        type : "string"
+    }
 } 
 
 module.exports = {
@@ -35,7 +44,7 @@ module.exports = {
     cValidate : (params, paramsModel) => {
         let compareTypes = (param, paramModel) => {
             if (typeof param !== paramModel.type)
-                throw new ContractError(`Incorrect parameter '${key}' type. Must be ${cTypes.hexStr64.type}.`)
+                throw new ContractError(`Incorrect parameter '${key}' type.`)
         }
 
         for (let key in paramsModel) {
@@ -69,6 +78,10 @@ module.exports = {
                 compareTypes(param, paramModel)
                 if (!paramModel.validate(param))
                     throw new ContractError(`Incorrect parameter '${key}' type. Must be object.`)
+            }
+
+            if (paramModel.id === cTypes.str.id) {
+                compareTypes(param, paramModel)
             }
         }
 

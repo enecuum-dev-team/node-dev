@@ -382,14 +382,19 @@ class Substate {
             return null
         return this.transferred.find(tranfer => tranfer.src_address === src_address && tranfer.dst_address === dst_address && tranfer.src_network === src_network)
     }
+    get_transferred_by_id(id) {
+        if(!id)
+            return null
+        return this.transferred.find(tranfer => tranfer.transfer_id === id)
+    }
     get_last_transferred () {
         let len = this.transferred.length
         return len ? this.transferred[len - 1] : null
     }
     transfers_add (changes) {
-        let data = this.transferred.find(el => Number(el.nonce) === changes.nonce)
+        let data = this.transferred.find(el => Number(el.nonce) === changes.nonce || el.transfer_id === changes.transfer_id)
         if (data)
-            throw new ContractError(`Bridge tx has already transferred`)
+            throw new ContractError(`Bridge tx has already initialized`)
         changes.changed = true
         this.transferred.push(changes)
     }

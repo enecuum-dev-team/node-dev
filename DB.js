@@ -219,7 +219,7 @@ class DB {
 			if (snapshot.transferred && snapshot.transferred.length > 0) {
                 let transferred_chunks = snapshot.transferred.chunk(INSERT_CHUNK_SIZE);
                 transferred_chunks.forEach(chunk => {
-					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, src_network, src_hash, nonce) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.src_network, transferred.src_hash, transferred.nonce])]));
+					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, src_network, src_hash, nonce, transfer_id, ticker) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker])]));
 				});
 			}
 			let cashier_ptr = mysql.format("INSERT INTO stat (`key`, `value`) VALUES ('cashier_ptr', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(value)", snapshot.kblocks_hash);
@@ -596,7 +596,7 @@ class DB {
 			snapshot.farmers = await this.request(mysql.format("SELECT farm_id, farmer_id, stake, level FROM farmers ORDER BY farmer_id"));
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
             snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
-            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY nonce"));
+            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY transfer_id"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
@@ -1118,15 +1118,15 @@ class DB {
 		if(substate.tokens.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO tokens (`hash`, `owner`, `fee_type`, `fee_value`, `fee_min`, `ticker`, `caption`, `decimals`, `total_supply`, `reissuable`, `minable`, `max_supply`, `block_reward`, `min_stake`, `referrer_stake`, `ref_share`) VALUES ? ON DUPLICATE KEY UPDATE `total_supply` = VALUES(total_supply)", [substate.tokens.map(a => [a.hash, a.owner, a.fee_type, a.fee_value, a.fee_min, a.ticker, a.caption, a.decimals, a.total_supply, a.reissuable, a.minable, a.max_supply, a.block_reward, a.min_stake, a.referrer_stake, a.ref_share ])]));
 
-		substate.transferred = substate.transferred.filter(a => a.changed === true);
+        substate.transferred = substate.transferred.filter(a => a.changed === true);
         if(substate.transferred.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `src_network`, `src_hash`, `nonce`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.src_network, a.src_hash, a.nonce])]));
+            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker])]));
     
         substate.minted = substate.minted.filter(a => a.changed === true);
         if(substate.minted.length > 0)
             state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin, a.origin_hash])]));
-
-        substate.poses = substate.poses.filter(a => a.changed === true);
+    
+		substate.poses = substate.poses.filter(a => a.changed === true);
 		if(substate.poses.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO poses (`id`, `owner`, `fee`, `name`) VALUES ? ", [substate.poses.map(a => [a.id, a.owner, a.fee, a.name])]));
 
@@ -1480,10 +1480,10 @@ class DB {
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
     }
-    async get_transferred_by_nonce (nonce) {
-        if (!nonce)
+    async get_transferred_by_id (id) {
+        if (!id)
             return [];
-        return await this.request(mysql.format('SELECT * FROM transferred WHERE nonce = ?', [nonce]));
+        return await this.request(mysql.format('SELECT * FROM transferred WHERE transfer_id = ?', [id]));
     }
 
 	async get_farms(ids){

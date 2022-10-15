@@ -530,7 +530,9 @@ CREATE TABLE `transferred` (
   `dst_address` varchar(66) NOT NULL,
   `src_network` varchar(64) NOT NULL,
   `src_hash` varchar(64) NOT NULL,
-  PRIMARY KEY (`nonce`)
+  `transfer_id` varchar(64) NOT NULL,
+  `ticker` varchar(10) DEFAULT NULL
+  PRIMARY KEY (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dump completed on 2020-04-14 15:09:51
