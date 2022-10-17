@@ -135,6 +135,7 @@ class DB {
 			DELETE FROM  dex_pools;
             DELETE FROM  minted;
             DELETE FROM  transferred;
+            DELETE FROM  confirmations;
 			DELETE FROM  farms;
 			DELETE FROM  farmers`);
 
@@ -222,6 +223,14 @@ class DB {
 					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, src_network, src_hash, nonce, transfer_id, ticker) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker])]));
 				});
 			}
+            let confirmations = [];
+            if (snapshot.confirmations && snapshot.confirmations.length > 0) {
+                let confirmations_chunks = snapshot.confirmations.chunk(INSERT_CHUNK_SIZE);
+                confirmations_chunks.forEach(chunk => {
+					confirmations.push(mysql.format("INSERT INTO confirmations (validator_id, validator_sign, transfer_id) VALUES ? ", [chunk.map(confirmations => [confirmations.validator_id, confirmations.validator_sign, confirmations.transfer_id])]));
+				});
+			}
+
 			let cashier_ptr = mysql.format("INSERT INTO stat (`key`, `value`) VALUES ('cashier_ptr', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(value)", snapshot.kblocks_hash);
             //let unlock = mysql.format(`UNLOCK TABLES`);
 			let sql_put_snapshot = "";
@@ -589,6 +598,7 @@ class DB {
 		snapshot.farmers = [];
         snapshot.minted = [];
         snapshot.transferred = [];
+        snapshot.confirmations = [];
 		let kblock = await this.get_kblock(hash);
 		if(kblock && kblock.length > 0 && kblock[0].n >= this.app_config.FORKS.fork_block_002){
 			snapshot.dex_pools = await this.request(mysql.format("SELECT pair_id, asset_1, volume_1, asset_2, volume_2, pool_fee, token_hash FROM dex_pools ORDER BY pair_id"));
@@ -597,6 +607,7 @@ class DB {
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
             snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
             snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY transfer_id"));
+            snapshot.confirmations = await this.request(mysql.format("SELECT * FROM confirmations ORDER BY transfer_id"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
@@ -1122,6 +1133,10 @@ class DB {
         if(substate.transferred.length > 0)
             state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker])]));
     
+        substate.confirmations = substate.confirmations.filter(a => a.changed === true);
+        if(substate.confirmations.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO confirmations (`validator_id`, `validator_sign`, `transfer_id`) VALUES ?", [substate.confirmations.map(a => [a.validator_id, a.validator_sign, a.transfer_id])]));
+
         substate.minted = substate.minted.filter(a => a.changed === true);
         if(substate.minted.length > 0)
             state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin, a.origin_hash])]));
@@ -1474,6 +1489,9 @@ class DB {
     }
     async get_transferred_all () {
         return await this.request('SELECT * FROM transferred');
+    }
+    async get_confirmations_all () {
+        return await this.request('SELECT * FROM confirmations');
     }
     async get_transferred (src_address, dst_address, src_network) {
         if (!src_address || !dst_address || !src_network)

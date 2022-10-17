@@ -535,4 +535,14 @@ CREATE TABLE `transferred` (
   PRIMARY KEY (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
+DROP TABLE IF EXISTS `confirmations`;
+
+CREATE TABLE `confirmations` (
+  `validator_id` varchar(64) NOT NULL,
+  `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
+  `transfer_id` varchar(64) NOT NULL,
+  PRIMARY KEY (`transfer_id`, `validator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+
 -- Dump completed on 2020-04-14 15:09:51

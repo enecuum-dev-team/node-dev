@@ -2408,8 +2408,12 @@ class ClaimInitContract extends Contract {
     }
     
     async execute(tx, substate, kblock, config) {
-        //check nonce
+        let last_t = substate.get_last_transferred()
+        if (last_t === null)
+            last_t = {nonce : 0}
         let data = this.data.parameters
+        if (Number(last_t.nonce) + 1 !== data.nonce)
+            throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
         substate.transfers_add({
             src_address : data.src_address,
             dst_address : data.dst_address,
@@ -2450,12 +2454,18 @@ class ClaimConfirmContract extends Contract {
     }
 
     async execute(tx, substate, kblock, config) {
-        let confirmations = substate.add_confirmation(this.data.parameters)
+        let data = this.data.parameters
+        if (!Utils.VALIDATORS.find(id => id === data.validator_id))
+            throw new ContractError(`Unknown validator: ${data.validator_id}`)
+        if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
+            throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
+
+        let confirmations = substate.add_confirmation(data)
         if (confirmations === Utils.BRIDGE_THRESHOLD) {
             let claim_object = {
                 type : "claim",
                 parameters : {
-                    transfer_id : this.data.parameters.transfer_id
+                    transfer_id : data.transfer_id
                 }
             }
 
@@ -2547,14 +2557,8 @@ class ClaimContract extends Contract {
         }
 
         let transfer = (hash, amount, dstAddress) => {
-            let userAmount = substate.get_balance(dstAddress, hash).amount
-            let bridgeAmount = substate.get_balance(Utils.BRIDGE_ADDRESS, hash).amount
-            let newUserAmount = BigInt(userAmount) + amount
-            let newBridgeAmount = BigInt(bridgeAmount) - amount
-
-            if (newBridgeAmount < 0)
-                throw new ContractError("Insufficient balance on the bridge")
-            
+            let newUserAmount = amount
+            let newBridgeAmount = -amount
             substate.accounts_change({
                 id : dstAddress,
                 amount : newUserAmount,
@@ -2619,7 +2623,6 @@ class ClaimContract extends Contract {
             }
         }
 
-        // TODO - check signatures
         let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
         
         if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
@@ -2660,6 +2663,7 @@ module.exports.TokenBurnContract = TokenBurnContract;
 module.exports.CrossChainSourceContract = CrossChainSourceContract;
 module.exports.ClaimInitContract = ClaimInitContract;
 module.exports.ClaimConfirmContract = ClaimConfirmContract;
+module.exports.ClaimContract = ClaimContract;
 
 module.exports.PosCreateContract = PosCreateContract;
 module.exports.PosDelegateContract = PosDelegateContract;

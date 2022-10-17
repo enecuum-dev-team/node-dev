@@ -38,6 +38,7 @@ class Substate {
         this.farmers = [];
         this.minted = [];
         this.transferred = [];
+        this.confirmations = [];
     }
     async loadState(){
         this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
@@ -108,6 +109,7 @@ class Substate {
 
         this.minted = await this.db.get_minted_all();
         this.transferred = await this.db.get_transferred_all();
+        this.confirmations = await this.db.get_confirmations_all();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -130,6 +132,7 @@ class Substate {
         this.farmers = state.farmers.map(a => Object.assign({}, a));
         this.minted = state.minted.map(a => Object.assign({}, a));
         this.transferred = state.transferred.map(a => Object.assign({}, a));
+        this.confirmations = state.confirmations.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
         let type = contract.type;
@@ -397,6 +400,19 @@ class Substate {
             throw new ContractError(`Bridge tx has already initialized`)
         changes.changed = true
         this.transferred.push(changes)
+    }
+    add_confirmation (changes) {
+        if (!changes.validator_id || !changes.validator_sign || !changes.transfer_id) 
+            return null
+        if (this.confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.transfer_id === changes.transfer_id))
+            throw new ContractError(`Validator has already confirm transfer: ${changes.transfer_id}`)
+        changes.changed = true
+        this.confirmations.push(changes)
+        return this.confirmations.reduce((prev, cur) => {
+            if (cur.transfer_id === changes.transfer_id)
+                ++prev
+            return prev
+        }, 0)
     }
     minted_add (changes) {
         if (this.get_minted_token(changes.wrapped_hash))
