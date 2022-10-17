@@ -160,8 +160,8 @@ let utils = {
 		for(let i = 0; i < len; i++){
 			let value = Object.values(param_obj)[i];
 			const parsed = parseInt(value, 10);
-  			if (isNaN(parsed) || parsed < 0) 
-  				return false; 
+  			if (isNaN(parsed) || parsed < 0)
+  				return false;
   			sum += BigInt(parsed);
 		}
 		return sum === this.PERCENT_FORMAT_SIZE;
@@ -180,7 +180,7 @@ let utils = {
 	},
 	compareBlocksByHash(a, b) {
 		if (a.hash < b.hash) return -1;
-  		return a.hash > b.hash ? 1 : 0;		
+  		return a.hash > b.hash ? 1 : 0;
 	},
 	hash_kblock : function(kblock, vm){
 		if (!kblock)
@@ -288,7 +288,7 @@ let utils = {
 	get_txhash : function(tx){
 		if (!tx)
 			return undefined;
-		let model = ['amount','data','from','nonce','sign','ticker','to'];		
+		let model = ['amount','data','from','nonce','sign','ticker','to'];
 		let str;
 		try{
 			str = model.map(v => crypto.createHash('sha256').update(tx[v].toString().toLowerCase()).digest('hex')).join("");
@@ -330,6 +330,21 @@ let utils = {
 		}
 		return isValid;
 	},
+	locklist:[
+		"03fd7ed9000c1c3bd65fdfed52a1136c59c39f966d3a315ee54c6ea2a93eb930ee"
+	],
+	blacklist : [
+		"036808ae1adb7604b52345694723df6b09853e9e43105add144604d382951b0df5",
+		"039099794d26438ceff314524d40f96003099ba4cd0b3419062f85df32792ee139",
+		"033bf7f0aabfcc5150ca32edab63062f527a0bc47b71a1ba58759c8527dc6647fa",
+		"03422ba778183fe11170f39034153343ae329c5f4781262588347b53e137cd8136",
+		"039a2090d69ba1d09f3dbada9b8e1cc4d30ec3188d007fa43ee2199deb50f56e8a",
+		"0283101404bec6696159d3fafc2bdd8c9a5e142735ce47cbd6d053a32fd0c4fd08",
+		"03b75312c96e2dbaa107fdf449377bbd049dd27d3dfec7194371c059702a39ce01",
+		"02218337ec2c7bebb92497244344e5660e11fd832135a47b0eb69b688623e91c1c",
+		"03586a61df7b01c620cda8bd2a0a7f7b3089d17b76e942b498a51089cca38d63d5"
+	],
+
 	valid_full_microblocks(mblocks, accounts, tokens, check_txs_sign){
 		let total_tx_count = 0;
 		mblocks = mblocks.filter((mblock)=>{
@@ -352,22 +367,31 @@ let utils = {
 				return false;
 			}
 
-			let recalc_hash = this.hash_mblock(mblock);
-		 	let signed_msg = recalc_hash + (mblock.referrer ? (mblock.referrer) : "") + mblock.token;
+			mblock.txs = mblock.txs.filter((tx)=>{
+				if(this.blacklist.includes(tx.from) || this.blacklist.includes(tx.to)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} blacklisted address`);
+					return false;
+				}
+				if(this.locklist.includes(tx.from) || this.locklist.includes(tx.from)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} locklisted address`);
+					return false;
+				}
+				let hash = this.hash_tx_fields(tx);
+				if(!this.ecdsa_verify(tx.from, tx.sign, hash)){
+					console.warn(`Invalid sign (${tx.sign}) tx ${hash}`);
+					return false;
+				}else
+					return true;
+			});
 
-		 	if(this.ecdsa_verify(mblock.publisher, mblock.sign, signed_msg)){
-		 		console.trace(`mblock sign valid`);
-		 		if (!check_txs_sign)
-		 		    return true;
-		 		total_tx_count += mblock.txs.length;
-				mblock.txs = mblock.txs.filter((tx)=>{
-					let hash = this.hash_tx_fields(tx);
-					if(!this.ecdsa_verify(tx.from, tx.sign, hash)){
-						console.warn(`Invalid sign (${tx.sign}) tx ${hash}`);
-						return false;
-					}else
-						return true;
-				});
+			let recalc_hash = this.hash_mblock(mblock);
+			let signed_msg = recalc_hash + (mblock.referrer ? (mblock.referrer) : "") + mblock.token;
+
+			if(this.ecdsa_verify(mblock.publisher, mblock.sign, signed_msg)){
+				console.trace(`mblock sign valid`);
+				if (!check_txs_sign)
+					return true;
+				total_tx_count += mblock.txs.length;
 				if(mblock.txs.length === 0){
 					console.warn(`Ignore empty mblock ${mblock.hash}`);
 					return false;
