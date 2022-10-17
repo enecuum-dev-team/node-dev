@@ -1485,7 +1485,7 @@ class DB {
     async get_minted (wrapped_hash) {
         if (!wrapped_hash)
             return [];
-        return await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash]));
+        return (await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash])))[0];
     }
     async get_transferred_all () {
         return await this.request('SELECT * FROM transferred');

@@ -76,6 +76,14 @@ class Explorer {
 
 		this.app.use(express.json());
 
+        this.app.get('/api/v1/minted_token', async (req, res) => {
+            console.trace('requested minted_token', req.query);
+            if (!req.query.hash)
+                res.send("")
+            else
+                res.send(await this.db.get_minted())
+        })
+
 		this.app.get('/api/v1/network_info', async (req, res) => {
 			console.trace('requested network_info', req.query);
 			let native_token = (await this.db.get_tokens_info([this.config.native_token_hash]))[0];
