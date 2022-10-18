@@ -59,7 +59,9 @@ class ContractFactory{
             case "pool_sell_exact_routed" : return new Contracts[idx].PoolLiquiditySellExactRoutedContract(data);
             case "pool_buy_exact_routed" :  return new Contracts[idx].PoolLiquidityBuyExactRoutedContract(data);
             case "token_send_over_bridge" : return new Contracts[idx].CrossChainSourceContract(data);
-            case "token_get_over_bridge" :  return new Contracts[idx].CrossChainDestinationContract(data);
+            case "claim_init" :             return new Contracts[idx].ClaimInitContract(data);
+            case "claim_confirm" :          return new Contracts[idx].ClaimConfirmContract(data);
+            case "claim" :                  return new Contracts[idx].ClaimContract(data);
             default :                       return null;
         }
     }

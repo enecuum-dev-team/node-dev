@@ -531,7 +531,7 @@ CREATE TABLE `transferred` (
   `src_network` varchar(64) NOT NULL,
   `src_hash` varchar(64) NOT NULL,
   `transfer_id` varchar(64) NOT NULL,
-  `ticker` varchar(10) DEFAULT NULL
+  `ticker` varchar(10) NOT NULL,
   PRIMARY KEY (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

@@ -19,6 +19,7 @@ const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
 const ContractParser = require('./contractParser').ContractParser;
+const crypto = require('crypto');
 
 let MAX_DECIMALS = BigInt(10);
 let ENQ_INTEGER_COIN = BigInt(10000000000);
@@ -2301,7 +2302,7 @@ class CrossChainSourceContract extends Contract {
             throw new ContractError("Bridge is deactivated")
         let paramsModel = {
             dst_address : cTypes.hexStr66,
-            dst_network : cTypes.hexStr64,
+            dst_network : cTypes.number,
             amount : cTypes.bigInt,
             hash : cTypes.hexStr64
         }
@@ -2391,7 +2392,7 @@ class ClaimInitContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            dst_address : cTypes.hexStr64,
+            dst_address : cTypes.hexStr66,
             dst_network : cTypes.number,
             amount : cTypes.bigInt,
             src_hash : cTypes.hexStr64,
@@ -2404,7 +2405,14 @@ class ClaimInitContract extends Contract {
             ticker : cTypes.str
         }
 
-        return cValidate(this.data.parameters, paramsModel)
+        cValidate(this.data.parameters, paramsModel)
+
+        let paramsStr = Object.keys(paramsModel).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
+		let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
+
+        if (transfer_id !== this.data.parameters.transfer_id)
+            throw new ContractError(`Wrong transfer_id. Expected: ${transfer_id}, actual: ${this.data.parameters.transfer_id}`)
+        return true
     }
     
     async execute(tx, substate, kblock, config) {
@@ -2445,7 +2453,7 @@ class ClaimConfirmContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            validator_id : cTypes.number,
+            validator_id : cTypes.hexStr64,
             validator_sign : cTypes.hexStr142,
             transfer_id : cTypes.hexStr64
         }

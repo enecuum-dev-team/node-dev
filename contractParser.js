@@ -1,4 +1,4 @@
-// const zlib = require("zlib")
+const zlib = require("zlib")
 
 let schema = {
     "root" :            "0000",
@@ -78,7 +78,7 @@ class ContractParser {
     }
     // TODO: possible false-positive results because of data field format
     isContract(raw) {
-        // raw = zlib.brotliDecompressSync(Buffer.from(raw));
+        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64"));
         if(raw === undefined || raw === null)
             return false;
         let chunk = this.getChunk(raw);
@@ -129,8 +129,8 @@ class ContractParser {
         let serialized = this.serialize_object({
             [obj.type] : res
         });
-        // return zlib.brotliCompressSync(serialized)
-        return serialized
+        return zlib.brotliCompressSync(serialized).toString("base64")
+        // return serialized
     }
     serialize_object(obj, objKey){
         let binary = Buffer.alloc(0);
@@ -227,7 +227,7 @@ class ContractParser {
         return res;
     }
     parse(raw){
-        // raw = zlib.brotliDecompressSync(Buffer.from(raw));
+        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64"));
         let data = {};
         let input = (this.deserialize(raw))[0];
         data.type = input[0];
@@ -236,7 +236,6 @@ class ContractParser {
         let params = input[0].parameters;
         data.parameters = {};
         data.parameters = this.parseNestedObj(params);
-        console.log(data)
         return data;
     }
 }
