@@ -185,10 +185,10 @@ class ContractParser {
         let arr = [];
         for(let i = 0; i < (data.length); i++){
             let el = data[i];
-            if(Array.isArray(el)){
+            if(Array.isArray(el)) {
                 arr.push(this.prettify(el))
             }
-            else{
+            else {
                 if(!Array.isArray(data[i+1])){
                     res[el] = data[i+1];
                     i++;

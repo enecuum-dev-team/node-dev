@@ -76,12 +76,28 @@ class Explorer {
 
 		this.app.use(express.json());
 
+        this.app.get('/api/v1/network_id', async (req, res) => {
+            console.trace('requested network_id', req.query);
+            if (!Utils.BRIDGE_ACTIVE)
+                res.send("")
+            else
+                res.send(Utils.BRIDGE_NET_ID)
+        })
+
+        this.app.get('/api/v1/transfers', async (req, res) => {
+            console.trace('requested transfers', req.query);
+            if (!req.query.dst_address)
+                res.send([])
+            else
+                res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address))
+        })
+
         this.app.get('/api/v1/minted_token', async (req, res) => {
             console.trace('requested minted_token', req.query);
             if (!req.query.hash)
                 res.send("")
             else
-                res.send(await this.db.get_minted())
+                res.send(await this.db.get_minted(req.query.hash))
         })
 
 		this.app.get('/api/v1/network_info', async (req, res) => {

@@ -1503,6 +1503,11 @@ class DB {
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE transfer_id = ?', [id]));
     }
+    async get_transferred_by_dst_address (dst_address) {
+        if (!dst_address)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM transferred WHERE dst_address = ?', [dst_address]));
+    }
 
 	async get_farms(ids){
 		if(!ids.length)

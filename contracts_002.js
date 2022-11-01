@@ -2407,7 +2407,9 @@ class ClaimInitContract extends Contract {
 
         cValidate(this.data.parameters, paramsModel)
 
-        let paramsStr = Object.keys(paramsModel).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
+        let modelTmp = {...paramsModel}
+        delete modelTmp.transfer_id
+        let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
 		let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
 
         if (transfer_id !== this.data.parameters.transfer_id)
