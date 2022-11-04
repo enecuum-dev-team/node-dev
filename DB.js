@@ -220,7 +220,7 @@ class DB {
 			if (snapshot.transferred && snapshot.transferred.length > 0) {
                 let transferred_chunks = snapshot.transferred.chunk(INSERT_CHUNK_SIZE);
                 transferred_chunks.forEach(chunk => {
-					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, src_network, src_hash, nonce, transfer_id, ticker) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker])]));
+					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, dst_network, src_network, src_hash, nonce, transfer_id, ticker, amount, origin_network, origin_hash) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.dst_network, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker, transferred.amount, transferred.origin_network, transferred.origin_hash])]));
 				});
 			}
             let confirmations = [];
@@ -1131,7 +1131,7 @@ class DB {
 
         substate.transferred = substate.transferred.filter(a => a.changed === true);
         if(substate.transferred.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker])]));
+            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`, `amount`, `origin_network`, `origin_hash`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker, a.amount, a.origin_network, a.origin_hash])]));
     
         substate.confirmations = substate.confirmations.filter(a => a.changed === true);
         if(substate.confirmations.length > 0)

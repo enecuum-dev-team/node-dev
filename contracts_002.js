@@ -2301,10 +2301,10 @@ class CrossChainSourceContract extends Contract {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
         let paramsModel = {
-            dst_address : cTypes.hexStr66,
+            dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
             amount : cTypes.bigInt,
-            hash : cTypes.hexStr64
+            hash : cTypes.hexStr1_66
         }
         try {
             return cValidate(this.data.parameters, paramsModel)
@@ -2392,13 +2392,13 @@ class ClaimInitContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            dst_address : cTypes.hexStr66,
+            dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
-            amount : cTypes.bigInt,
-            src_hash : cTypes.hexStr64,
-            src_address : cTypes.hexStr66,
+            amount : cTypes.strBigInt,
+            src_hash : cTypes.hexStr1_66,
+            src_address : cTypes.hexStr1_66,
             src_network : cTypes.number,
-            origin_hash : cTypes.hexStr64,
+            origin_hash : cTypes.hexStr1_66,
             origin_network : cTypes.number,
             nonce : cTypes.number,
             transfer_id : cTypes.hexStr64,
@@ -2424,15 +2424,7 @@ class ClaimInitContract extends Contract {
         let data = this.data.parameters
         if (Number(last_t.nonce) + 1 !== data.nonce)
             throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
-        substate.transfers_add({
-            src_address : data.src_address,
-            dst_address : data.dst_address,
-            src_network : data.src_network,
-            src_hash : data.src_hash,
-            nonce : data.nonce,
-            transfer_id : data.transfer_id,
-            ticker : data.ticker
-        })
+        substate.transfers_add(data)
         return {
             amount_changes : [],
             pos_changes : [],
@@ -2455,8 +2447,8 @@ class ClaimConfirmContract extends Contract {
             throw new ContractError("Bridge is deactivated")
 
         let paramsModel = {
-            validator_id : cTypes.hexStr64,
-            validator_sign : cTypes.hexStr142,
+            validator_id : cTypes.hexStr66,
+            validator_sign : cTypes.hexStr1_150,
             transfer_id : cTypes.hexStr64
         }
 
@@ -2470,6 +2462,9 @@ class ClaimConfirmContract extends Contract {
         if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
             throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
 
+        let cparser = new ContractParser(config)
+        let cfactory = new ContractMachine.ContractFactory(config)
+
         let confirmations = substate.add_confirmation(data)
         if (confirmations === Utils.BRIDGE_THRESHOLD) {
             let claim_object = {
@@ -2478,19 +2473,18 @@ class ClaimConfirmContract extends Contract {
                     transfer_id : data.transfer_id
                 }
             }
-
             let claim_data = cparser.dataFromObject(claim_object)
             let claim_contract = cfactory.createContract(claim_data)
-
             let _tx = {
                 amount : tx.amount,
                 from : tx.from,
                 data : claim_data,
                 ticker : tx.ticker,
+                hash : tx.hash,
                 to : tx.to
             }
             try {
-                return await claim_contract.execute(_tx, substate)
+                return await claim_contract.execute(_tx, substate, kblock, config)
             } catch (e) {
                 if (e instanceof ContractError) {
                     console.log(e)
@@ -2532,6 +2526,8 @@ class ClaimContract extends Contract {
     }
 
     async execute(tx, substate, kblock, config) {
+        let cfactory = new ContractMachine.ContractFactory(config)
+        let cparser = new ContractParser(config)
         let mint_tokens = async (hash, amount) => {
             let mint_object = {
                 type : "mint",
@@ -2549,7 +2545,8 @@ class ClaimContract extends Contract {
                 from : Utils.BRIDGE_ADDRESS,
                 data : mint_data,
                 ticker : tx.ticker,
-                to : tx.to
+                to : tx.to,
+                hash : tx.hash
             }
             try {
                 return await mint_contract.execute(_tx, substate)
@@ -2593,7 +2590,7 @@ class ClaimContract extends Contract {
                     fee_type : 2,
                     fee_value : 100000000n,
                     fee_min : 100000000n,
-                    ticker : "WR" + originalTicker,
+                    ticker : "WR" + originalTicker.toUpperCase(),
                     decimals : 10n,
                     total_supply : BigInt(amount),
                     max_supply : BigInt(amount),
@@ -2606,12 +2603,26 @@ class ClaimContract extends Contract {
                     min_stake : 0n,
                 }
             }
-            let cfactory = new ContractMachine.ContractFactory(config)
-            let cparser = new ContractParser(config)
             let token_create_data = cparser.dataFromObject(token_create_object)
             let token_create_contract = cfactory.createContract(token_create_data)
+
+            let token_price = BigInt(Utils.CONTRACT_PRICELIST.create_token)
+            // let balance = await substate.get_balance(tx.from, tx.ticker)
+            // if (BigInt(balance.amount) < token_price)
+            //     throw new ContractError(`Not enough balance to create new token`)
+
+            // substate.accounts_change({
+            //     id : Utils.BRIDGE_ADDRESS,
+            //     amount : token_price,
+            //     token : tx.ticker,
+            // });
+            // substate.accounts_change({
+            //     id : tx.from,
+            //     amount : -token_price,
+            //     token : tx.ticker,
+            // });
             let _tx = {
-                amount : BigInt(Utils.CONTRACT_PRICELIST.create_token),
+                amount : token_price,
                 from : Utils.BRIDGE_ADDRESS,
                 data : token_create_data,
                 ticker : tx.ticker,
@@ -2634,16 +2645,14 @@ class ClaimContract extends Contract {
         }
 
         let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
-        
         if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
             throw new ContractError("Wrong network id")
-        
         let res
         if (ticket.origin_network === ticket.dst_network) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
         } else {
             let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)
-            if (minted) {
+            if (minted !== null && minted !== undefined) {
                 await mint_tokens(ticket.amount, minted.wrapped_hash)
                 res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
             } else {

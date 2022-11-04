@@ -291,11 +291,13 @@ class Substate {
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
             }
                 break;
-            case "token_get_over_bridge" : {
+            case "claim_confirm" : {
                 this.minted.push(contract.data.parameters.origin_hash)
                 this.tokens.push(contract.data.parameters.origin_hash)
                 this.accounts.push(contract.data.parameters.src_address)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
             }
                 break;
             default : return false;

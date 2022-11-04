@@ -98,7 +98,7 @@ class ContractFactory{
         if(tx.to !== db.ORIGIN.publisher){
             throw new ContractError(`Invalid recipient address, expected ${db.ORIGIN.publisher} , given ${tx.to}`);
         }
-        if(tx.ticker !== Utils.ENQ_TOKEN_NAME){
+        if (tx.ticker !== Utils.ENQ_TOKEN_NAME) {
             throw new ContractError(`Invalid token, expected ${Utils.ENQ_TOKEN_NAME} , given ${tx.ticker}`);
         }
         return contract;
