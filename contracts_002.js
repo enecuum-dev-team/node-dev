@@ -2302,8 +2302,8 @@ class CrossChainSourceContract extends Contract {
             throw new ContractError("Bridge is deactivated")
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
-            dst_network : cTypes.number,
-            amount : cTypes.bigInt,
+            dst_network : cTypes.str,
+            amount : cTypes.str,
             hash : cTypes.hexStr1_66
         }
         try {
@@ -2365,7 +2365,6 @@ class CrossChainSourceContract extends Contract {
                 post_action : []
             }
         }
-
         let data = this.data.parameters
         let wrappedToken = substate.get_minted_token(data.hash)
         let res

@@ -1,3 +1,4 @@
+
 const { ContractError } = require("./errors")
 
 const cTypes = {
@@ -52,7 +53,7 @@ const cTypes = {
 module.exports = {
     cTypes,
     cValidate : (params, paramsModel) => {
-        let compareTypes = (param, paramModel) => {
+        let compareTypes = (param, paramModel, key) => {
             if (typeof param !== paramModel.type)
                 throw new ContractError(`Incorrect parameter '${key}' type.`)
         }
@@ -63,7 +64,7 @@ module.exports = {
 
             let checkRegex = function (type) {
                 if (paramModel.id === cTypes[type].id) {
-                    compareTypes(param, paramModel)
+                    compareTypes(param, paramModel, key)
                     if (!paramModel.regexp.test(param))
                         throw new ContractError(`Incorrect parameter '${key}' format. ${type}`)
                 }
@@ -78,7 +79,7 @@ module.exports = {
             checkRegex("hexStr1_150")
 
             if (paramModel.id === cTypes.bigInt.id) {
-                compareTypes(param, paramModel)
+                compareTypes(param, paramModel, key)
             }
 
             if (paramModel.id === cTypes.array.id) {
@@ -87,17 +88,17 @@ module.exports = {
             }
 
             if (paramModel.id === cTypes.obj.id) {
-                compareTypes(param, paramModel)
+                compareTypes(param, paramModel, key)
                 if (!paramModel.validate(param))
                     throw new ContractError(`Incorrect parameter '${key}' type. Must be object.`)
             }
 
             if (paramModel.id === cTypes.str.id) {
-                compareTypes(param, paramModel)
+                compareTypes(param, paramModel, key)
             }
 
             if (paramModel.id === cTypes.strBigInt.id) {
-                compareTypes(param, paramModel)
+                compareTypes(param, paramModel, key)
                 if (!paramModel.regexp.test(param))
                     throw new ContractError(`Incorrect parameter '${key}' format. strBigInt`)
             }
