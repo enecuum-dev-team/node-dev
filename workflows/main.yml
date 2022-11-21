@@ -1,0 +1,93 @@
+name: Node-dev tests
+
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [ 16.x ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Configure ssh
+        run: |
+          mkdir ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/fatman
+          chmod 600 ~/.ssh/fatman
+          cat >> ~/.ssh/config << END
+          Host fatman
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/fatman
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_USER: root
+          SSH_KEY: ${{ secrets.SSH_SECRET }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+
+      - name: Clear machine
+        run: ssh fatman "bash -ic 'pm2 delete all; rm -rf $W_DIR'"
+        env: 
+          W_DIR: ${{ github.event.repository.name }}
+      
+      - name: Extract branch name
+        id: vars
+        run: echo ::set-output name=branch::${GITHUB_REF#refs/*/}
+
+      - name: Clone repo
+        run: "bash -ic 'GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_nodedev\' git clone git@github.com:enecuum-dev-team/node-dev;'"
+
+      - name: Merge branches
+        run: ssh fatman "bash -ic 'cd $W_DIR; git merge origin ${M_BRANCH}'"
+        env:
+          M_BRANCH: ${{ steps.vars.outputs.branch }}
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Update submodules
+        run: ssh fatman "bash -ic 'cd $W_DIR; git submodule init; GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_test_rsa\' git submodule update test; GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_ext\' git submodule update ext"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Prepare configs
+        run: ssh fatman "bash -ic 'cd $W_DIR; cp config.json.example config.json; cp snapshot.json.example snapshot.json; cp ./test/ecosystem.config.js ecosystem.config.js; cd test/autoTests; cp config.json.example config.json'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Update modules
+        run: ssh fatman "bash -ic 'cd $W_DIR; npm i; cd test; npm i'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Start node
+        run: ssh fatman "bash -ic 'cd $W_DIR; cd test/nodeStart; source trinity_test.bash --netbuild'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Restart test server
+        run: ssh fatman "bash -ic 'cd $W_DIR; cd test/autoTests/management; node launchServer.js'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run first TS group
+        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Send_valid_native_transaction Send_invalid_native_transaction Create_invalid_pos_contract Send_valid_custom_token_transaction'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run second TS group
+        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Claim_reward Transfer_coins Invalid_undelegate'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run thrid TS group
+        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Burn_coins Create_mineable_token Create_invalid_token'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
