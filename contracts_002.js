@@ -2098,7 +2098,12 @@ class FarmDecreaseStakeContract extends Contract {
             new_level = BigInt(farm.level) + (distributed * Utils.FARMS_LEVEL_PRECISION) / farm.total_stake;
         }
 
-        let farmer_reward = farmer.stake * (new_level - BigInt(farmer.level)) / Utils.FARMS_LEVEL_PRECISION;
+        //let farmer_reward = farmer.stake * (new_level - BigInt(farmer.level)) / Utils.FARMS_LEVEL_PRECISION;
+        
+        let farmer_reward = farmer.stake * (new_level - BigInt(farmer.level));
+        let farmer_stake = farmer.stake + params.amount;
+        let farmer_level = new_level - (farmer_reward / farmer_stake);
+        farmer_reward /= Utils.FARMS_LEVEL_PRECISION;
 
         let farm_data = {
             farm_id : params.farm_id,
@@ -2110,7 +2115,8 @@ class FarmDecreaseStakeContract extends Contract {
         let farmer_data = {
             farm_id : farm.farm_id,
             farmer_id : tx.from,
-            stake : BigInt(-1) * params.amount
+            stake : BigInt(-1) * params.amount,
+            level : farmer_level
         };
         substate.accounts_change({
             id : tx.from,
