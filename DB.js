@@ -745,15 +745,13 @@ class DB {
 		return res;
 	}
 
-	async clear_uptime_poses(){
-		let res = await this.request(mysql.format(`UPDATE IGNORE poses 
-											SET uptime = 0
-											WHERE uptime != 0`));
-	}
-
-	async update_pos_statuses(data){
-		let res = await this.request(mysql.format(`UPDATE poses SET uptime = ? WHERE id = ?`, [data.uptime, data.pos_id]));
-		return res;
+	async update_pos_statuses(data) {
+		let poses = [];
+		let clear = mysql.format(`UPDATE IGNORE poses SET uptime = 0 WHERE uptime != 0`);
+		for (let pos of data) {
+			poses.push(mysql.format(`UPDATE poses SET uptime = ? WHERE id = ?`, [pos.uptime, pos.pos_id]));
+		}
+		return this.transaction([clear, poses.join(';')].join(';'));
 	}
 
 	async update_total_supply(amount, token){
@@ -1062,12 +1060,16 @@ class DB {
 			sb.push(mysql.format("UPDATE sblocks SET `calculated` = 1, `reward` = ? WHERE `hash` = ?", [s.reward, s.hash]));
 		});
 		for(let hash in supply_change) {
-			let ts = await this.request(mysql.format("select total_supply from tokens WHERE hash = ?", [hash]));
-			//console.warn(ts[0].total_supply, supply_change[hash])
-			ts = BigInt(ts[0].total_supply) + BigInt(supply_change[hash]);
-			let sql = mysql.format("UPDATE tokens SET total_supply = ? WHERE hash = ?", [ts, hash])
-			//console.warn(sql)
-			sc.push(sql);
+			if (kblock.n >= this.app_config.FORKS.fork_block_002){
+				let ts = await this.request(mysql.format("select total_supply from tokens WHERE hash = ?", [hash]));
+				//console.warn(ts[0].total_supply, supply_change[hash])
+				ts = BigInt(ts[0].total_supply) + BigInt(supply_change[hash]);
+				let sql = mysql.format("UPDATE tokens SET total_supply = ? WHERE hash = ?", [ts, hash])
+				//console.warn(sql)
+				sc.push(sql);
+			}else{
+				sc.push(mysql.format("UPDATE tokens SET total_supply = total_supply + ? WHERE hash = ?", [supply_change[hash], hash]));
+			}
 		}
 
 		let ind = this.generate_eindex(rewards, kblock.time);
