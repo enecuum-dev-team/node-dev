@@ -19,13 +19,13 @@ jobs:
       - name: Configure ssh
         run: |
           mkdir ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/fatman
-          chmod 600 ~/.ssh/fatman
+          echo "$SSH_KEY" > ~/.ssh/fullnode
+          chmod 600 ~/.ssh/fullnode
           cat >> ~/.ssh/config << END
-          Host fatman
+          Host fullnode
             HostName $SSH_HOST
             User $SSH_USER
-            IdentityFile ~/.ssh/fatman
+            IdentityFile ~/.ssh/fullnode
             StrictHostKeyChecking no
           END
         env:
@@ -34,7 +34,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
 
       - name: Clear machine
-        run: ssh fatman "bash -ic 'pm2 delete all; rm -rf $W_DIR'"
+        run: ssh fullnode "bash -ic 'pm2 delete all; rm -rf $W_DIR'"
         env: 
           W_DIR: ${{ github.event.repository.name }}
       
@@ -43,51 +43,51 @@ jobs:
         run: echo ::set-output name=branch::${GITHUB_REF#refs/*/}
 
       - name: Clone repo
-        run: "bash -ic 'GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_nodedev\' git clone git@github.com:enecuum-dev-team/node-dev;'"
+        run: "bash -ic 'cd ${W_DIR}/.github/workflows; . ./clone_repo.bash'"
 
       - name: Merge branches
-        run: ssh fatman "bash -ic 'cd $W_DIR; git merge origin ${M_BRANCH}'"
+        run: ssh fullnode "bash -ic 'cd $W_DIR; git merge origin ${M_BRANCH}'"
         env:
           M_BRANCH: ${{ steps.vars.outputs.branch }}
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Update submodules
-        run: ssh fatman "bash -ic 'cd $W_DIR; git submodule init; GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_test_rsa\' git submodule update test; GIT_SSH_COMMAND=\'ssh -i ~/.ssh/f3_ext\' git submodule update ext"
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./upd_submodules.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Prepare configs
-        run: ssh fatman "bash -ic 'cd $W_DIR; cp config.json.example config.json; cp snapshot.json.example snapshot.json; cp ./test/ecosystem.config.js ecosystem.config.js; cd test/autoTests; cp config.json.example config.json'"
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./prepare_configs.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Update modules
-        run: ssh fatman "bash -ic 'cd $W_DIR; npm i; cd test; npm i'"
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./upd_modules.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Start node
-        run: ssh fatman "bash -ic 'cd $W_DIR; cd test/nodeStart; source trinity_test.bash --netbuild'"
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./start_node.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Restart test server
-        run: ssh fatman "bash -ic 'cd $W_DIR; cd test/autoTests/management; node launchServer.js'"
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./restart_test_server.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Run first TS group
-        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Send_valid_native_transaction Send_invalid_native_transaction Create_invalid_pos_contract Send_valid_custom_token_transaction'"
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./first_TS.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
       - name: Run second TS group
-        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Claim_reward Transfer_coins Invalid_undelegate'"
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./second_TS.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
-      - name: Run thrid TS group
-        run: ssh fatman "bach -ic 'cd $W_DIR/test/autoTests/management; node launchTest.js --ts Burn_coins Create_mineable_token Create_invalid_token'"
+      - name: Run third TS group
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./third_TS.bash'"
         env:
           W_DIR: ${{ github.event.repository.name }}
 
