@@ -2302,15 +2302,11 @@ class CrossChainSourceContract extends Contract {
             throw new ContractError("Bridge is deactivated")
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
-            dst_network : cTypes.str,
+            dst_network : cTypes.number,
             amount : cTypes.str,
             hash : cTypes.hexStr1_66
         }
-        try {
-            return cValidate(this.data.parameters, paramsModel)
-        } catch (e) {
-            console.log(e)
-        }
+        return cValidate(this.data.parameters, paramsModel)
     }
     
     async execute(tx, substate, kblock) {
@@ -2333,19 +2329,8 @@ class CrossChainSourceContract extends Contract {
                 ticker : tx.ticker,
                 to : tx.to
             }
-            try {
-                return await burn_contract.execute(_tx, substate)
-            } catch (e) {
-                if (e instanceof ContractError) {
-                    console.log(e)
-                    return {
-                        amount_changes : [],
-                        pos_changes : [],
-                        post_action : []
-                    }
-                } else 
-                    throw e
-            }
+            
+            return await burn_contract.execute(_tx, substate)
         }
 
         let lock_tokens = async (hash, amount) => {         
@@ -2403,14 +2388,11 @@ class ClaimInitContract extends Contract {
             transfer_id : cTypes.hexStr64,
             ticker : cTypes.str
         }
-
         cValidate(this.data.parameters, paramsModel)
-
         let modelTmp = {...paramsModel}
         delete modelTmp.transfer_id
         let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
 		let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
-
         if (transfer_id !== this.data.parameters.transfer_id)
             throw new ContractError(`Wrong transfer_id. Expected: ${transfer_id}, actual: ${this.data.parameters.transfer_id}`)
         return true
@@ -2421,8 +2403,9 @@ class ClaimInitContract extends Contract {
         if (last_t === null)
             last_t = {nonce : 0}
         let data = this.data.parameters
-        if (Number(last_t.nonce) + 1 !== data.nonce)
-            throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
+        // if (Number(last_t.nonce) + 1 !== data.nonce)
+        //     throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
+        
         substate.transfers_add(data)
         return {
             amount_changes : [],
@@ -2482,19 +2465,8 @@ class ClaimConfirmContract extends Contract {
                 hash : tx.hash,
                 to : tx.to
             }
-            try {
-                return await claim_contract.execute(_tx, substate, kblock, config)
-            } catch (e) {
-                if (e instanceof ContractError) {
-                    console.log(e)
-                    return {
-                        amount_changes : [],
-                        pos_changes : [],
-                        post_action : []
-                    }
-                } else 
-                    throw e
-            }
+            
+            return await claim_contract.execute(_tx, substate, kblock, config)
         }
         return {
             amount_changes : [],
@@ -2527,7 +2499,7 @@ class ClaimContract extends Contract {
     async execute(tx, substate, kblock, config) {
         let cfactory = new ContractMachine.ContractFactory(config)
         let cparser = new ContractParser(config)
-        let mint_tokens = async (hash, amount) => {
+        let mint_tokens = async (amount, hash) => {
             let mint_object = {
                 type : "mint",
                 parameters : {
@@ -2535,7 +2507,7 @@ class ClaimContract extends Contract {
                     amount : amount
                 }
             }
-
+            
             let mint_data = cparser.dataFromObject(mint_object)
             let mint_contract = cfactory.createContract(mint_data)
 
@@ -2547,19 +2519,8 @@ class ClaimContract extends Contract {
                 to : tx.to,
                 hash : tx.hash
             }
-            try {
-                return await mint_contract.execute(_tx, substate)
-            } catch (e) {
-                if (e instanceof ContractError) {
-                    console.log(e)
-                    return {
-                        amount_changes : [],
-                        pos_changes : [],
-                        post_action : []
-                    }
-                } else 
-                    throw e
-            }
+
+            return await mint_contract.execute(_tx, substate)
         }
 
         let transfer = (hash, amount, dstAddress) => {
@@ -2628,19 +2589,7 @@ class ClaimContract extends Contract {
                 to : tx.to,
                 hash : tx.hash
             }
-            try {
-                return await token_create_contract.execute(_tx, substate)
-            } catch (e) {
-                if (e instanceof ContractError) {
-                    console.log(e)
-                    return {
-                        amount_changes : [],
-                        pos_changes : [],
-                        post_action : []
-                    }
-                } else 
-                    throw e
-            }
+            return await token_create_contract.execute(_tx, substate)
         }
 
         let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
@@ -2656,16 +2605,12 @@ class ClaimContract extends Contract {
                 res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
             } else {
                 let tokenCreateRes = await createToken(ticket.amount, ticket.ticker)
-                try {
-                    substate.minted_add({
-                        wrapped_hash : tokenCreateRes.token_info.hash, 
-                        origin : ticket.origin_network, 
-                        origin_hash : ticket.origin_hash
-                    })
-                    res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)
-                } catch (err) {
-                    console.log(err)
-                }
+                substate.minted_add({
+                    wrapped_hash : tokenCreateRes.token_info.hash, 
+                    origin : ticket.origin_network, 
+                    origin_hash : ticket.origin_hash
+                })
+                res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)
             }
         }
         return res
