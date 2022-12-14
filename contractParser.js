@@ -78,9 +78,9 @@ class ContractParser {
     }
     // TODO: possible false-positive results because of data field format
     isContract(raw) {
-        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64"));
-        if(raw === undefined || raw === null)
+        if(raw === undefined || raw === null || raw === "")
             return false;
+        raw = zlib.brotliDecompressSync(Buffer.from(raw, "base64"));
         let chunk = this.getChunk(raw);
         if((chunk.size === raw.length) && this.contract_pricelist.hasOwnProperty(chunk.key))
             return chunk.key;

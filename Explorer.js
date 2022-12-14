@@ -94,10 +94,11 @@ class Explorer {
 
         this.app.get('/api/v1/minted_token', async (req, res) => {
             console.trace('requested minted_token', req.query);
-            if (!req.query.hash)
-                res.send("")
-            else
-                res.send(await this.db.get_minted(req.query.hash))
+            try {
+                res.send(await this.db.get_minted_all())
+            } catch (e) {
+                res.send([])
+            }
         })
 
 		this.app.get('/api/v1/network_info', async (req, res) => {
@@ -474,7 +475,6 @@ class Explorer {
 
 		this.app.post('/api/v1/tx', async (req, res, next) => {
 			let txs = req.body;
-			console.trace(`post txs`, JSON.stringify(txs));
 
 			if (txs.length !== 1)
 				return res.send({err: 1, message: "Only 1 TX can be sent"});
