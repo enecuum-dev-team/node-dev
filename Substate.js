@@ -57,6 +57,10 @@ class Substate {
         this.lt_hashes = this.pools.map(h => h.token_hash);
         if(this.lt_hashes.length > 0)
             this.tokens = this.tokens.concat(this.lt_hashes);
+        if(this.transferred.length > 0) {
+            let tickets = this.db.get_transferred_by_hashes(this.transferred);
+            tickets.forEach(ticket => this.tokens.push(this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network).wrapped_hash))
+        }
         let tokens_a = this.pools.map(h => h.asset_1);
         let tokens_b = this.pools.map(h => h.asset_2);
         this.tokens = this.tokens.concat(tokens_a);
@@ -292,9 +296,13 @@ class Substate {
             }
                 break;
             case "claim_confirm" : {
-                this.minted.push(contract.data.parameters.origin_hash)
-                this.tokens.push(contract.data.parameters.origin_hash)
-                this.accounts.push(contract.data.parameters.src_address)
+                this.transferred.push(contract.data.parameters.transfer_id)
+                this.accounts.push(Utils.BRIDGE_ADDRESS)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
+            }
+            case "claim" : {
+                this.transferred.push(contract.data.parameters.transfer_id)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)
@@ -385,7 +393,13 @@ class Substate {
     get_transferred (src_address, dst_address, src_network) {
         if(!src_address || !dst_address || !src_network)
             return null
-        return this.transferred.find(tranfer => tranfer.src_address === src_address && tranfer.dst_address === dst_address && tranfer.src_network === src_network)
+        let res = this.transferred.filter(tranfer => tranfer.src_address === src_address && tranfer.dst_address === dst_address && tranfer.src_network === src_network)
+        if (res.length) {
+            res.sort((a, b) => a.nonce > b.nonce ? -1 : 1)
+            res = res[0]
+        } else
+            res = null
+        return res
     }
     get_transferred_by_id(id) {
         if(!id)
@@ -397,7 +411,7 @@ class Substate {
         return len ? this.transferred[len - 1] : null
     }
     transfers_add (changes) {
-        let data = this.transferred.find(el => Number(el.nonce) === changes.nonce || el.transfer_id === changes.transfer_id)
+        let data = this.transferred.find(el => /* Number(el.nonce) === changes.nonce  || */ el.transfer_id === changes.transfer_id)
         if (data)
             throw new ContractError(`Bridge tx has already initialized`)
         changes.changed = true

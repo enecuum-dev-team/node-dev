@@ -2399,12 +2399,12 @@ class ClaimInitContract extends Contract {
     }
     
     async execute(tx, substate, kblock, config) {
-        let last_t = substate.get_last_transferred()
+        let data = this.data.parameters
+        let last_t = substate.get_transferred(data.src_address, data.dst_address, data.src_network)
         if (last_t === null)
             last_t = {nonce : 0}
-        let data = this.data.parameters
-        // if (Number(last_t.nonce) + 1 !== data.nonce)
-        //     throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
+        if (Number(last_t.nonce) + 1 !== data.nonce)
+            throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
         
         substate.transfers_add(data)
         return {

@@ -1487,12 +1487,22 @@ class DB {
             return [];
         return (await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash])))[0];
     }
+    async get_minted_by_origin (origin_hash, origin_network) {
+        if(!origin_hash || !origin_network)
+            return [];
+        return (await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ?, origin_network = ?`, [origin_hash, origin_network])))[0];
+    }
     async get_transferred_all () {
         return await this.request('SELECT * FROM transferred');
     }
     async get_confirmations_all () {
         return await this.request('SELECT * FROM confirmations');
     }
+    async get_transferred_by_hashes(transfer_ids){
+		if(!hashes.length)
+			return [];
+		return await this.request(mysql.format(`SELECT transferred.* FROM transferred WHERE transferred.transfer_id in (?)`, [transfer_ids]));
+	}
     async get_transferred (src_address, dst_address, src_network) {
         if (!src_address || !dst_address || !src_network)
             return [];
