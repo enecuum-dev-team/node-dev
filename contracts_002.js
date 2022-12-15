@@ -2606,8 +2606,8 @@ class ClaimContract extends Contract {
             } else {
                 let tokenCreateRes = await createToken(ticket.amount, ticket.ticker)
                 substate.minted_add({
-                    wrapped_hash : tokenCreateRes.token_info.hash, 
-                    origin : ticket.origin_network, 
+                    wrapped_hash : tokenCreateRes.token_info.hash,
+                    origin : ticket.origin_network,
                     origin_hash : ticket.origin_hash
                 })
                 res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)

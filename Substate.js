@@ -58,8 +58,12 @@ class Substate {
         if(this.lt_hashes.length > 0)
             this.tokens = this.tokens.concat(this.lt_hashes);
         if(this.transferred.length > 0) {
-            let tickets = this.db.get_transferred_by_hashes(this.transferred);
-            tickets.forEach(ticket => this.tokens.push(this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network).wrapped_hash))
+            let tickets = await this.db.get_transferred_by_hashes(this.transferred);
+            for (let ticket of tickets) {
+                let minted = await this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network)
+                if (minted)
+                    this.tokens.push(minted.wrapped_hash)
+            }
         }
         let tokens_a = this.pools.map(h => h.asset_1);
         let tokens_b = this.pools.map(h => h.asset_2);
@@ -347,7 +351,7 @@ class Substate {
     get_transfer_lock(){
         return this.db.app_config.transfer_lock;
     }
-    get_token_info(hash){
+    get_token_info (hash) {
         if(!hash)
             return null;
         return this.tokens.find(a => a.hash === hash);

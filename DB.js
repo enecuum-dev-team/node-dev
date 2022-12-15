@@ -1489,8 +1489,11 @@ class DB {
     }
     async get_minted_by_origin (origin_hash, origin_network) {
         if(!origin_hash || !origin_network)
-            return [];
-        return (await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ?, origin_network = ?`, [origin_hash, origin_network])))[0];
+            return null;
+        let res = await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ? and origin = ?`, [origin_hash, origin_network]));
+        if (res)
+            return res[0];
+        return null;
     }
     async get_transferred_all () {
         return await this.request('SELECT * FROM transferred');
@@ -1499,7 +1502,7 @@ class DB {
         return await this.request('SELECT * FROM confirmations');
     }
     async get_transferred_by_hashes(transfer_ids){
-		if(!hashes.length)
+		if(!transfer_ids.length)
 			return [];
 		return await this.request(mysql.format(`SELECT transferred.* FROM transferred WHERE transferred.transfer_id in (?)`, [transfer_ids]));
 	}
