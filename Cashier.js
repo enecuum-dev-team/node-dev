@@ -4,19 +4,30 @@ const Substate = require('./Substate').Substate;
 const {ContractError} = require('./errors');
 
 class Cashier {
-    constructor(config, db){
+    constructor(config, db, eventdb){
         this.config = config;
         this.db = db;
+        this.eventdb = eventdb;
         this.mrewards = BigInt(0);
         this.refrewards = BigInt(0);
         this.srewards = BigInt(0);
         this.krewards = BigInt(0);
+        this.events = [];
     }
 
-    eindex_entry(arr, type, id, hash, value) {
+    eindex_entry(arr, type, id, hash, value, n = 1) {
+        let entry = {type : type, id : id, hash : hash, value : value }
+        let event = {
+            type : type,
+            data : {
+                id, hash, value
+            },
+            n : n
+        }
+        this.events.push(event);
         if(this.config.indexer_mode !== 1)
             return;
-        arr.push({type : type, id : id, hash : hash, value : value });
+        arr.push(entry);
     }
 
     processTransfer(tx, substate){
@@ -245,7 +256,7 @@ class Cashier {
                     accounts[pub].amount = BigInt(accounts[pub].amount) + m.reward;
                     total_mblock_reward += m.reward;
                     this.mrewards += m.reward;
-                    this.eindex_entry(rewards, 'im', accounts[pub].id, m.hash, m.reward);
+                    this.eindex_entry(rewards, 'im', accounts[pub].id, m.hash, m.reward, kblock.n);
                 } else {
                     console.warn(`PoA miner with low-stake detected at mblock ${JSON.stringify(m)}`);
                     m.reward = BigInt(0);
@@ -273,11 +284,11 @@ class Cashier {
                     accounts[real_ref].amount = BigInt(accounts[real_ref].amount) + ref_reward /  BigInt(2);
                     total_mblock_reward += ((ref_reward /  BigInt(2)) *  BigInt(2));
                     this.refrewards += ref_reward;
-                    this.eindex_entry(rewards, 'iref', accounts[pub].id, m.hash, ref_reward / BigInt(2));
-                    this.eindex_entry(rewards, 'iref', accounts[real_ref].id, m.hash, ref_reward / BigInt(2));
+                    this.eindex_entry(rewards, 'iref', accounts[pub].id, m.hash, ref_reward / BigInt(2), kblock.n);
+                    this.eindex_entry(rewards, 'iref', accounts[real_ref].id, m.hash, ref_reward / BigInt(2), kblock.n);
                 } else {
                     accounts[owner].amount = BigInt(accounts[owner].amount) + ref_reward;
-                    this.eindex_entry(rewards, 'iref', accounts[owner].id, m.hash, ref_reward);
+                    this.eindex_entry(rewards, 'iref', accounts[owner].id, m.hash, ref_reward, kblock.n);
                     total_mblock_reward += ref_reward;
                     this.refrewards += ref_reward;
                 }
@@ -324,7 +335,7 @@ class Cashier {
                 total_reward += BigInt(kblock.reward);
                 this.krewards += kblock.reward;
             }
-            this.eindex_entry(rewards, 'ik', kblock.publisher, kblock.hash, kblock.reward);
+            this.eindex_entry(rewards, 'ik', kblock.publisher, kblock.hash, kblock.reward, kblock.n);
             /**
              * POS rewards
              *
@@ -379,8 +390,8 @@ class Cashier {
                     }
                     accounts[pub].amount = BigInt(accounts[pub].amount) + pos_owner_reward;
                     total_reward += BigInt(pos_owner_reward);
-                    this.eindex_entry(rewards,'iv', accounts[pub].id, s.hash, pos_owner_reward);
-                    this.eindex_entry(rewards,'istat', s.publisher, s.hash, s.reward);
+                    this.eindex_entry(rewards,'iv', accounts[pub].id, s.hash, pos_owner_reward, kblock.n);
+                    this.eindex_entry(rewards,'istat', s.publisher, s.hash, s.reward, kblock.n);
                     this.srewards += pos_owner_reward;
                     this.srewards += delegates_reward;
                 }
@@ -412,14 +423,14 @@ class Cashier {
 
             if (k_pub > -1) {
                 accounts[k_pub].amount = BigInt(accounts[k_pub].amount) + BigInt(pow_fee_share);
-                this.eindex_entry(rewards, 'ifk', accounts[k_pub].id, kblock.hash, BigInt(pow_fee_share));
+                this.eindex_entry(rewards, 'ifk', accounts[k_pub].id, kblock.hash, BigInt(pow_fee_share), kblock.n);
                 total_fee += BigInt(pow_fee_share);
             } else
                 org_fee_share += pow_fee_share;
 
             if (org > -1) {
                 accounts[org].amount = BigInt(accounts[org].amount) + BigInt(org_fee_share);
-                this.eindex_entry(rewards, 'ifg', accounts[org].id, kblock.hash, BigInt(org_fee_share));
+                this.eindex_entry(rewards, 'ifg', accounts[org].id, kblock.hash, BigInt(org_fee_share), kblock.n);
                 total_fee += BigInt(org_fee_share);
             }
 
@@ -446,7 +457,7 @@ class Cashier {
                         }
                     }
                     accounts[pub].amount = BigInt(accounts[pub].amount) + pos_owner_fee_reward;
-                    this.eindex_entry(rewards, 'iv', accounts[pub].id, kblock.hash, BigInt(pos_owner_fee_reward));
+                    this.eindex_entry(rewards, 'iv', accounts[pub].id, kblock.hash, BigInt(pos_owner_fee_reward), kblock.n);
                     total_fee += BigInt(pos_owner_fee_reward);
                 }
             }
@@ -458,7 +469,7 @@ class Cashier {
             let dust_block = BigInt(token_enq.block_reward) - BigInt(total_reward);
             let dust_fees = BigInt(kblock_fees) - BigInt(total_fee);
             accounts[org].amount += dust_block + dust_fees;
-            this.eindex_entry(rewards, 'idust', accounts[org].id, kblock.hash, BigInt(dust_block + dust_fees));
+            this.eindex_entry(rewards, 'idust', accounts[org].id, kblock.hash, BigInt(dust_block + dust_fees), kblock.n);
 
             supply_change[Utils.ENQ_TOKEN_NAME] = token_enq.block_reward;
 
@@ -482,7 +493,8 @@ class Cashier {
             time = process.hrtime();
 
             await this.db.terminate_ledger_kblock(accounts, kblock, mblocks, sblocks, [group_update_delegates], supply_change, rewards);
-
+            await this.eventdb.addEvents(this.events);
+            this.events = []
             time = process.hrtime(time);
             console.debug(`cashier_timing: kblock termination ${hash} saved in`, Utils.format_time(time));
 
@@ -589,24 +601,25 @@ class Cashier {
                     let res = await contract.execute(tx, substate_copy, kblock, this.config);
                     // add eindex entry for claims
                     if(contract.type === 'pos_reward')
-                        this.eindex_entry(rewards, 'ic', substate_copy.claims[tx.hash].delegator, tx.hash, substate_copy.claims[tx.hash].reward);
+                        this.eindex_entry(rewards, 'ic', substate_copy.claims[tx.hash].delegator, tx.hash, substate_copy.claims[tx.hash].reward, kblock.n);
                     if(res.hasOwnProperty("dex_swap"))
-                        this.eindex_entry(rewards, 'iswapout', tx.from, tx.hash, res.dex_swap.out);
+                        this.eindex_entry(rewards, 'iswapout', tx.from, tx.hash, res.dex_swap.out, kblock.n);
                     if(res.hasOwnProperty("farm_reward"))
-                        this.eindex_entry(rewards, 'ifrew', tx.from, tx.hash, res.farm_reward);
+                        this.eindex_entry(rewards, 'ifrew', tx.from, tx.hash, res.farm_reward, kblock.n);
 
                     if(res.hasOwnProperty("pool_create_lt"))
-                        this.eindex_entry(rewards, 'ipcreatelt', tx.from, tx.hash, res.pool_create_lt);
+                        this.eindex_entry(rewards, 'ipcreatelt', tx.from, tx.hash, res.pool_create_lt, kblock.n);
                     if(res.hasOwnProperty("liq_add_lt"))
-                        this.eindex_entry(rewards, 'iliqaddlt', tx.from, tx.hash, res.liq_add_lt);
+                        this.eindex_entry(rewards, 'iliqaddlt', tx.from, tx.hash, res.liq_add_lt, kblock.n);
                     if(res.hasOwnProperty("liq_remove")){
-                        this.eindex_entry(rewards, 'iliqrmv1', tx.from, tx.hash, res.liq_remove.liq_remove1);
-                        this.eindex_entry(rewards, 'iliqrmv2', tx.from, tx.hash, res.liq_remove.liq_remove2);
+                        this.eindex_entry(rewards, 'iliqrmv1', tx.from, tx.hash, res.liq_remove.liq_remove1, kblock.n);
+                        this.eindex_entry(rewards, 'iliqrmv2', tx.from, tx.hash, res.liq_remove.liq_remove2, kblock.n);
                     }
                     if(res.hasOwnProperty("farm_close_reward"))
-                        this.eindex_entry(rewards, 'ifcloserew', tx.from, tx.hash, res.farm_close_reward);
+                        this.eindex_entry(rewards, 'ifcloserew', tx.from, tx.hash, res.farm_close_reward, kblock.n);
                     if(res.hasOwnProperty("farm_decrease_reward"))
-                        this.eindex_entry(rewards, 'ifdecrew', tx.from, tx.hash, res.farm_decrease_reward);
+                        this.eindex_entry(rewards, 'ifdecrew', tx.from, tx.hash, res.farm_decrease_reward, kblock.n);
+                    //this.events.push(...res.events);
                 }
                 statuses.push(this.status_entry(Utils.TX_STATUS.CONFIRMED, tx));
                 console.silly(`approved tx `, Utils.JSON_stringify(tx));
@@ -1328,6 +1341,7 @@ class Cashier {
                 let res = await this.db.prefork_002();
             }
             // Create temp snapshot (state) of current block
+            /*
             let tmp_snapshot_hash = await this.db.get_tmp_snapshot_hash(cur_hash);
             if (!tmp_snapshot_hash) {
                 let time = process.hrtime();
@@ -1338,7 +1352,7 @@ class Cashier {
                 time = process.hrtime(time);
                 console.debug(`cashier_timing: caching state(temp snapshot)`, Utils.format_time(time));
             }
-
+*/
             // Create snapshot of current block if needed
             if ((block.n) % this.config.snapshot_interval === 0) {
                 let snapshot_hash = await this.db.get_snapshot_hash(cur_hash);

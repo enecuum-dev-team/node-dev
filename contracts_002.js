@@ -30,6 +30,8 @@ class Contract{
         this._mysql = require('mysql');
         this.type = null;
         this.pricelist = require('./pricelist').fork_block_002;
+        // TODO: cleanup
+        this.events = [];
     }
     get mysql(){
         return this._mysql;
@@ -1193,7 +1195,16 @@ class PoolLiquiditySellExactContract extends Contract {
         });
         substate.tokens_change(tok_data);
         substate.pools_change(pool_data);
-
+        let event = {
+            type : this.type,
+            data : {
+                params : params.asset_in,
+                in : amount_in,
+                out : amount_out,
+                cmd_lt_amount : cmd_lt_amount
+            }
+        }
+        this.events.push()
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1202,7 +1213,8 @@ class PoolLiquiditySellExactContract extends Contract {
                 in : amount_in,
                 out : amount_out,
                 cmd_lt_amount : cmd_lt_amount
-            }
+            },
+            events : [event]
         };
     }
 }

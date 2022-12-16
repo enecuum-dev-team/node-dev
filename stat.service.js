@@ -18,8 +18,9 @@ let prev_max_tps = 0;
 
 class StatService {
 
-    constructor(db) {
+    constructor(db, eventdb) {
         this.db = db;
+        this.eventdb = eventdb;
         this.init_max_tps();
     }
 
@@ -248,6 +249,30 @@ class StatService {
                 console.info('IP-API empty response');
             }
         }
+    }
+    async update_eindex(){
+        let n = (await this.db.get_stats('update_eindex'))[0];
+        if(n === undefined || n === null)
+            return;
+        if(!n.hasOwnProperty('value'))
+            return;
+        if(n.value === null)
+            n.value = 0;
+        n = n.value;
+        let kblock = (await this.db.get_kblock_by_n(n))[0]
+        let events = await this.eventdb.getEvents(n)
+        //console.log(events)
+        let new_n = n;
+        let rewards = events.map(event => {
+            if(event.n > new_n)
+                new_n = event.n;
+            let edata = JSON.parse(event.data);
+            return {type : event.event, id : edata.id, hash : edata.hash, value : edata.value }
+        })
+        let ind = this.db.generate_eindex(rewards, kblock.time);
+        await this.db.transaction(ind.join(';'))
+        console.log(new_n)
+        return new_n;//console.log(ind)
     }
 }
 
