@@ -81,7 +81,7 @@
         "pool_sell_exact_routed" :  0,
         "pool_buy_exact" :          0,
         "pool_buy_exact_routed" :   0,
-        "token_send_over_bridge" :  0,
+        "lock" :                    0,
         "claim_init" :              0,
         "claim_confirm" :           0,
         "claim" :                   0
