@@ -292,7 +292,7 @@ class Substate {
                 this.farms.push(Utils.DEX_SPACE_STATION_ID);
             }
                 break;
-            case "token_send_over_bridge" : {
+            case "lock" : {
                 this.tokens.push(contract.data.parameters.hash)
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)

@@ -2309,30 +2309,9 @@ class CrossChainSourceContract extends Contract {
         return cValidate(this.data.parameters, paramsModel)
     }
     
-    async execute(tx, substate, kblock) {
-        let burn_tokens = async (hash, amount) => {
-            let burn_object = {
-                type : "burn",
-                parameters : {
-                    token_hash : hash,
-                    amount : amount
-                }
-            }
-
-            let burn_data = cparser.dataFromObject(burn_object)
-            let burn_contract = cfactory.createContract(burn_data)
-
-            let _tx = {
-                amount : tx.amount,
-                from : Utils.BRIDGE_ADDRESS,
-                data : burn_data,
-                ticker : tx.ticker,
-                to : tx.to
-            }
-            
-            return await burn_contract.execute(_tx, substate)
-        }
-
+    async execute(tx, substate, kblock, config) {
+        let cparser = new ContractParser(config)
+        let cfactory = new ContractMachine.ContractFactory(config)
         let lock_tokens = async (hash, amount) => {         
             substate.accounts_change({
                 id : tx.from,
@@ -2350,6 +2329,30 @@ class CrossChainSourceContract extends Contract {
                 post_action : []
             }
         }
+        let burn_tokens = async (hash, amount) => {
+            let burn_object = {
+                type : "burn",
+                parameters : {
+                    token_hash : hash,
+                    amount : BigInt(amount)
+                }
+            }
+
+            let burn_data = cparser.dataFromObject(burn_object)
+            let burn_contract = cfactory.createContract(burn_data)
+
+            lock_tokens(hash, amount)
+            let _tx = {
+                amount : tx.amount,
+                from : Utils.BRIDGE_ADDRESS,
+                data : burn_data,
+                ticker : tx.ticker,
+                to : tx.to
+            }
+
+            return await burn_contract.execute(_tx, substate)
+        }
+
         let data = this.data.parameters
         let wrappedToken = substate.get_minted_token(data.hash)
         let res
