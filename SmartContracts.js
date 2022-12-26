@@ -58,7 +58,7 @@ class ContractFactory{
             case "dex_cmd_distribute" :     return new Contracts[idx].DexCmdDistributeContract(data);
             case "pool_sell_exact_routed" : return new Contracts[idx].PoolLiquiditySellExactRoutedContract(data);
             case "pool_buy_exact_routed" :  return new Contracts[idx].PoolLiquidityBuyExactRoutedContract(data);
-            case "lock" :                   return new Contracts[idx].CrossChainSourceContract(data);
+            case "lock" :                   return new Contracts[idx].LockContract(data);
             case "claim_init" :             return new Contracts[idx].ClaimInitContract(data);
             case "claim_confirm" :          return new Contracts[idx].ClaimConfirmContract(data);
             case "claim" :                  return new Contracts[idx].ClaimContract(data);

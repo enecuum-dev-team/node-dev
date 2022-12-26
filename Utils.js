@@ -827,7 +827,8 @@ if (config.bridge.active) {
     utils.BRIDGE_ADDRESS = config.bridge.address
     utils.BRIDGE_THRESHOLD = config.bridge.threshold
     utils.BRIDGE_NET_ID = config.bridge.network_id,
-    utils.VALIDATORS = config.bridge.validators
+    utils.VALIDATORS = config.bridge.validators,
+    utils.KNOWN_NETWORKS = config.bridge.known_networks
 }
 
 module.exports = utils;

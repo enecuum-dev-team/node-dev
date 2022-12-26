@@ -41,10 +41,6 @@ class Substate {
         this.confirmations = [];
     }
     async loadState(){
-        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
-        this.accounts = this.accounts.filter(v => v !== null);
-        this.accounts = await this.db.get_accounts_all(this.accounts);
-
         // TODO: optimized selection
         // this.pools = await this.db.dex_get_pools(this.pools);
         // let more_pools = await this.db.dex_get_pools_by_lt(this.lt_hashes);
@@ -60,11 +56,17 @@ class Substate {
         if(this.transferred.length > 0) {
             let tickets = await this.db.get_transferred_by_hashes(this.transferred);
             for (let ticket of tickets) {
+                this.accounts.push(ticket.dst_address)
                 let minted = await this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network)
                 if (minted)
                     this.tokens.push(minted.wrapped_hash)
             }
         }
+
+        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
+        this.accounts = this.accounts.filter(v => v !== null);
+        this.accounts = await this.db.get_accounts_all(this.accounts);
+
         let tokens_a = this.pools.map(h => h.asset_1);
         let tokens_b = this.pools.map(h => h.asset_2);
         this.tokens = this.tokens.concat(tokens_a);
@@ -394,10 +396,10 @@ class Substate {
             return null
         return this.minted.find(token => token.origin_hash === origin_hash && token.origin === origin)
     }
-    get_transferred (src_address, dst_address, src_network) {
-        if(!src_address || !dst_address || !src_network)
+    get_transferred (src_address, dst_address, src_network, src_hash) {
+        if(!src_address || !dst_address || !src_network || !src_hash)
             return null
-        let res = this.transferred.filter(tranfer => tranfer.src_address === src_address && tranfer.dst_address === dst_address && tranfer.src_network === src_network)
+        let res = this.transferred.filter(tranfer => tranfer.src_address == src_address && tranfer.dst_address == dst_address && tranfer.src_network == src_network && tranfer.src_hash == src_hash)
         if (res.length) {
             res.sort((a, b) => a.nonce > b.nonce ? -1 : 1)
             res = res[0]
@@ -415,7 +417,10 @@ class Substate {
         return len ? this.transferred[len - 1] : null
     }
     transfers_add (changes) {
-        let data = this.transferred.find(el => /* Number(el.nonce) === changes.nonce  || */ el.transfer_id === changes.transfer_id)
+        let data = this.transferred.find(el => el.src_address === changes.src_address && 
+                                               el.dst_address === changes.dst_address &&
+                                               el.src_network === changes.src_network &&
+                                               el.src_hash === changes.src_hash)
         if (data)
             throw new ContractError(`Bridge tx has already initialized`)
         changes.changed = true

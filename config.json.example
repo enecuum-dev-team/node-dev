@@ -146,6 +146,10 @@
         "network_id" : "12345",
         "address" : "123333333333333333333333333333f33333333333333333333333333333333333",
         "validators" : ["validatorID"],
-        "threshold" : 5
+        "threshold" : 5,
+        "known_networks": [
+            {"id":17, "decimals":2},
+            {"id":29, "decimals":4}
+        ]
     }
 }

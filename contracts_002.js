@@ -2288,7 +2288,7 @@ class FarmGetRewardContract extends Contract {
     }
 }
 
-class CrossChainSourceContract extends Contract {
+class LockContract extends Contract {
     constructor(data) {
         super()
         this.data = data
@@ -2312,7 +2312,7 @@ class CrossChainSourceContract extends Contract {
     async execute(tx, substate, kblock, config) {
         let cparser = new ContractParser(config)
         let cfactory = new ContractMachine.ContractFactory(config)
-        let lock_tokens = async (hash, amount) => {         
+        let lock_tokens = async (hash, amount) => {
             substate.accounts_change({
                 id : tx.from,
                 amount : -amount,
@@ -2395,7 +2395,7 @@ class ClaimInitContract extends Contract {
         let modelTmp = {...paramsModel}
         delete modelTmp.transfer_id
         let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
-		let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
+        let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
         if (transfer_id !== this.data.parameters.transfer_id)
             throw new ContractError(`Wrong transfer_id. Expected: ${transfer_id}, actual: ${this.data.parameters.transfer_id}`)
         return true
@@ -2403,7 +2403,7 @@ class ClaimInitContract extends Contract {
     
     async execute(tx, substate, kblock, config) {
         let data = this.data.parameters
-        let last_t = substate.get_transferred(data.src_address, data.dst_address, data.src_network)
+        let last_t = substate.get_transferred(data.src_address, data.dst_address, data.src_network, data.src_hash)
         if (last_t === null)
             last_t = {nonce : 0}
         if (Number(last_t.nonce) + 1 !== data.nonce)
@@ -2510,7 +2510,7 @@ class ClaimContract extends Contract {
                     amount : amount
                 }
             }
-            
+
             let mint_data = cparser.dataFromObject(mint_object)
             let mint_contract = cfactory.createContract(mint_data)
 
@@ -2626,7 +2626,7 @@ module.exports.TokenCreateContract = TokenCreateContract;
 module.exports.TokenMintContract = TokenMintContract;
 module.exports.TokenBurnContract = TokenBurnContract;
 
-module.exports.CrossChainSourceContract = CrossChainSourceContract;
+module.exports.LockContract = LockContract;
 module.exports.ClaimInitContract = ClaimInitContract;
 module.exports.ClaimConfirmContract = ClaimConfirmContract;
 module.exports.ClaimContract = ClaimContract;

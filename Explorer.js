@@ -86,10 +86,10 @@ class Explorer {
 
         this.app.get('/api/v1/transfers', async (req, res) => {
             console.trace('requested transfers', req.query);
-            if (!req.query.dst_address)
+            if (!req.query.dst_address || !req.query.src_address || !req.query.src_network || !req.query.src_hash)
                 res.send([])
             else
-                res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address))
+                res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
         })
 
         this.app.get('/api/v1/minted_token', async (req, res) => {

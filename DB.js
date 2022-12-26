@@ -1516,10 +1516,15 @@ class DB {
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE transfer_id = ?', [id]));
     }
-    async get_transferred_by_dst_address (dst_address) {
-        if (!dst_address)
+    async get_transferred_by_dst_address (dst_address, src_address, src_network, src_hash) {
+        if (!dst_address || !src_address || !src_network || !src_hash)
             return [];
-        return await this.request(mysql.format('SELECT * FROM transferred WHERE dst_address = ?', [dst_address]));
+        return await this.request(mysql.format(`SELECT * FROM transferred WHERE 
+        dst_address = ? AND
+        src_address = ? AND
+        src_network = ? AND
+        src_hash = ?
+        ORDER BY nonce DESC LIMIT 1`, [dst_address, src_address, src_network, src_hash]));
     }
 
 	async get_farms(ids){
