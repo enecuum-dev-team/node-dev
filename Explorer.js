@@ -338,7 +338,7 @@ class Explorer {
 			res.send(data);
 		});
 
-		this.app.get('/api/v1/balance_all', async (req, res) => {
+        this.app.get('/api/v1/balance_all', async (req, res) => {
 			console.trace('requested balances', req.query);
 			let id = req.query.id;
 			let data = await this.db.get_balance_all(id);
@@ -655,7 +655,7 @@ class Explorer {
 		*       200:
 		*         description: tickers
 		*/
-		this.app.get('/api/v1/get_tickers_all', async (req, res) => {
+        this.app.get('/api/v1/get_tickers_all', async (req, res) => {
 			console.trace('get_tickers_all', req.query);
 			let ticker_all = await this.db.get_tickers_all();
 			res.send(ticker_all);

@@ -18,7 +18,7 @@ const Utils = require('./Utils');
 const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
-const ContractParser = require('./contractParser').ContractParser;
+const { ContractParser, ContractParserWithCompression } = require('./contractParser');
 const crypto = require('crypto');
 
 let MAX_DECIMALS = BigInt(10);
@@ -2300,6 +2300,8 @@ class LockContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
+        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
+        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2312,7 +2314,7 @@ class LockContract extends Contract {
     async execute(tx, substate, kblock, config) {
         let cparser = new ContractParser(config)
         let cfactory = new ContractMachine.ContractFactory(config)
-        let lock_tokens = async (hash, amount) => {
+        let lock_tokens = async (hash, amount) => { 
             substate.accounts_change({
                 id : tx.from,
                 amount : -amount,
@@ -2377,7 +2379,8 @@ class ClaimInitContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-
+        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
+        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2430,7 +2433,8 @@ class ClaimConfirmContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-
+        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
+        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
         let paramsModel = {
             validator_id : cTypes.hexStr66,
             validator_sign : cTypes.hexStr1_150,
@@ -2491,7 +2495,8 @@ class ClaimContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-
+        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
+        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
         let paramsModel = {
             transfer_id : cTypes.hexStr64
         }
@@ -2610,7 +2615,7 @@ class ClaimContract extends Contract {
                 let tokenCreateRes = await createToken(ticket.amount, ticket.ticker)
                 substate.minted_add({
                     wrapped_hash : tokenCreateRes.token_info.hash,
-                    origin : ticket.origin_network,
+                    origin_network : ticket.origin_network,
                     origin_hash : ticket.origin_hash
                 })
                 res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)

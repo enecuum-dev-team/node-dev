@@ -213,7 +213,7 @@ class DB {
 			if (snapshot.minted && snapshot.minted.length > 0) {
                 let minted_chunks = snapshot.minted.chunk(INSERT_CHUNK_SIZE);
                 minted_chunks.forEach(chunk => {
-					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin, origin_hash) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin, minted.origin_hash])]));
+					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin_network, origin_hash) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin_network, minted.origin_hash])]));
 				});
 			}
             let transferred = [];
@@ -1139,7 +1139,7 @@ class DB {
 
         substate.minted = substate.minted.filter(a => a.changed === true);
         if(substate.minted.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin, a.origin_hash])]));
+            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin_network`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin_network, a.origin_hash])]));
     
 		substate.poses = substate.poses.filter(a => a.changed === true);
 		if(substate.poses.length > 0)
@@ -1490,7 +1490,7 @@ class DB {
     async get_minted_by_origin (origin_hash, origin_network) {
         if(!origin_hash || !origin_network)
             return null;
-        let res = await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ? and origin = ?`, [origin_hash, origin_network]));
+        let res = await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ? and origin_network = ?`, [origin_hash, origin_network]));
         if (res)
             return res[0];
         return null;

@@ -517,7 +517,7 @@ DROP TABLE IF EXISTS `minted`;
 
 CREATE TABLE `minted` (
   `wrapped_hash` varchar(64) NOT NULL,
-  `origin` varchar(64) NOT NULL,
+  `origin_network` varchar(64) NOT NULL,
   `origin_hash` varchar(64) NOT NULL,
   PRIMARY KEY (`wrapped_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
