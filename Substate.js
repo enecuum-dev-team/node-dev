@@ -385,10 +385,10 @@ class Substate {
             return null
         return this.minted.find(token => token.wrapped_hash === wrapped_hash)
     }
-    get_minted_token_by_origin (origin_hash, origin) {
-        if (!origin_hash || !origin)
+    get_minted_token_by_origin (origin_hash, origin_network) {
+        if (!origin_hash || !origin_network)
             return null
-        return this.minted.find(token => token.origin_hash === origin_hash && token.origin === origin)
+        return this.minted.find(token => token.origin_hash === origin_hash && token.origin_network === origin_network)
     }
     get_transferred (src_address, dst_address, src_network, src_hash) {
         if(!src_address || !dst_address || !src_network || !src_hash)
@@ -411,12 +411,6 @@ class Substate {
         return len ? this.transferred[len - 1] : null
     }
     transfers_add (changes) {
-        let data = this.transferred.find(el => el.src_address === changes.src_address && 
-                                               el.dst_address === changes.dst_address &&
-                                               el.src_network === changes.src_network &&
-                                               el.src_hash === changes.src_hash)
-        if (data)
-            throw new ContractError(`Bridge tx has already initialized`)
         changes.changed = true
         this.transferred.push(changes)
     }
