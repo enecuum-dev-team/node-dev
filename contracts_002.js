@@ -18,8 +18,9 @@ const Utils = require('./Utils');
 const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
-const { ContractParser, ContractParserWithCompression } = require('./contractParser');
+const ContractParser = require('./contractParser').ContractParser;
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 let MAX_DECIMALS = BigInt(10);
 let ENQ_INTEGER_COIN = BigInt(10000000000);
@@ -2293,6 +2294,10 @@ class LockContract extends Contract {
         super()
         this.data = data
         this.type = this.data.type
+
+        let decompressed = zlib.brotliDecompressSync(Buffer.from(data.parameters.compressed_data, 'base64'))
+        this.data.parameters = JSON.parse(decompressed.toString())
+
         if(!this.validate())
             throw new ContractError("Incorrect contract")
     }
@@ -2300,8 +2305,7 @@ class LockContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
-        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
+
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2372,6 +2376,10 @@ class ClaimInitContract extends Contract {
         super()
         this.data = data
         this.type = this.data.type
+
+        let decompressed = zlib.brotliDecompressSync(Buffer.from(data.parameters.compressed_data, 'base64'))
+        this.data.parameters = JSON.parse(decompressed.toString())
+
         if(!this.validate())
             throw new ContractError("Incorrect contract")
     }
@@ -2379,8 +2387,7 @@ class ClaimInitContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
-        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
+        
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2426,6 +2433,10 @@ class ClaimConfirmContract extends Contract {
         super()
         this.data = data
         this.type = this.data.type
+        
+        let decompressed = zlib.brotliDecompressSync(Buffer.from(data.parameters.compressed_data, 'base64'))
+        this.data.parameters = JSON.parse(decompressed.toString())
+
         if(!this.validate())
             throw new ContractError("Incorrect contract")
     }
@@ -2433,8 +2444,7 @@ class ClaimConfirmContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
-        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
+
         let paramsModel = {
             validator_id : cTypes.hexStr66,
             validator_sign : cTypes.hexStr1_150,
@@ -2495,8 +2505,7 @@ class ClaimContract extends Contract {
     validate () {
         if (!Utils.BRIDGE_ACTIVE)
             throw new ContractError("Bridge is deactivated")
-        // let cparserWithCompression = new ContractParserWithCompression(config) // TODO - config?...
-        // this.data.parameters = cparserWithCompression.parse(this.data.parameters.compressed)
+
         let paramsModel = {
             transfer_id : cTypes.hexStr64
         }

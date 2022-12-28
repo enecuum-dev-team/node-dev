@@ -307,12 +307,6 @@ class Substate {
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)
             }
-            case "claim" : {
-                this.transferred.push(contract.data.parameters.transfer_id)
-                this.accounts.push(Utils.BRIDGE_ADDRESS)
-                this.accounts.push(tx.from)
-                this.accounts.push(tx.to)
-            }
                 break;
             default : return false;
         }
