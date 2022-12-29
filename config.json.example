@@ -142,7 +142,6 @@
         ]
     },
     "bridge" : {
-        "active" : true,
         "network_id" : "12345",
         "address" : "123333333333333333333333333333f33333333333333333333333333333333333",
         "validators" : ["validatorID"],

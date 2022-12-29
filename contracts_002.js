@@ -2303,9 +2303,6 @@ class LockContract extends Contract {
     }
 
     validate () {
-        if (!Utils.BRIDGE_ACTIVE)
-            throw new ContractError("Bridge is deactivated")
-
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2385,9 +2382,6 @@ class ClaimInitContract extends Contract {
     }
 
     validate () {
-        if (!Utils.BRIDGE_ACTIVE)
-            throw new ContractError("Bridge is deactivated")
-        
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
@@ -2442,9 +2436,6 @@ class ClaimConfirmContract extends Contract {
     }
 
     validate () {
-        if (!Utils.BRIDGE_ACTIVE)
-            throw new ContractError("Bridge is deactivated")
-
         let paramsModel = {
             validator_id : cTypes.hexStr66,
             validator_sign : cTypes.hexStr1_150,
@@ -2503,9 +2494,6 @@ class ClaimContract extends Contract {
     }
 
     validate () {
-        if (!Utils.BRIDGE_ACTIVE)
-            throw new ContractError("Bridge is deactivated")
-
         let paramsModel = {
             transfer_id : cTypes.hexStr64
         }

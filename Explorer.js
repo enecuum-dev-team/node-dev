@@ -78,9 +78,6 @@ class Explorer {
 
         this.app.get('/api/v1/network_id', async (req, res) => {
             console.trace('requested network_id', req.query);
-            if (!Utils.BRIDGE_ACTIVE)
-                res.send("")
-            else
                 res.send(Utils.BRIDGE_NET_ID)
         })
 
