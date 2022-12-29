@@ -2347,7 +2347,7 @@ class LockContract extends Contract {
             let burn_data = cparser.dataFromObject(burn_object)
             let burn_contract = cfactory.createContract(burn_data)
 
-            lock_tokens(hash, amount)
+            await lock_tokens(hash, amount)
             let _tx = {
                 amount : tx.amount,
                 from : Utils.BRIDGE_ADDRESS,
