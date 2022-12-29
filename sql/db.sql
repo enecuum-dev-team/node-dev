@@ -513,4 +513,39 @@ CREATE TABLE `undelegates` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+DROP TABLE IF EXISTS `minted`;
+
+CREATE TABLE `minted` (
+  `wrapped_hash` varchar(64) NOT NULL,
+  `origin_network` varchar(64) NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`wrapped_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `transferred`;
+
+CREATE TABLE `transferred` (
+  `nonce` bigint(20) NOT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `src_network` varchar(2) NOT NULL,
+  `amount` bigint(20) unsigned DEFAULT NULL,
+  `dst_network` varchar(2) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  `transfer_id` varchar(64) NOT NULL,
+  `ticker` varchar(10) NOT NULL,
+  `origin_network` varchar(2) NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`transfer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `confirmations`;
+
+CREATE TABLE `confirmations` (
+  `validator_id` varchar(66) NOT NULL,
+  `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
+  `transfer_id` varchar(64) NOT NULL,
+  PRIMARY KEY (`transfer_id`, `validator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+
 -- Dump completed on 2020-04-14 15:09:51

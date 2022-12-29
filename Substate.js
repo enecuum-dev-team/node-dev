@@ -36,12 +36,11 @@ class Substate {
         this.claims = {};
         this.farms = [];
         this.farmers = [];
+        this.minted = [];
+        this.transferred = [];
+        this.confirmations = [];
     }
     async loadState(){
-        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
-        this.accounts = this.accounts.filter(v => v !== null);
-        this.accounts = await this.db.get_accounts_all(this.accounts);
-
         // TODO: optimized selection
         // this.pools = await this.db.dex_get_pools(this.pools);
         // let more_pools = await this.db.dex_get_pools_by_lt(this.lt_hashes);
@@ -54,6 +53,20 @@ class Substate {
         this.lt_hashes = this.pools.map(h => h.token_hash);
         if(this.lt_hashes.length > 0)
             this.tokens = this.tokens.concat(this.lt_hashes);
+        if(this.transferred.length > 0) {
+            let tickets = await this.db.get_transferred_by_hashes(this.transferred);
+            for (let ticket of tickets) {
+                this.accounts.push(ticket.dst_address)
+                let minted = await this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network)
+                if (minted)
+                    this.tokens.push(minted.wrapped_hash)
+            }
+        }
+
+        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
+        this.accounts = this.accounts.filter(v => v !== null);
+        this.accounts = await this.db.get_accounts_all(this.accounts);
+
         let tokens_a = this.pools.map(h => h.asset_1);
         let tokens_b = this.pools.map(h => h.asset_2);
         this.tokens = this.tokens.concat(tokens_a);
@@ -103,6 +116,10 @@ class Substate {
         this.farmers = this.farmers.filter((v, i, a) => a.indexOf(v) === i);
         this.farmers = this.farmers.filter(v => v !== null);
         this.farmers = await this.db.get_farmers_by_farmer(this.farmers);
+
+        this.minted = await this.db.get_minted_all();
+        this.transferred = await this.db.get_transferred_all();
+        this.confirmations = await this.db.get_confirmations_all();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -123,6 +140,9 @@ class Substate {
         this.accounts = state.accounts.map(a => Object.assign({}, a));
         this.farms = state.farms.map(a => Object.assign({}, a));
         this.farmers = state.farmers.map(a => Object.assign({}, a));
+        this.minted = state.minted.map(a => Object.assign({}, a));
+        this.transferred = state.transferred.map(a => Object.assign({}, a));
+        this.confirmations = state.confirmations.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
         let type = contract.type;
@@ -274,6 +294,20 @@ class Substate {
                 this.farms.push(Utils.DEX_SPACE_STATION_ID);
             }
                 break;
+            case "lock" : {
+                this.tokens.push(contract.data.parameters.hash)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
+                this.accounts.push(Utils.BRIDGE_ADDRESS)
+            }
+                break;
+            case "claim_confirm" : {
+                this.transferred.push(contract.data.parameters.transfer_id)
+                this.accounts.push(Utils.BRIDGE_ADDRESS)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
+            }
+                break;
             default : return false;
         }
     }
@@ -313,7 +347,7 @@ class Substate {
     get_transfer_lock(){
         return this.db.app_config.transfer_lock;
     }
-    get_token_info(hash){
+    get_token_info (hash) {
         if(!hash)
             return null;
         return this.tokens.find(a => a.hash === hash);
@@ -345,6 +379,59 @@ class Substate {
         if(!farm_id || !farmer_id)
             return null;
         return this.farmers.find(a => ((a.farm_id === farm_id) && (a.farmer_id === farmer_id)));
+    }
+    get_minted_token (wrapped_hash) {
+        if (!wrapped_hash)
+            return null
+        return this.minted.find(token => token.wrapped_hash === wrapped_hash)
+    }
+    get_minted_token_by_origin (origin_hash, origin_network) {
+        if (!origin_hash || !origin_network)
+            return null
+        return this.minted.find(token => token.origin_hash === origin_hash && token.origin_network === origin_network)
+    }
+    get_transferred (src_address, dst_address, src_network, src_hash) {
+        if(!src_address || !dst_address || !src_network || !src_hash)
+            return null
+        let res = this.transferred.filter(tranfer => tranfer.src_address == src_address && tranfer.dst_address == dst_address && tranfer.src_network == src_network && tranfer.src_hash == src_hash)
+        if (res.length) {
+            res.sort((a, b) => a.nonce > b.nonce ? -1 : 1)
+            res = res[0]
+        } else
+            res = null
+        return res
+    }
+    get_transferred_by_id(id) {
+        if(!id)
+            return null
+        return this.transferred.find(tranfer => tranfer.transfer_id === id)
+    }
+    get_last_transferred () {
+        let len = this.transferred.length
+        return len ? this.transferred[len - 1] : null
+    }
+    transfers_add (changes) {
+        changes.changed = true
+        this.transferred.push(changes)
+    }
+    add_confirmation (changes) {
+        if (!changes.validator_id || !changes.validator_sign || !changes.transfer_id) 
+            return null
+        if (this.confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.transfer_id === changes.transfer_id))
+            throw new ContractError(`Validator has already confirm transfer: ${changes.transfer_id}`)
+        changes.changed = true
+        this.confirmations.push(changes)
+        return this.confirmations.reduce((prev, cur) => {
+            if (cur.transfer_id === changes.transfer_id)
+                ++prev
+            return prev
+        }, 0)
+    }
+    minted_add (changes) {
+        if (this.get_minted_token(changes.wrapped_hash))
+            throw new ContractError(`Token ${changes.wrapped_hash} is already minted`)
+        changes.changed = true
+        this.minted.push(changes)
     }
     pools_add(changes){
         if(this.pools.find(a => a.hash === changes.pair_id))

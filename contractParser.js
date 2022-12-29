@@ -33,6 +33,10 @@ let schema = {
     "pool_sell_exact_routed" :  "2000",
     "pool_buy_exact" :          "2100",
     "pool_buy_exact_routed" :   "2200",
+    "lock" :                    "2300",
+    "claim_init" :              "2400",
+    "claim_confirm" :           "2500",
+    "claim" :                   "2600",
 };
 const contracts_000 = [
     "0100", "0200", "0300", "0400", "1000",

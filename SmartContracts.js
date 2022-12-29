@@ -34,28 +34,32 @@ class ContractFactory{
             ENX_TOKEN_HASH = this.config.dex.DEX_ENX_TOKEN_HASH;
 
         switch(type) {
-            case "create_token" :           return new Contracts.TokenCreateContract(data);
-            case "create_pos" :             return new Contracts.PosCreateContract(data);
-            case "delegate" :               return new Contracts.PosDelegateContract(data);
-            case "undelegate" :             return new Contracts.PosUndelegateContract(data);
-            case "transfer" :               return new Contracts.PosTransferContract(data);
-            case "pos_reward" :             return new Contracts.PosGetRewardContract(data);
-            case "mint" :                   return new Contracts.TokenMintContract(data);
-            case "burn" :                   return new Contracts.TokenBurnContract(data);
-            case "pool_create" :            return new Contracts.PoolCreateContract(data);
-            case "pool_add_liquidity" :     return new Contracts.PoolLiquidityAddContract(data);
-            case "pool_remove_liquidity":   return new Contracts.PoolLiquidityRemoveContract(data);
-            case "pool_sell_exact" :        return new Contracts.PoolLiquiditySellExactContract(data, ENX_TOKEN_HASH);
-            case "pool_buy_exact" :         return new Contracts.PoolLiquidityBuyExactContract(data, ENX_TOKEN_HASH);
-            case "farm_create" :            return new Contracts.FarmCreateContract(data);
-            case "farm_increase_stake" :    return new Contracts.FarmIncreaseStakeContract(data);
-            case "farm_decrease_stake" :    return new Contracts.FarmDecreaseStakeContract(data);
-            case "farm_close_stake" :       return new Contracts.FarmCloseStakeContract(data);
-            case "farm_get_reward" :        return new Contracts.FarmGetRewardContract(data);
-            case "farm_add_emission" :      return new Contracts.FarmsAddEmissionContract(data);
-            case "dex_cmd_distribute" :     return new Contracts.DexCmdDistributeContract(data, ENX_TOKEN_HASH);
-            case "pool_sell_exact_routed" : return new Contracts.PoolLiquiditySellExactRoutedContract(data);
-            case "pool_buy_exact_routed" :  return new Contracts.PoolLiquidityBuyExactRoutedContract(data);
+            case "create_token" :           return new Contracts[idx].TokenCreateContract(data);
+            case "create_pos" :             return new Contracts[idx].PosCreateContract(data);
+            case "delegate" :               return new Contracts[idx].PosDelegateContract(data);
+            case "undelegate" :             return new Contracts[idx].PosUndelegateContract(data);
+            case "transfer" :               return new Contracts[idx].PosTransferContract(data);
+            case "pos_reward" :             return new Contracts[idx].PosGetRewardContract(data);
+            case "mint" :                   return new Contracts[idx].TokenMintContract(data);
+            case "burn" :                   return new Contracts[idx].TokenBurnContract(data);
+            case "pool_create" :            return new Contracts[idx].PoolCreateContract(data);
+            case "pool_add_liquidity" :     return new Contracts[idx].PoolLiquidityAddContract(data);
+            case "pool_remove_liquidity":   return new Contracts[idx].PoolLiquidityRemoveContract(data);
+            case "pool_sell_exact" :        return new Contracts[idx].PoolLiquiditySellExactContract(data);
+            case "pool_buy_exact" :         return new Contracts[idx].PoolLiquidityBuyExactContract(data);
+            case "farm_create" :            return new Contracts[idx].FarmCreateContract(data);
+            case "farm_increase_stake" :    return new Contracts[idx].FarmIncreaseStakeContract(data);
+            case "farm_decrease_stake" :    return new Contracts[idx].FarmDecreaseStakeContract(data);
+            case "farm_close_stake" :       return new Contracts[idx].FarmCloseStakeContract(data);
+            case "farm_get_reward" :        return new Contracts[idx].FarmGetRewardContract(data);
+            case "farm_add_emission" :      return new Contracts[idx].FarmsAddEmissionContract(data);
+            case "dex_cmd_distribute" :     return new Contracts[idx].DexCmdDistributeContract(data);
+            case "pool_sell_exact_routed" : return new Contracts[idx].PoolLiquiditySellExactRoutedContract(data);
+            case "pool_buy_exact_routed" :  return new Contracts[idx].PoolLiquidityBuyExactRoutedContract(data);
+            case "lock" :                   return new Contracts[idx].LockContract(data);
+            case "claim_init" :             return new Contracts[idx].ClaimInitContract(data);
+            case "claim_confirm" :          return new Contracts[idx].ClaimConfirmContract(data);
+            case "claim" :                  return new Contracts[idx].ClaimContract(data);
             default :                       return null;
         }
     }
@@ -81,7 +85,7 @@ class ContractFactory{
         if(tx.to !== db.ORIGIN.publisher){
             throw new ContractError(`Invalid recipient address, expected ${db.ORIGIN.publisher} , given ${tx.to}`);
         }
-        if(tx.ticker !== Utils.ENQ_TOKEN_NAME){
+        if (tx.ticker !== Utils.ENQ_TOKEN_NAME) {
             throw new ContractError(`Invalid token, expected ${Utils.ENQ_TOKEN_NAME} , given ${tx.ticker}`);
         }
         return contract;

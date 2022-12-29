@@ -77,6 +77,28 @@ class Explorer {
 
 		this.app.use(express.json());
 
+        this.app.get('/api/v1/network_id', async (req, res) => {
+            console.trace('requested network_id', req.query);
+                res.send(Utils.BRIDGE_NET_ID)
+        })
+
+        this.app.get('/api/v1/transfers', async (req, res) => {
+            console.trace('requested transfers', req.query);
+            if (!req.query.dst_address || !req.query.src_address || !req.query.src_network || !req.query.src_hash)
+                res.send([])
+            else
+                res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
+        })
+
+        this.app.get('/api/v1/minted_token', async (req, res) => {
+            console.trace('requested minted_token', req.query);
+            try {
+                res.send(await this.db.get_minted_all())
+            } catch (e) {
+                res.send([])
+            }
+        })
+
 		this.app.get('/api/v1/network_info', async (req, res) => {
 			console.trace('requested network_info', req.query);
 			let native_token = (await this.db.get_tokens_info([this.config.native_token_hash]))[0];
@@ -314,7 +336,7 @@ class Explorer {
 			res.send(data);
 		});
 
-		this.app.get('/api/v1/balance_all', async (req, res) => {
+        this.app.get('/api/v1/balance_all', async (req, res) => {
 			console.trace('requested balances', req.query);
 			let id = req.query.id;
 			let data = await this.db.get_balance_all(id);
@@ -461,7 +483,6 @@ class Explorer {
 
 		this.app.post('/api/v1/tx', async (req, res, next) => {
 			let txs = req.body;
-			console.trace(`post txs`, JSON.stringify(txs));
 
 			if (txs.length !== 1)
 				return res.send({err: 1, message: "Only 1 TX can be sent"});
@@ -645,7 +666,7 @@ class Explorer {
 		*       200:
 		*         description: tickers
 		*/
-		this.app.get('/api/v1/get_tickers_all', async (req, res) => {
+        this.app.get('/api/v1/get_tickers_all', async (req, res) => {
 			console.trace('get_tickers_all', req.query);
 			let ticker_all = await this.db.get_tickers_all();
 			let that = this;

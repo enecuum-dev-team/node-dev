@@ -123,4 +123,15 @@
         "824e7b171c01e971337c1b25a055023dd53c003d4aa5aa8b58a503d7c622651e"
     ]
 
+    },
+    "bridge" : {
+        "network_id" : "12345",
+        "address" : "123333333333333333333333333333f33333333333333333333333333333333333",
+        "validators" : ["validatorID"],
+        "threshold" : 5,
+        "known_networks": [
+            {"id":17, "decimals":2},
+            {"id":29, "decimals":4}
+        ]
+    }
 }
