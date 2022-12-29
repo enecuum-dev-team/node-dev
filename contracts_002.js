@@ -2595,10 +2595,10 @@ class ClaimContract extends Contract {
                     min_stake : 0n,
                 }
             }
-            let token_create_data = cparser.dataFromObject(token_create_object)
-            let token_create_contract = cfactory.createContract(token_create_data)
+            let token_create_data = cparser.dataFromObject(token_create_object);
+            let token_create_contract = cfactory.createContract(token_create_data);
 
-            let token_price = BigInt(Utils.CONTRACT_PRICELIST.create_token)
+            let token_price = BigInt(this.pricelist.create_token);
             // let balance = await substate.get_balance(tx.from, tx.ticker)
             // if (BigInt(balance.amount) < token_price)
             //     throw new ContractError(`Not enough balance to create new token`)
