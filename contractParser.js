@@ -49,10 +49,18 @@ const contracts_002 = [
     "1b00", "1c00", "1d00", "1e00", "1f00",
     "2000", "2100", "2200"
 ];
+const contracts_003 = [
+    "0100", "0200", "0300", "0400", "1000",
+    "1100", "1200", "1300", "1400", "1500",
+    "1600", "1700", "1800", "1900", "1a00",
+    "1b00", "1c00", "1d00", "1e00", "1f00",
+    "2000", "2100", "2200", "2300", "2400",
+    "25200", "2600"
+];
 class ContractParser {
     constructor() {
         this.schema = schema;
-        this.contracts = contracts_002;
+        this.contracts = contracts_003;
     }
     toHex(d) {
         let hex = Number(d).toString(16);
@@ -83,7 +91,7 @@ class ContractParser {
         }
     }
     getContractsId(forks, n){
-        let Contracts = [contracts_000, contracts_000, contracts_002, contracts_002]; // first duplicate contracts_000 but fork_001 didn`t change the contracts list
+        let Contracts = [contracts_000, contracts_000, contracts_002, contracts_003, contracts_003]; // first duplicate contracts_000 but fork_001 didn`t change the contracts list
         let fork_keys = Object.keys(forks);
         let idx = fork_keys.length - 1;
         for(let i = 0; i < fork_keys.length; i++){

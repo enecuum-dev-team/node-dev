@@ -92,7 +92,8 @@
     "PROTOCOL_VERSIONS" : {
           "fork_block_000" : 2,
           "fork_block_001" : 3,
-          "fork_block_002" : 4
+          "fork_block_002" : 4,
+          "fork_block_003" : 4
         },
 	  "mblock_slots": {
         "size": 2,
