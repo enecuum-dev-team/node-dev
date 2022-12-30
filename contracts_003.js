@@ -32,7 +32,7 @@ class Contract{
     constructor() {
         this._mysql = require('mysql');
         this.type = null;
-        this.pricelist = require('./pricelist').fork_block_002;
+        this.pricelist = require('./pricelist').fork_block_003;
     }
     get mysql(){
         return this._mysql;
@@ -1077,7 +1077,7 @@ class PoolLiquiditySellExactContract extends Contract {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = "";
+        this.enx_hash = Utils.DEX_ENX_TOKEN_HASH
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1214,7 +1214,7 @@ class PoolLiquidityBuyExactContract extends Contract {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = "";
+        this.enx_hash = Utils.DEX_ENX_TOKEN_HASH
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1828,7 +1828,7 @@ class DexCmdDistributeContract extends Contract {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = "";
+        this.enx_hash = Utils.DEX_ENX_TOKEN_HASH
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
