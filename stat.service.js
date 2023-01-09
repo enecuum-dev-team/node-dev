@@ -259,8 +259,8 @@ class StatService {
         if(n.value === null)
             n.value = 0;
         n = n.value;
-        let kblock = (await this.db.get_kblock_by_n(n))[0]
-        let events = await this.eventdb.getEvents(n)
+        let kblock = (await this.db.get_kblock_by_n(n))[0];
+        let events = await this.eventdb.getEvents(n);
         //console.log(events)
         let new_n = n;
         let rewards = events.map(event => {
@@ -268,10 +268,35 @@ class StatService {
                 new_n = event.n;
             let edata = JSON.parse(event.data);
             return {type : event.event, id : edata.id, hash : edata.hash, value : edata.value }
-        })
+        });
         let ind = this.db.generate_eindex(rewards, kblock.time);
-        await this.db.transaction(ind.join(';'))
-        console.log(new_n)
+        await this.db.transaction(ind.join(';'));
+        console.log(new_n);
+        return new_n;//console.log(ind)
+    }
+    async update_dex_info(){
+        let n = (await this.db.get_stats('update_dex_info'))[0];
+        if(n === undefined || n === null)
+            return;
+        if(!n.hasOwnProperty('value'))
+            return;
+        if(n.value === null)
+            n.value = 0;
+        n = n.value;
+        let kblock = (await this.db.get_kblock_by_n(n))[0];
+        let events = await this.eventdb.getEvents(n);
+        //console.log(events)
+        let new_n = n;
+        let dex_events = events.map(event => {
+            if(event.n > new_n)
+                new_n = event.n;
+            let edata = JSON.parse(event.data);
+
+            return {type : event.event, id : edata.id, hash : edata.hash, value : edata.value }
+        });
+        let ind = this.db.generate_eindex(rewards, kblock.time);
+        await this.db.transaction(ind.join(';'));
+        console.log(new_n);
         return new_n;//console.log(ind)
     }
 }

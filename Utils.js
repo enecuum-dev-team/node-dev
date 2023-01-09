@@ -14,10 +14,12 @@
 
 const crypto = require('crypto');
 const enq = require('./Enq');
-const config = require('./config.json');
+const fs = require('fs');
+const config = JSON.parse(fs.readFileSync('./config.bit', 'utf8'));
+
 const rsasign = require('jsrsasign');
 let rx = require('./node_modules/node-randomx/addon');
-const fs = require('fs');
+
 
 let KeyEncoder = require('key-encoder').default;
 let keyEncoder = new KeyEncoder('secp256k1');

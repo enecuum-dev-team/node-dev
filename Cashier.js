@@ -13,6 +13,9 @@ class Cashier {
         this.srewards = BigInt(0);
         this.krewards = BigInt(0);
         this.events = [];
+        this.iterations = 0;
+        this.test_time = process.hrtime();
+        this.iterations_target = 2000
     }
 
     eindex_entry(arr, type, id, hash, value, n = 1) {
@@ -494,7 +497,7 @@ class Cashier {
 
             await this.db.terminate_ledger_kblock(accounts, kblock, mblocks, sblocks, [group_update_delegates], supply_change, rewards);
             await this.eventdb.addEvents(this.events);
-            this.events = []
+            this.events = [];
             time = process.hrtime(time);
             console.debug(`cashier_timing: kblock termination ${hash} saved in`, Utils.format_time(time));
 
@@ -635,7 +638,7 @@ class Cashier {
         console.debug(`cashier_timing: mblocks chunk ${hash} prepared in`, Utils.format_time(time));
 
         let tokens_counts = {};
-        if(this.config.indexer_mode === 1){
+        //if(this.config.indexer_mode === 1){
             for(let st of statuses){
                 if ((st.status === Utils.TX_STATUS.REJECTED) || (st.status === Utils.TX_STATUS.CONFIRMED)) {
                     this.eindex_entry(rewards, 'iin', st.to, st.hash, st.amount);
@@ -647,7 +650,7 @@ class Cashier {
                     tokens_counts[st.ticker]++;
                 }
             }
-        }
+        //}
         //return;
         time = process.hrtime();
 
@@ -1373,6 +1376,13 @@ class Cashier {
             } else {
                 console.trace(`Cashier block ${cur_hash} not closed yet`)
             }
+
+            //if(this.iterations === this.iterations_target){
+            //    this.test_time = process.hrtime(this.test_time);
+            //    console.log(`${this.iterations} iterations in`, Utils.format_time(this.test_time));
+            //    process.exit(0)
+            //}
+            //this.iterations++;
             //let put_time = process.hrtime(time);
             //console.debug(`chunk ${cur_hash} calculated in`, Utils.format_time(put_time));
         } catch (e) {
