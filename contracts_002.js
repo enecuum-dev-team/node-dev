@@ -866,6 +866,7 @@ class PoolLiquidityAddContract extends Contract {
             return null;
         let params = this.data.parameters;
 
+        let events = [];
         let assets = Utils.getPairId(params.asset_1, params.asset_2);
         let pair_id = assets.pair_id;
         assets.amount_1 = (params.asset_1 === assets.asset_1) ? params.amount_1 : params.amount_2;
@@ -960,12 +961,23 @@ class PoolLiquidityAddContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-
+        events.push({
+            type : this.type,
+            txhash : tx.hash,
+            data : {
+                old_volume_1 : pool_info.volume_1,
+                old_volume_2 : pool_info.volume_2,
+                new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+                new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+                lt_amount : lt_amount
+            }
+        });
         return {
             amount_changes : [],
             pos_changes : [],
             post_action : [],
-            liq_add_lt : lt_amount
+            liq_add_lt : lt_amount,
+            events : events
         };
     }
 }
@@ -1015,6 +1027,7 @@ class PoolLiquidityRemoveContract extends Contract {
             return null;
         let params = this.data.parameters;
 
+        let events = [];
         // TODO: this is probably unnececcary checks
         let token_info = (await substate.get_token_info(params.lt));
         if(!token_info)
@@ -1060,15 +1073,17 @@ class PoolLiquidityRemoveContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-        let event = {
+        events.push({
             type : this.type,
+            txhash : tx.hash,
             data : {
-                params : params,
-                in : amount_in,
-                out : amount_out,
-                cmd_lt_amount : cmd_lt_amount
+                old_volume_1 : pool_info.volume_1,
+                old_volume_2 : pool_info.volume_2,
+                new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+                new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+                lt_amount : params.amount
             }
-        };
+        });
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1076,7 +1091,8 @@ class PoolLiquidityRemoveContract extends Contract {
             liq_remove : {
                 liq_remove1 : amount_1,
                 liq_remove2 : amount_2
-            }
+            },
+            events : events
         };
     }
 }
@@ -1206,6 +1222,7 @@ class PoolLiquiditySellExactContract extends Contract {
         substate.pools_change(pool_data);
         let event = {
             type : this.type,
+            txhash : tx.hash,
             data : {
                 params : params,
                 in : amount_in,
@@ -1358,6 +1375,7 @@ class PoolLiquidityBuyExactContract extends Contract {
         substate.pools_change(pool_data);
         let event = {
             type : this.type,
+            txhash : tx.hash,
             data : {
                 params : params,
                 in : amount_in,
