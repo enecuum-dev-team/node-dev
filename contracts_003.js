@@ -2334,7 +2334,7 @@ class LockContract extends Contract {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
             amount : cTypes.str,
-            hash : cTypes.hexStr1_66
+            hash : cTypes.hexStr1_64
         }
         return cValidate(this.data.parameters, paramsModel)
     }
@@ -2413,10 +2413,10 @@ class ClaimInitContract extends Contract {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
             amount : cTypes.strBigInt,
-            src_hash : cTypes.hexStr1_66,
+            src_hash : cTypes.hexStr1_64,
             src_address : cTypes.hexStr1_66,
             src_network : cTypes.number,
-            origin_hash : cTypes.hexStr1_66,
+            origin_hash : cTypes.hexStr1_64,
             origin_network : cTypes.number,
             nonce : cTypes.number,
             transfer_id : cTypes.hexStr64,
@@ -2599,20 +2599,7 @@ class ClaimContract extends Contract {
             let token_create_contract = cfactory.createContract(token_create_data);
 
             let token_price = BigInt(this.pricelist.create_token);
-            // let balance = await substate.get_balance(tx.from, tx.ticker)
-            // if (BigInt(balance.amount) < token_price)
-            //     throw new ContractError(`Not enough balance to create new token`)
 
-            // substate.accounts_change({
-            //     id : Utils.BRIDGE_ADDRESS,
-            //     amount : token_price,
-            //     token : tx.ticker,
-            // });
-            // substate.accounts_change({
-            //     id : tx.from,
-            //     amount : -token_price,
-            //     token : tx.ticker,
-            // });
             let _tx = {
                 amount : token_price,
                 from : Utils.BRIDGE_ADDRESS,
@@ -2628,7 +2615,7 @@ class ClaimContract extends Contract {
         if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
             throw new ContractError("Wrong network id")
         let res
-        if (ticket.origin_network === ticket.dst_network) {
+        if (ticket.origin_network == ticket.dst_network) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
         } else {
             let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)

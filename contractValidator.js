@@ -5,7 +5,7 @@ const cTypes = {
     hexStr64 : {
         id : 0x0, 
         type : "string", 
-        regexp : /^(0x)?[0-9a-fA-F]{64}$/i
+        regexp : /^[0-9a-fA-F]{64}$/i
     },
     bigInt : {
         id : 0x1,
@@ -27,12 +27,12 @@ const cTypes = {
     hexStr66 : {
         id : 0x5, 
         type : "string", 
-        regexp : /^(0x)?[0-9a-fA-F]{66}$/i
+        regexp : /^[0-9a-fA-F]{66}$/i
     },
     hexStr1_150 : {
         id : 0x6, 
         type : "string",
-        regexp : /^(0x)?[0-9a-fA-F]{1,150}$/i
+        regexp : /^[0-9a-fA-F]{1,150}$/i
     },
     str : {
         id : 0x7, 
@@ -41,7 +41,12 @@ const cTypes = {
     hexStr1_66 : {
         id : 0x8, 
         type : "string",
-        regexp : /^(0x)?[0-9a-fA-F]{1,66}$/i
+        regexp : /^[0-9a-fA-F]{1,66}$/i
+    },
+    hexStr1_64 : {
+        id : 0xA, 
+        type : "string",
+        regexp : /^[0-9a-fA-F]{1,64}$/i
     },
     strBigInt : {
         id : 0x9,
@@ -76,6 +81,7 @@ module.exports = {
             checkRegex("hexStr64")
             checkRegex("hexStr66")
             checkRegex("hexStr1_66")
+            checkRegex("hexStr1_64")
             checkRegex("hexStr1_150")
 
             if (paramModel.id === cTypes.bigInt.id) {
