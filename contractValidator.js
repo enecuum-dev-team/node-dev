@@ -2,11 +2,6 @@
 const { ContractError } = require("./errors")
 
 const cTypes = {
-    hexStr64 : {
-        id : 0x0, 
-        type : "string", 
-        regexp : /^[0-9a-fA-F]{64}$/i
-    },
     bigInt : {
         id : 0x1,
         type : "bigint"
@@ -24,34 +19,41 @@ const cTypes = {
         id : 0x4,
         type : "number"
     },
-    hexStr66 : {
+    str : {
         id : 0x5, 
+        type : "string"
+    },
+    strBigInt : {
+        id : 0x6,
+        type : "string",
+        regexp : /^([0-9]+n{0,1}|\s*)$/i
+    },
+
+    enqHash64 : {
+        id : 0x7, 
+        type : "string", 
+        regexp : /^[0-9a-fA-F]{64}$/i
+    },
+    enqHash66 : {
+        id : 0x8,
         type : "string", 
         regexp : /^[0-9a-fA-F]{66}$/i
     },
+
     hexStr1_150 : {
-        id : 0x6, 
+        id : 0x9, 
         type : "string",
-        regexp : /^[0-9a-fA-F]{1,150}$/i
-    },
-    str : {
-        id : 0x7, 
-        type : "string"
+        regexp : /^(0x)?[0-9a-fA-F]{1,150}$/i
     },
     hexStr1_66 : {
-        id : 0x8, 
+        id : 0x0, 
         type : "string",
-        regexp : /^[0-9a-fA-F]{1,66}$/i
+        regexp : /^(0x)?[0-9a-fA-F]{1,66}$/i
     },
     hexStr1_64 : {
         id : 0xA, 
         type : "string",
-        regexp : /^[0-9a-fA-F]{1,64}$/i
-    },
-    strBigInt : {
-        id : 0x9,
-        type : "string",
-        regexp : /^([0-9]+n{0,1}|\s*)$/i
+        regexp : /^(0x)?[0-9a-fA-F]{1,64}$/i
     }
 }
 
@@ -78,8 +80,8 @@ module.exports = {
             if (param === undefined)
                 throw new ContractError(`Incorrect parameters structure. Param '${key}' is missing.`)
 
-            checkRegex("hexStr64")
-            checkRegex("hexStr66")
+            checkRegex("enqHash64")
+            checkRegex("enqHash66")
             checkRegex("hexStr1_66")
             checkRegex("hexStr1_64")
             checkRegex("hexStr1_150")

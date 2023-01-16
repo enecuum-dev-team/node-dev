@@ -2334,7 +2334,7 @@ class LockContract extends Contract {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.number,
             amount : cTypes.str,
-            hash : cTypes.hexStr1_64
+            hash : cTypes.enqHash64
         }
         return cValidate(this.data.parameters, paramsModel)
     }
@@ -2410,7 +2410,7 @@ class ClaimInitContract extends Contract {
 
     validate () {
         let paramsModel = {
-            dst_address : cTypes.hexStr1_66,
+            dst_address : cTypes.enqHash66,
             dst_network : cTypes.number,
             amount : cTypes.strBigInt,
             src_hash : cTypes.hexStr1_64,
@@ -2419,7 +2419,7 @@ class ClaimInitContract extends Contract {
             origin_hash : cTypes.hexStr1_64,
             origin_network : cTypes.number,
             nonce : cTypes.number,
-            transfer_id : cTypes.hexStr64,
+            transfer_id : cTypes.enqHash64,
             ticker : cTypes.str
         }
         cValidate(this.data.parameters, paramsModel)
@@ -2464,9 +2464,9 @@ class ClaimConfirmContract extends Contract {
 
     validate () {
         let paramsModel = {
-            validator_id : cTypes.hexStr66,
+            validator_id : cTypes.enqHash66,
             validator_sign : cTypes.hexStr1_150,
-            transfer_id : cTypes.hexStr64
+            transfer_id : cTypes.enqHash64
         }
 
         return cValidate(this.data.parameters, paramsModel)
@@ -2522,7 +2522,7 @@ class ClaimContract extends Contract {
 
     validate () {
         let paramsModel = {
-            transfer_id : cTypes.hexStr64
+            transfer_id : cTypes.enqHash64
         }
 
         return cValidate(this.data.parameters, paramsModel)
