@@ -77,12 +77,7 @@ class Explorer {
 
 		this.app.use(express.json());
 
-        this.app.get('/api/v1/network_id', async (req, res) => {
-            console.trace('requested network_id', req.query);
-                res.send(Utils.BRIDGE_NET_ID)
-        })
-
-        this.app.get('/api/v1/transfers', async (req, res) => {
+        this.app.get('/api/v1/bridge_last_transfer', async (req, res) => {
             console.trace('requested transfers', req.query);
             if (!req.query.dst_address || !req.query.src_address || !req.query.src_network || !req.query.src_hash)
                 res.send([])
@@ -90,7 +85,7 @@ class Explorer {
                 res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
         })
 
-        this.app.get('/api/v1/minted_token', async (req, res) => {
+        this.app.get('/api/v1/bridge_minted_token', async (req, res) => {
             console.trace('requested minted_token', req.query);
             try {
                 res.send(await this.db.get_minted_all())
@@ -117,7 +112,8 @@ class Explorer {
 					count:this.config.mblock_slots.count,
 					min_stake:this.config.mblock_slots.min_stake
 				},
-				dex : this.config.dex
+				dex : this.config.dex,
+                bridge : this.config.bridge
 			};
 			res.send(data);
 		});

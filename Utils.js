@@ -107,8 +107,9 @@ let utils = {
 	SYNC_FAILURES_LIMIT : 5,
 	SYNC_IGNORE_TIMEOUT : 7200000, //ms  2 hours
 	MAX_NONCE : 2147483647, //Maximum Value Signed Int
+    ...config.bridge,
 
-	pid_cached : 0,
+    pid_cached : 0,
 	lastTime : Date.now(),
 	lastInput : 0,
 	lastError : 0,
@@ -887,11 +888,6 @@ let utils = {
 	}
 };
 
-utils.BRIDGE_ADDRESS = config.bridge.address;
-utils.BRIDGE_THRESHOLD = config.bridge.threshold;
-utils.BRIDGE_NET_ID = config.bridge.network_id;
-utils.VALIDATORS = config.bridge.validators;
-utils.KNOWN_NETWORKS = config.bridge.known_networks;
 
 module.exports = utils;
 module.exports.ECC = ECC;

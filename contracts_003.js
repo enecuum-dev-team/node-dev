@@ -2612,7 +2612,7 @@ class ClaimContract extends Contract {
         }
 
         let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
-        if (Utils.BRIDGE_NET_ID !== ticket.dst_network)
+        if (Utils.BRIDGE_NETWORK_ID !== ticket.dst_network)
             throw new ContractError("Wrong network id")
         let res
         if (ticket.origin_network == ticket.dst_network) {

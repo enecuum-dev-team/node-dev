@@ -126,11 +126,11 @@
 
     },
     "bridge" : {
-        "network_id" : "12345",
-        "address" : "123333333333333333333333333333f33333333333333333333333333333333333",
-        "validators" : ["validatorID"],
-        "threshold" : 5,
-        "known_networks": [
+        "BRIDGE_NETWORK_ID" : "1",
+        "BRIDGE_ADDRESS" : "123333333333333333333333333333f33333333333333333333333333333333333",
+        "BRIDGE_VALIDATORS" : ["validatorID"],
+        "BRIDGE_THRESHOLD" : 5,
+        "BRIDGE_KNOWN_NETWORKS": [
             {"id":17, "decimals":2},
             {"id":29, "decimals":4}
         ]
