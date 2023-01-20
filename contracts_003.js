@@ -2342,7 +2342,7 @@ class LockContract extends Contract {
     async execute(tx, substate, kblock, config) {
         let cparser = new ContractParser(config)
         let cfactory = new ContractMachine.ContractFactory(config)
-        let lock_tokens = async (hash, amount) => { 
+        let lock_tokens = async (hash, amount) => {
             substate.accounts_change({
                 id : tx.from,
                 amount : -amount,
@@ -2382,6 +2382,13 @@ class LockContract extends Contract {
 
             return await burn_contract.execute(_tx, substate)
         }
+        let validateDecimals = (params) => {
+            let dstDecimals = Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == params.dst_network).decimals
+            let srcDecimals = substate.get_token_info(params.hash).decimals
+            if (dstDecimals < srcDecimals)
+                return BigInt(params.amount) % BigInt("1" + "0".repeat(srcDecimals - dstDecimals)) == 0
+            return true
+        }
 
         let data = this.data.parameters
         let wrappedToken = substate.get_minted_token(data.hash)
@@ -2389,7 +2396,10 @@ class LockContract extends Contract {
         if (wrappedToken) {
             res = await burn_tokens(data.hash, data.amount)
         } else {
-            res = await lock_tokens(data.hash, data.amount)
+            if (validateDecimals(data))
+                res = await lock_tokens(data.hash, data.amount)
+            else 
+                throw new ContractError("Lock contract: Fraction too low.")
         }
         return res
     }
