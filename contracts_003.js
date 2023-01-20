@@ -2474,7 +2474,7 @@ class ClaimConfirmContract extends Contract {
 
     async execute(tx, substate, kblock, config) {
         let data = this.data.parameters
-        if (!Utils.VALIDATORS.find(id => id === data.validator_id))
+        if (!Utils.BRIDGE_VALIDATORS.find(id => id === data.validator_id))
             throw new ContractError(`Unknown validator: ${data.validator_id}`)
         if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
             throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
