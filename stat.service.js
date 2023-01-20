@@ -260,7 +260,7 @@ class StatService {
             n.value = 0;
         n = n.value;
         let kblock = (await this.db.get_kblock_by_n(n))[0];
-        let events = await this.eventdb.getEvents(n);
+        let events = await this.eventdb.getEventsAfter(n);
         //console.log(events)
         let new_n = n;
         let rewards = events.map(event => {
@@ -284,18 +284,39 @@ class StatService {
             n.value = 0;
         n = n.value;
         let kblock = (await this.db.get_kblock_by_n(n))[0];
-        let events = await this.eventdb.getEvents(n);
+        let events = await this.eventdb.getEventsAfter(n);
         //console.log(events)
         let new_n = n;
-        let dex_events = events.map(event => {
+        let DEX_EVENT_TYPES = ["pool_remove_liquidity", "pool_add_liquidity"];
+        for(let event of events){
             if(event.n > new_n)
                 new_n = event.n;
-            let edata = JSON.parse(event.data);
+            if(!DEX_EVENT_TYPES.includes(event.type))
+                continue;
+            event.data = JSON.parse(event.data)
+            let last_entry = await this.db.dex_history_get_last_entry();
 
-            return {type : event.event, id : edata.id, hash : edata.hash, value : edata.value }
-        });
-        let ind = this.db.generate_eindex(rewards, kblock.time);
-        await this.db.transaction(ind.join(';'));
+            let entry = {
+                hash : event.hash,
+                action : event.type,
+                n : event.n,
+                v1_at : last_entry.v1_at || "0" ,
+                v2_at : last_entry.v2_at || "0" ,
+                pool_id : 0,
+                price : 0,
+            };
+            if(event.type === "pool_add_liquidity"){
+                entry.tvl1 = BigInt(event.data.old_volume1) + BigInt(event.data.liq_add1);
+                entry.tvl2 = BigInt(event.data.old_volume2) + BigInt(event.data.liq_add2);
+            }
+            if(event.type === "pool_remove_liquidity"){
+                entry.tvl1 = BigInt(event.data.old_volume1) - BigInt(event.data.liq_remove1);
+                entry.tvl2 = BigInt(event.data.old_volume2) - BigInt(event.data.liq_remove2);
+            }
+            console.log(entry);
+            await this.db.dex_history_add_entry(entry);
+        }
+        //return;
         console.log(new_n);
         return new_n;//console.log(ind)
     }

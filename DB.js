@@ -2296,6 +2296,28 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+	async dex_history_get_last_entry(){
+		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
+		let res = (await this.request(mysql.format(`SELECT * FROM dex_history where i = (SELECT MAX(i) from dex_history);`)));
+		if(res.length === 0){
+			return {}
+		}
+		return res;
+	}
+	async dex_history_add_entry(e){
+		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
+		let sql = mysql.format(`INSERT INTO dex_history (
+		hash, action, pool_id, block, caller, 
+		v1_at, v2_at, v1_change, v2_change, lt_change) VALUES (?)`,
+			[[e.hash, e.action, null, e.n, null,
+				e.v1_at, e.v2_at, null, null, null]]);
+		console.log(sql)
+		let res = await this.request(sql);
+		if(res.length === 0){
+			return {}
+		}
+		return res;
+	}
 	async prefork_002(){
 		/*
 			Функция выполняется перед блоком форка. Она меняет структуру таблиц для получения единообразного
@@ -2310,6 +2332,7 @@ class DB {
 		return this.transaction(sql.join(';'));
 	}
 }
+
 class EventDB extends DB {
 	constructor(config, app_config){
 		super(config, app_config);
@@ -2318,16 +2341,16 @@ class EventDB extends DB {
 		if(events.length === 0)
 			return
 		let ev = events.map(e => {
-			return [e.type, JSON.stringify(e.data), e.n]
+			return [e.type, e.hash, e.time, e.n, JSON.stringify(e.data)]
 		})
-		let sql = mysql.format(`INSERT INTO events (event, data, n) VALUES ?`, [ev]);
+		let sql = mysql.format(`INSERT INTO events (type, hash, time, n, data) VALUES ?`, [ev]);
 		await this.request(sql);
 		//console.log(sql);
 		//console.log(events);
 	}
-	async getEvents(n){
+	async getEventsAfter(after_n){
 
-		let sql = mysql.format(`SELECT * FROM events WHERE n > ? order by n desc`, [n]);
+		let sql = mysql.format(`SELECT * FROM events WHERE n > ? order by n desc`, [after_n]);
 		return await this.request(sql);
 		//console.log(sql);
 		//console.log(events);

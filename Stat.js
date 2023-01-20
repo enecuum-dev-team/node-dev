@@ -69,7 +69,8 @@ class Stat {
             // 'txfee_hourly_24h_avg':     this.service.get_txfee_hourly_24h_avg.bind(this),
             // 'txfee_daily_30d_avg':      this.service.get_txfee_daily_30d_avg.bind(this),
             // 'update_iptable':           this.service.update_iptable.bind(this),
-            'update_eindex':            this.service.update_eindex.bind(this)
+            // 'update_eindex':            this.service.update_eindex.bind(this),
+            'update_dex_info':            this.service.update_dex_info.bind(this)
         };
 
         //this.calcInt = setImmediate(async () => { await this.calcRefs(); }, day);

@@ -21,6 +21,7 @@ const Utils = require('./Utils');
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
 const ContractParser = require('./contractParser').ContractParser;
+const createEvent = Utils.createEvent;
 
 let MAX_DECIMALS = BigInt(10);
 let ENQ_INTEGER_COIN = BigInt(10000000000);
@@ -961,17 +962,26 @@ class PoolLiquidityAddContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-        events.push({
-            type : this.type,
-            txhash : tx.hash,
-            data : {
-                old_volume_1 : pool_info.volume_1,
-                old_volume_2 : pool_info.volume_2,
-                new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-                new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
-                lt_amount : lt_amount
-            }
-        });
+        // events.push({
+        //     type : this.type,
+        //     txhash : tx.hash,
+        //     data : {
+        //         old_volume_1 : pool_info.volume_1,
+        //         old_volume_2 : pool_info.volume_2,
+        //         new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+        //         new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+        //         lt_amount : lt_amount
+        //     }
+        // });
+        events.push(createEvent(this.type, tx.hash, tx.n,{
+            old_volume1 : pool_info.volume_1,
+            old_volume2 : pool_info.volume_2,
+            liq_add1 : amount_1,
+            liq_add2 : amount_2,
+            // new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+            // new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            lt_amount : lt_amount
+        }))
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1073,17 +1083,26 @@ class PoolLiquidityRemoveContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-        events.push({
-            type : this.type,
-            txhash : tx.hash,
-            data : {
-                old_volume_1 : pool_info.volume_1,
-                old_volume_2 : pool_info.volume_2,
-                new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-                new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
-                lt_amount : params.amount
-            }
-        });
+        // events.push({
+        //     type : this.type,
+        //     txhash : tx.hash,
+        //     data : {
+        //         old_volume_1 : pool_info.volume_1,
+        //         old_volume_2 : pool_info.volume_2,
+        //         new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+        //         new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+        //         lt_amount : params.amount
+        //     }
+        // });
+        events.push(createEvent(this.type, tx.hash, tx.n,{
+            old_volume1 : pool_info.volume_1,
+            old_volume2 : pool_info.volume_2,
+            liq_remove1 : amount_1,
+            liq_remove2 : amount_2,
+            // new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+            // new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            lt_amount : params.amount
+        }))
         return {
             amount_changes : [],
             pos_changes : [],

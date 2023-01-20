@@ -595,7 +595,7 @@ class Cashier {
 
             substate_copy.setState(substate);
             tx.amount = BigInt(tx.amount);
-
+            tx.n = kblock.n;
             try {
                 this.processTransfer(tx, substate_copy);
                 // Check if tx has contract

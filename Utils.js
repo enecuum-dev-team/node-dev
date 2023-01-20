@@ -886,6 +886,15 @@ let utils = {
 			return newtonIteration(n, x1);
 		}
 		return newtonIteration(value, BigInt(1));
+	},
+	createEvent : function(type, hash, n, data){
+		return {
+			type : type,        // id ивента, 'iin', 'ifg', 'contract_id (код из схемы?)'
+			hash : hash,        // хеш транзакции/хеш сущности (хеш кблока/сблока)
+			time : Date.now(),  // время обработки-создания ивента (время блока?)
+			n : n,              // номер блока
+			data : data,        // произвольный json с доп инфой
+		}
 	}
 };
 
