@@ -43,17 +43,17 @@ const cTypes = {
     hexStr1_150 : {
         id : 0x9, 
         type : "string",
-        regexp : /^(0x)?[0-9a-fA-F]{1,150}$/i
+        regexp : /^((0x[0-9a-fA-F]{1,148})|[0-9a-fA-F]{1,150})$/i
     },
     hexStr1_66 : {
         id : 0x0, 
         type : "string",
-        regexp : /^(0x)?[0-9a-fA-F]{1,66}$/i
+        regexp : /^((0x[0-9a-fA-F]{1,64})|[0-9a-fA-F]{1,66})$/i
     },
     hexStr1_64 : {
         id : 0xA, 
         type : "string",
-        regexp : /^(0x)?[0-9a-fA-F]{1,64}$/i
+        regexp : /^((0x[0-9a-fA-F]{1,62})|[0-9a-fA-F]{1,64})$/i
     }
 }
 
