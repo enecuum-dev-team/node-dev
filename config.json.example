@@ -122,17 +122,25 @@
     "tokens_white_list": [
         "0000000000000000000000000000000000000000000000000000000000000000",
         "824e7b171c01e971337c1b25a055023dd53c003d4aa5aa8b58a503d7c622651e"
-    ]
-
-    },
+    ],
     "bridge" : {
         "BRIDGE_NETWORK_ID" : "1",
         "BRIDGE_ADDRESS" : "123333333333333333333333333333f33333333333333333333333333333333333",
-        "BRIDGE_VALIDATORS" : ["validatorID"],
+        "BRIDGE_VALIDATORS" : [
+            "02792cf144cf81326db717a5316d0a2df0fb937be5a4dd970d34883b00b16315f2",
+            "02375a89c4cd7a7410fcf90c6b144d82ea48c03e96d9c335b63627300771e67293",
+            "02fd060ad909004756e8f29929a71ce2734de3ad394a99affd66a26706a292583d"
+        ],
         "BRIDGE_THRESHOLD" : 5,
         "BRIDGE_KNOWN_NETWORKS": [
+            {"id":1, "decimals":10},
+            {"id":5, "decimals":18},
             {"id":17, "decimals":2},
-            {"id":29, "decimals":4}
+            {"id":23, "decimals":3},
+            {"id":29, "decimals":4},
+            {"id":97, "decimals":18},
+            {"id":666, "decimals":10},
+            {"id":80001, "decimals":18}
         ]
     }
 }

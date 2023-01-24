@@ -2332,11 +2332,15 @@ class LockContract extends Contract {
     validate () {
         let paramsModel = {
             dst_address : cTypes.hexStr1_66,
-            dst_network : cTypes.number,
+            dst_network : cTypes.int,
             amount : cTypes.str,
             hash : cTypes.enqHash64
         }
-        return cValidate(this.data.parameters, paramsModel)
+        if (!cValidate(this.data.parameters, paramsModel))
+            throw new ContractError("Validation error")
+        if (Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == this.data.parameters.dst_network) === undefined)
+            throw new ContractError("Unknown network")
+        return true
     }
     
     async execute(tx, substate, kblock, config) {
@@ -2421,18 +2425,20 @@ class ClaimInitContract extends Contract {
     validate () {
         let paramsModel = {
             dst_address : cTypes.enqHash66,
-            dst_network : cTypes.number,
+            dst_network : cTypes.int,
             amount : cTypes.strBigInt,
             src_hash : cTypes.hexStr1_64,
             src_address : cTypes.hexStr1_66,
-            src_network : cTypes.number,
+            src_network : cTypes.int,
             origin_hash : cTypes.hexStr1_64,
-            origin_network : cTypes.number,
-            nonce : cTypes.number,
+            origin_network : cTypes.int,
+            nonce : cTypes.int,
             transfer_id : cTypes.enqHash64,
             ticker : cTypes.str
         }
         cValidate(this.data.parameters, paramsModel)
+        if (Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == this.data.parameters.dst_network) === undefined)
+            throw new ContractError("Unknown network")
         let modelTmp = {...paramsModel}
         delete modelTmp.transfer_id
         let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")

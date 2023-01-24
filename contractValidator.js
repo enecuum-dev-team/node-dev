@@ -54,6 +54,11 @@ const cTypes = {
         id : 0xA, 
         type : "string",
         regexp : /^((0x[0-9a-fA-F]{1,62})|[0-9a-fA-F]{1,64})$/i
+    },
+    int : {
+        id : 0xB,
+        type : "number",
+        validate : num => Number.isSafeInteger(num)
     }
 }
 
@@ -99,6 +104,12 @@ module.exports = {
                 compareTypes(param, paramModel, key)
                 if (!paramModel.validate(param))
                     throw new ContractError(`Incorrect parameter '${key}' type. Must be object.`)
+            }
+
+            if (paramModel.id === cTypes.int.id) {
+                compareTypes(param, paramModel, key)
+                if (!paramModel.validate(param))
+                    throw new ContractError(`Incorrect parameter '${key}' type. Must be int.`)
             }
 
             if (paramModel.id === cTypes.str.id) {
