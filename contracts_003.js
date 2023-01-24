@@ -2437,8 +2437,8 @@ class ClaimInitContract extends Contract {
             ticker : cTypes.str
         }
         cValidate(this.data.parameters, paramsModel)
-        if (Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == this.data.parameters.dst_network) === undefined)
-            throw new ContractError("Unknown network")
+        if (Number(Utils.BRIDGE_NETWORK_ID) !== Number(his.data.parameters.dst_network))
+            throw new ContractError("Wrong network id")
         let modelTmp = {...paramsModel}
         delete modelTmp.transfer_id
         let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
@@ -2628,10 +2628,8 @@ class ClaimContract extends Contract {
         }
 
         let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
-        if (Utils.BRIDGE_NETWORK_ID !== ticket.dst_network)
-            throw new ContractError("Wrong network id")
         let res
-        if (ticket.origin_network == ticket.dst_network) {
+        if (Number(ticket.origin_network) === Number(ticket.dst_network)) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
         } else {
             let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)
