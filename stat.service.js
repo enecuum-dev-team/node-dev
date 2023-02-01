@@ -302,7 +302,7 @@ class StatService {
                 n : event.n,
                 v1_at : last_entry.v1_at || "0" ,
                 v2_at : last_entry.v2_at || "0" ,
-                pool_id : 0,
+                pool_id : event.data.pool_id,
                 price : 0,
             };
             if(event.type === "pool_add_liquidity"){

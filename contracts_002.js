@@ -974,6 +974,7 @@ class PoolLiquidityAddContract extends Contract {
         //     }
         // });
         events.push(createEvent(this.type, tx.hash, tx.n,{
+            pool_id : pool_info.token_hash,
             old_volume1 : pool_info.volume_1,
             old_volume2 : pool_info.volume_2,
             liq_add1 : amount_1,
@@ -1095,6 +1096,7 @@ class PoolLiquidityRemoveContract extends Contract {
         //     }
         // });
         events.push(createEvent(this.type, tx.hash, tx.n,{
+            pool_id : pool_info.token_hash,
             old_volume1 : pool_info.volume_1,
             old_volume2 : pool_info.volume_2,
             liq_remove1 : amount_1,

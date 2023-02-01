@@ -1528,7 +1528,8 @@ class DB {
 			return [];
 		let res = await this.request(mysql.format(`SELECT tokens.*
 														FROM tokens
-														WHERE tokens.hash in (?)`, [hashes]));
+														WHERE tokens.hash in (?)
+														ORDER BY hash ASC`, [hashes]));
 		return res;
 	}
 
