@@ -334,7 +334,37 @@ class DB {
 		}
 		return 0;
 	}
+	async delete_kblocks_tail(height) {
+		//block after which we delete the chain
 
+
+		let cur_n = 9999999999999999;
+		do {
+			let kblock = (await this.request(mysql.format('SELECT * FROM kblocks WHERE n = (select n from kblocks order by n desc limit 1)')))[0];
+
+			cur_n = kblock.n;
+			//let kblock = (await this.request(mysql.format('SELECT * FROM kblocks WHERE n = ?', [cur_n])))[0];
+
+			let mblocks = await this.request(mysql.format('SELECT hash FROM mblocks WHERE kblocks_hash  = ?', [kblock.hash]));
+			let mblock_hashes = mblocks.map(m => m.hash);
+			let delete_transactions = '';
+			if (mblock_hashes.length > 0) {
+				delete_transactions = mysql.format(`DELETE FROM transactions WHERE mblocks_hash in (?)`, [mblock_hashes]);
+			}
+
+			let delete_mblocks = mysql.format(`DELETE FROM mblocks WHERE kblocks_hash = ?`, [kblock.hash]);
+			let delete_sblocks = mysql.format(`DELETE FROM sblocks WHERE kblocks_hash  = ?`, [kblock.hash]);
+			let delete_snapshots = mysql.format(`DELETE FROM snapshots WHERE kblocks_hash  = ?`, [kblock.hash]);
+			let delete_kblocks = mysql.format('DELETE FROM kblocks WHERE n = ?', kblock.n)
+			console.log(`delete block ${kblock.n}`)
+			// console.log({
+			// 	delete_transactions, delete_mblocks, delete_sblocks, delete_snapshots, delete_kblocks
+			// })
+			await this.transaction([/*locs,*/ delete_transactions, delete_mblocks, delete_sblocks, delete_snapshots, delete_kblocks/*, unlock*/].join(';'));
+			//cur_n = kblock.n;
+		}
+		while(cur_n > height)
+	}
 	async get_snapshot_hash(kblocks_hash){
 		let snapshot_hash = undefined;
 		let data = await this.request(mysql.format('SELECT hash FROM snapshots WHERE ? ORDER BY hash', [{kblocks_hash}]));
@@ -1590,7 +1620,8 @@ class DB {
 			return [];
 		let res = await this.request(mysql.format(`SELECT tokens.*
 														FROM tokens
-														WHERE tokens.hash in (?)`, [hashes]));
+														WHERE tokens.hash in (?)
+														ORDER BY hash ASC`, [hashes]));
 		return res;
 	}
 
@@ -1756,7 +1787,12 @@ class DB {
 		    res[0].leader_sign = JSON.parse(res[0].leader_sign);
 		return res;
 	}
-
+	async get_kblock_by_n(n){
+		let res = await this.request(mysql.format('SELECT * FROM kblocks WHERE n = ?', n));
+		if(res[0] !== undefined)
+			res[0].leader_sign = JSON.parse(res[0].leader_sign);
+		return res;
+	}
 	async get_next_block(hash) {
 		let res = (await this.request(mysql.format('SELECT * FROM kblocks WHERE `link` = ? AND `hash` <> `link`', hash)));
 
@@ -2353,6 +2389,28 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+	async dex_history_get_last_entry(){
+		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
+		let res = (await this.request(mysql.format(`SELECT * FROM dex_history where i = (SELECT MAX(i) from dex_history);`)));
+		if(res.length === 0){
+			return {}
+		}
+		return res;
+	}
+	async dex_history_add_entry(e){
+		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
+		let sql = mysql.format(`INSERT INTO dex_history (
+		hash, action, pool_id, block, caller, 
+		v1_at, v2_at, v1_change, v2_change, lt_change) VALUES (?)`,
+			[[e.hash, e.action, null, e.n, null,
+				e.v1_at, e.v2_at, null, null, null]]);
+		console.log(sql)
+		let res = await this.request(sql);
+		if(res.length === 0){
+			return {}
+		}
+		return res;
+	}
 	async prefork_002(){
 		/*
 			Функция выполняется перед блоком форка. Она меняет структуру таблиц для получения единообразного
@@ -2368,4 +2426,28 @@ class DB {
 	}
 }
 
+class EventDB extends DB {
+	constructor(config, app_config){
+		super(config, app_config);
+	}
+	async addEvents(events){
+		if(events.length === 0)
+			return
+		let ev = events.map(e => {
+			return [e.type, e.hash, e.time, e.n, JSON.stringify(e.data)]
+		})
+		let sql = mysql.format(`INSERT INTO events (type, hash, time, n, data) VALUES ?`, [ev]);
+		await this.request(sql);
+		//console.log(sql);
+		//console.log(events);
+	}
+	async getEventsAfter(after_n){
+
+		let sql = mysql.format(`SELECT * FROM events WHERE n > ? order by n desc`, [after_n]);
+		return await this.request(sql);
+		//console.log(sql);
+		//console.log(events);
+	}
+}
 module.exports.DB = DB;
+module.exports.EventDB = EventDB;

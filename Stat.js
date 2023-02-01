@@ -26,58 +26,61 @@ const POS = 3;
 
 class Stat {
 
-    constructor(db, config) {
+    constructor(db, eventdb, config) {
         console.info(`Stat process started`);
 
         this.db = db;
+        this.eventdb = eventdb;
         this.config = config;
         this.target_speed = config.target_speed;
 
         this.db.update_stats({['block_time_target'] : this.target_speed});
 
-        this.service = new StatService(db);
+        this.service = new StatService(db, this.eventdb);
         this.service_roi = new StakeCalc(db, config);
         this.handlers = {
-            'max_tps' :                 this.service.get_max_tps.bind(this),
-            'accounts' :                this.service.get_accounts_count.bind(this),
-            'reward_poa' :              this.service.get_poa_reward.bind(this),
-            'reward_pow' :              this.service.get_pow_reward.bind(this),
-            'reward_pos' :              this.service.get_pos_reward.bind(this),
-            'csup' :                    this.service.get_csup.bind(this),
-            'tsup' :                    this.service.get_tsup.bind(this),
-            'full_count' :              this.service.get_peer_count.bind(this, FULL_NODE),
-            'pow_count' :               this.service.get_peer_count.bind(this, POW),
-            'poa_count' :               this.service.get_peer_count.bind(this, POA),
-            'pos_count' :               this.service.get_peer_count.bind(this, POS),
-            'tps' :                     this.service.get_tps.bind(this),
-            'total_daily_stake' :       this.service.get_total_daily_stake.bind(this),
-            'total_daily_pos_stake' :   this.service.get_total_daily_pos_stake.bind(this),
-            'cg_usd' :                  this.service.get_cg_usd.bind(this),
-            'cg_btc' :                  this.service.get_cg_btc.bind(this),
-            'cg_eth' :                  this.service.get_cg_eth.bind(this),
-            'difficulty':               this.service.get_difficulty.bind(this),
-            'height':                   this.service.get_height.bind(this),
-            'network_hashrate':         this.service.get_network_hashrate.bind(this),
-            'engaged_balance':          this.service.get_engaged_balance.bind(this),
-            'pos_active_count':         this.service.get_pos_active_count.bind(this),
-            'poa_capable_count':        this.service.get_poa_capable_count.bind(this),
-            'pos_total_count':          this.service.get_pos_total_count.bind(this),
-            'proposed_inflation':       this.service.get_proposed_inflation.bind(this),
-            'block_time_30d_avg':       this.service.get_block_time_30d_avg.bind(this),
-            'block_time_24h_avg':       this.service.get_block_time_24h_avg.bind(this),
-            'txfee_hourly_24h_avg':     this.service.get_txfee_hourly_24h_avg.bind(this),
-            'txfee_daily_30d_avg':      this.service.get_txfee_daily_30d_avg.bind(this),
-            'update_iptable':           this.service.update_iptable.bind(this)
+            // 'max_tps' :                 this.service.get_max_tps.bind(this),
+            // 'accounts' :                this.service.get_accounts_count.bind(this),
+            // 'reward_poa' :              this.service.get_poa_reward.bind(this),
+            // 'reward_pow' :              this.service.get_pow_reward.bind(this),
+            // 'reward_pos' :              this.service.get_pos_reward.bind(this),
+            // 'csup' :                    this.service.get_csup.bind(this),
+            // 'tsup' :                    this.service.get_tsup.bind(this),
+            // 'full_count' :              this.service.get_peer_count.bind(this, FULL_NODE),
+            // 'pow_count' :               this.service.get_peer_count.bind(this, POW),
+            // 'poa_count' :               this.service.get_peer_count.bind(this, POA),
+            // 'pos_count' :               this.service.get_peer_count.bind(this, POS),
+            // 'tps' :                     this.service.get_tps.bind(this),
+            // 'total_daily_stake' :       this.service.get_total_daily_stake.bind(this),
+            // 'total_daily_pos_stake' :   this.service.get_total_daily_pos_stake.bind(this),
+            // 'cg_usd' :                  this.service.get_cg_usd.bind(this),
+            // 'cg_btc' :                  this.service.get_cg_btc.bind(this),
+            // 'cg_eth' :                  this.service.get_cg_eth.bind(this),
+            // 'difficulty':               this.service.get_difficulty.bind(this),
+            // 'height':                   this.service.get_height.bind(this),
+            // 'network_hashrate':         this.service.get_network_hashrate.bind(this),
+            // 'engaged_balance':          this.service.get_engaged_balance.bind(this),
+            // 'pos_active_count':         this.service.get_pos_active_count.bind(this),
+            // 'poa_capable_count':        this.service.get_poa_capable_count.bind(this),
+            // 'pos_total_count':          this.service.get_pos_total_count.bind(this),
+            // 'proposed_inflation':       this.service.get_proposed_inflation.bind(this),
+            // 'block_time_30d_avg':       this.service.get_block_time_30d_avg.bind(this),
+            // 'block_time_24h_avg':       this.service.get_block_time_24h_avg.bind(this),
+            // 'txfee_hourly_24h_avg':     this.service.get_txfee_hourly_24h_avg.bind(this),
+            // 'txfee_daily_30d_avg':      this.service.get_txfee_daily_30d_avg.bind(this),
+            // 'update_iptable':           this.service.update_iptable.bind(this),
+            // 'update_eindex':            this.service.update_eindex.bind(this),
+            'update_dex_info':            this.service.update_dex_info.bind(this)
         };
 
-        this.calcInt = setImmediate(async () => { await this.calcRefs(); }, day);
+        //this.calcInt = setImmediate(async () => { await this.calcRefs(); }, day);
         this.statsInt = setTimeout(async () => { await this.calсStat(); }, 2000);
-        this.recalcRoi = setImmediate(async () => { await this.calcRoi(); }, day);
-        this.redefNodesType = setImmediate(async () => { await this.redefNodes(); }, check_type_timeout);
-        this.recalcPosPowRew = setImmediate(async () => { await this.calcPosPowRew(); }, day);
+        //this.recalcRoi = setImmediate(async () => { await this.calcRoi(); }, day);
+        //this.redefNodesType = setImmediate(async () => { await this.redefNodes(); }, check_type_timeout);
+        //this.recalcPosPowRew = setImmediate(async () => { await this.calcPosPowRew(); }, day);
 
-        this.tokensPrice = setImmediate(async () => { await this.tokensPriceCaching(); }, tokens_ptice_timeout);
-        this.tokensHolders = setImmediate(async () => { await this.tokensHoldersCaching(); }, this.target_speed * 1000);
+        //this.tokensPrice = setImmediate(async () => { await this.tokensPriceCaching(); }, tokens_ptice_timeout);
+        //this.tokensHolders = setImmediate(async () => { await this.tokensHoldersCaching(); }, this.target_speed * 1000);
     }
 
     async tokensHoldersCaching(){

@@ -16,6 +16,7 @@ const argv = require('yargs').argv;
 const fs = require('fs');
 
 const DB = require('./DB').DB;
+const EventDB = require('./DB').EventDB;
 const Stat = require('./Stat').Stat;
 const Utils = require('./Utils');
 
@@ -79,6 +80,16 @@ let db = new DB({
     multipleStatements: true,
     useNativeBigInt : false
 },config);
+let eventdb = new EventDB({
+    host: config.dbhost,
+    port: config.dbport,
+    user: config.dbuser,
+    database: config.dbname,
+    password: config.dbpass.toString(),
+    dateStrings: true,
+    multipleStatements: true,
+    useNativeBigInt : false
+},config);
 BigInt.prototype.toJSON = function() { return this.toString() }
 let stat;
 let start_stat = function(config, db) {
@@ -86,7 +97,7 @@ let start_stat = function(config, db) {
 
     if (config.stat_on) {
         console.info(`Starting stat process`);
-        stat = new Stat(db, config);
+        stat = new Stat(db, eventdb, config);
     } else {
         console.info(`Stat is OFF`);
     }

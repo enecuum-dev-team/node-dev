@@ -18,8 +18,9 @@ let prev_max_tps = 0;
 
 class StatService {
 
-    constructor(db) {
+    constructor(db, eventdb) {
         this.db = db;
+        this.eventdb = eventdb;
         this.init_max_tps();
     }
 
@@ -248,6 +249,76 @@ class StatService {
                 console.info('IP-API empty response');
             }
         }
+    }
+    async update_eindex(){
+        let n = (await this.db.get_stats('update_eindex'))[0];
+        if(n === undefined || n === null)
+            return;
+        if(!n.hasOwnProperty('value'))
+            return;
+        if(n.value === null)
+            n.value = 0;
+        n = n.value;
+        let kblock = (await this.db.get_kblock_by_n(n))[0];
+        let events = await this.eventdb.getEventsAfter(n);
+        //console.log(events)
+        let new_n = n;
+        let rewards = events.map(event => {
+            if(event.n > new_n)
+                new_n = event.n;
+            let edata = JSON.parse(event.data);
+            return {type : event.event, id : edata.id, hash : edata.hash, value : edata.value }
+        });
+        let ind = this.db.generate_eindex(rewards, kblock.time);
+        await this.db.transaction(ind.join(';'));
+        console.log(new_n);
+        return new_n;//console.log(ind)
+    }
+    async update_dex_info(){
+        let n = (await this.db.get_stats('update_dex_info'))[0];
+        if(n === undefined || n === null)
+            return;
+        if(!n.hasOwnProperty('value'))
+            return;
+        if(n.value === null)
+            n.value = 0;
+        n = n.value;
+        let kblock = (await this.db.get_kblock_by_n(n))[0];
+        let events = await this.eventdb.getEventsAfter(n);
+        //console.log(events)
+        let new_n = n;
+        let DEX_EVENT_TYPES = ["pool_remove_liquidity", "pool_add_liquidity"];
+        for(let event of events){
+            if(event.n > new_n)
+                new_n = event.n;
+            if(!DEX_EVENT_TYPES.includes(event.type))
+                continue;
+            event.data = JSON.parse(event.data)
+            let last_entry = await this.db.dex_history_get_last_entry();
+
+            let entry = {
+                hash : event.hash,
+                action : event.type,
+                n : event.n,
+                v1_at : last_entry.v1_at || "0" ,
+                v2_at : last_entry.v2_at || "0" ,
+                pool_id : event.data.pool_id,
+                price : 0,
+            };
+            if(event.type === "pool_add_liquidity"){
+                entry.tvl1 = BigInt(event.data.old_volume1) + BigInt(event.data.liq_add1);
+                entry.tvl2 = BigInt(event.data.old_volume2) + BigInt(event.data.liq_add2);
+            }
+            if(event.type === "pool_remove_liquidity"){
+                entry.tvl1 = BigInt(event.data.old_volume1) - BigInt(event.data.liq_remove1);
+                entry.tvl2 = BigInt(event.data.old_volume2) - BigInt(event.data.liq_remove2);
+            }
+            console.log(entry);
+            await this.db.dex_history_add_entry(entry);
+        }
+        //return;
+        console.log(new_n);
+        return new_n;//console.log(ind)
     }
 }
 

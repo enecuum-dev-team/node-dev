@@ -14,10 +14,12 @@
 
 const crypto = require('crypto');
 const enq = require('./Enq');
-const config = require('./config.json');
+const fs = require('fs');
+const config = JSON.parse(fs.readFileSync('./config.bit', 'utf8'));
+
 const rsasign = require('jsrsasign');
 let rx = require('./node_modules/node-randomx/addon');
-const fs = require('fs');
+
 
 let KeyEncoder = require('key-encoder').default;
 let keyEncoder = new KeyEncoder('secp256k1');
@@ -885,6 +887,15 @@ let utils = {
 			return newtonIteration(n, x1);
 		}
 		return newtonIteration(value, BigInt(1));
+	},
+	createEvent : function(type, hash, n, data){
+		return {
+			type : type,        // id ивента, 'iin', 'ifg', 'contract_id (код из схемы?)'
+			hash : hash,        // хеш транзакции/хеш сущности (хеш кблока/сблока)
+			time : Date.now(),  // время обработки-создания ивента (время блока?)
+			n : n,              // номер блока
+			data : data,        // произвольный json с доп инфой
+		}
 	}
 };
 

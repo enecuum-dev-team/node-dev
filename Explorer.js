@@ -20,14 +20,62 @@ const NodeapiService = require('./nodeapi.service').NodeapiService;
 const Utils = require('./Utils');
 const Transport = require('./Transport').Tip;
 const ContractMachine = require('./SmartContracts');
-//const swaggerJSDoc = require('swagger-jsdoc');
-let swaggerSpec;
 
 class Explorer {
-
 	constructor(port, db, pending, stake_limits, config) {
+		this.service = new ExplorerService(db);
 		this.app = express();
 		this.app.use(cors());
+		this.app.use(express.json());
+		this.app.use(express.static('explorer'));
+
+		let expRouter = new DexInfoRouter(db).getRouter();;//new ExplorerRouter(db, pending, stake_limits, config).getRouter();
+		let dexRouter = new DexInfoRouter(db).getRouter();
+
+		this.app.listen(port, function(){
+			console.info('Explorer started at ::', port);
+		});
+
+		this.app.use(function (req, res, next) {
+			console.debug(`Request ${req.headers['x-forwarded-for']} | ${req.connection.remoteAddress} ${req.method} \t ${req.url}`);
+			next();
+		});
+
+		this.app.use('/', expRouter);
+		this.app.use('/api/v1/cg', dexRouter);
+
+		this.app.get('/api/v1/list', (req, res) => {
+			let routes = this.getRoutes(expRouter);
+			res.json(routes);
+		});
+		this.app.use((err, req, res, next) => {
+			const status = err.status || 500;
+			const msg = err.message;
+			console.error(err);
+			//console.error(`Error ${status} (${msg}) on ${req.method} ${req.url} with payload ${JSON.stringify(req.body || req.query)}.`);
+			if(err instanceof ContractError)
+				res.status(200).send({ err: 1, message: msg });
+			else
+				res.status(status).send({ err: 1, message: 'Something went wrong...' });
+		});
+	}
+	getRoutes(router){
+		let routes = [];
+		router.stack.forEach(function (r) {
+			if (r.route && r.route.path) {
+				routes.push(r.route.path)
+			}
+		});
+		return routes;
+	}
+}
+class ExplorerRouter {
+	getRouter(){
+		return this.app;
+	}
+
+	constructor(db, pending, stake_limits, config) {
+		this.app = express.Router();
 		this.db = db;
 		this.config = config;
 		this.pending = pending;
@@ -36,46 +84,6 @@ class Explorer {
 		this.servicePlain = new ExplorerServicePlain(db);
 		this.serviceNodeapi = new NodeapiService(db);
 		this.transport = new Transport(config.id, 'explorer');
-		
-		this.app.listen(port, function(){
-			console.info('Explorer started at ::', port);
-
-		const options = {
-		  definition: {
-		    openapi: '3.0.0', // Specification (optional, defaults to swagger: '2.0')
-		    info: {
-		      title: 'Enecuum Node API', // Title (required)
-		      version: '1.0.0', // Version (required)
-		      description: `|
-    Enecuum is a cryptocurrency project designed to involve both mobile and desktop devices into one blockchain network. Enecuum provides a payment platform with the use of a native token. Enecuum's native token, ENQ, can be bought on the exchange, by card, or mined on PCs and smartphones. 
-
-    Below, you can read a short explanation of the basic terms and concepts related to Enecuum and cryptocurrency in general. The description will help you better understand the Enecuum API.
-    
-    When a user creates an account in the Enecuum network, a pair of public and private keys is generated. 
-
-    **The public key** is a user's identification. It is used as a wallet address. The user can safely share the public key to receive payments.
-
-    **The private key** acts as a password. It is used to access the account. The user must never share the private key. The private key needs to be backed up. If a private key is lost, the account will never be recovered.
-
-    Enecuum has a native token, ENQ, which is used for payments in the Enecuum network. Enecuum also allows the issue of custom tokens. Each token has two unique identifiers: ticker and hash. A **ticker** is a 1-6 letter name used for convenience. A **hash** is a 64-character sequence that acts as a technical identification. 
-
-    Each token token has a fixed number of **decimal places**. When using Enecuum API, the methods will return the token amount as an integer. Because of this, the returned amount is multiplied by 10^*d*, where *d* stands for the number of decimal places. For example, ENQ has 10 decimal places. The returned amount 250050000000 correlates with 25.005 ENQ.
-    `
-		    },
-		    servers:{
-				url: 'https://bit.enecuum.com/api/v1'
-		    },
-		  },
-		  // Path to the API docs
-		  apis: ['./Explorer.js'],
-		};
-
-		// Initialize swagger-jsdoc -> returns validated swagger spec in json format
-		//swaggerSpec = swaggerJSDoc(options);
-		//console.log(swaggerSpec);
-		});
-
-		this.app.use(express.json());
 
         this.app.get('/api/v1/bridge_last_transfer', async (req, res) => {
             console.trace('requested transfers', req.query);
@@ -1042,7 +1050,6 @@ class Explorer {
 						let roi = BigInt(Math.round(block_reward_usd / total_stake_usd * 365 * 5760)) * Utils.PERCENT_FORMAT_SIZE;
 						rec.apy = roi;
 					}
-
 				}
 			}
 			res.send(data);
@@ -1069,35 +1076,101 @@ class Explorer {
 			let data = await this.servicePlain.get_network_hashrate();
 			res.send(data);
 		});
-		this.app.get('/api-docs.json', (req, res) => {
-		  res.setHeader('Content-Type', 'application/json');
-		  res.send(swaggerSpec);
-		  console.log(swaggerSpec);
-		});
-		
-		let routes = [];
-		this.app._router.stack.forEach(function (r) {
-		if (r.route && r.route.path) {
-			routes.push(r.route.path)
-		}
-    });
-
-    this.app.get('/api/v1/list', function (request, response) {
-        response.json(routes);
-    });
-		this.app.use((err, req, res, next) => {
-			const status = err.status || 500;
-			const msg = err.message;
-			console.error(err);
-			//console.error(`Error ${status} (${msg}) on ${req.method} ${req.url} with payload ${JSON.stringify(req.body || req.query)}.`);
-			if(err instanceof ContractError)
-				res.status(200).send({ err: 1, message: msg });
-			else
-				res.status(status).send({ err: 1, message: 'Something went wrong...' });
-		});
-
-		this.app.use(express.static('explorer'));
 	}
 }
+class DexInfoRouter{
+	constructor(db){
+		this.router = express.Router();
+		this.db = db;
 
+		this.router.get('/tickers', async (req, res, next) => {
+			let pools = await this.db.dex_get_pools_all();
+			let data = [];
+			for (let pool of pools) {
+				let tokens_info = await this.db.get_tokens([pool.asset_1, pool.asset_2]);
+				if(tokens_info.length !== 2)
+					continue;
+				// (volume_1 / POW(10,T1.decimals) / (volume_2/POW(10,T2.decimals)))
+				let cur_price = ((pool.volume_2 / Math.pow(10, tokens_info[1].decimals)) / (pool.volume_1 / Math.pow(10, tokens_info[0].decimals)));
+				let rec = {
+					ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
+					base_currency : tokens_info[0].ticker,
+					target_currency : tokens_info[1].ticker,
+					last_price : cur_price,
+					base_volume : pool.volume_1,
+					target_volume : pool.volume_2,
+					pool_id : pool.pair_id,
+				};
+				data.push(rec);
+			}
+			res.send(data);
+		});
+
+		this.router.get('/pairs', async (req, res, next) => {
+			let pools = await this.db.dex_get_pools_all();
+			let data = [];
+			for (let pool of pools) {
+				let tokens_info = await this.db.get_tokens([pool.asset_1, pool.asset_2]);
+				if(tokens_info.length !== 2)
+					continue;
+				let rec = {
+					ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
+					base : tokens_info[0].ticker,
+					target : tokens_info[1].ticker,
+					pool_id : pool.pair_id,
+				};
+				data.push(rec);
+			}
+			res.send(data);
+		});
+	}
+	getRouter(){
+		return this.router;
+	}
+}
+class SwaggerRouter{
+	constructor() {
+		this.router = express.Router();
+		//const swaggerJSDoc = require('swagger-jsdoc');
+		let swaggerSpec;
+		const options = {
+			definition: {
+				openapi: '3.0.0', // Specification (optional, defaults to swagger: '2.0')
+				info: {
+					title: 'Enecuum Node API', // Title (required)
+					version: '1.0.0', // Version (required)
+					description: `|
+    Enecuum is a cryptocurrency project designed to involve both mobile and desktop devices into one blockchain network. Enecuum provides a payment platform with the use of a native token. Enecuum's native token, ENQ, can be bought on the exchange, by card, or mined on PCs and smartphones. 
+
+    Below, you can read a short explanation of the basic terms and concepts related to Enecuum and cryptocurrency in general. The description will help you better understand the Enecuum API.
+    
+    When a user creates an account in the Enecuum network, a pair of public and private keys is generated. 
+
+    **The public key** is a user's identification. It is used as a wallet address. The user can safely share the public key to receive payments.
+
+    **The private key** acts as a password. It is used to access the account. The user must never share the private key. The private key needs to be backed up. If a private key is lost, the account will never be recovered.
+
+    Enecuum has a native token, ENQ, which is used for payments in the Enecuum network. Enecuum also allows the issue of custom tokens. Each token has two unique identifiers: ticker and hash. A **ticker** is a 1-6 letter name used for convenience. A **hash** is a 64-character sequence that acts as a technical identification. 
+
+    Each token token has a fixed number of **decimal places**. When using Enecuum API, the methods will return the token amount as an integer. Because of this, the returned amount is multiplied by 10^*d*, where *d* stands for the number of decimal places. For example, ENQ has 10 decimal places. The returned amount 250050000000 correlates with 25.005 ENQ.
+    `
+				},
+				servers:{
+					url: 'https://bit.enecuum.com/api/v1'
+				},
+			},
+			// Path to the API docs
+			apis: ['./Explorer.js'],
+		};
+
+		// Initialize swagger-jsdoc -> returns validated swagger spec in json format
+		//swaggerSpec = swaggerJSDoc(options);
+		//console.log(swaggerSpec);
+		this.router.get('/api-docs.json', (req, res) => {
+			res.setHeader('Content-Type', 'application/json');
+			res.send(swaggerSpec);
+			console.log(swaggerSpec);
+		});
+	}
+}
 module.exports.Explorer = Explorer;

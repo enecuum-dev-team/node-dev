@@ -16,9 +16,10 @@ const argv = require('yargs').argv;
 const fs = require('fs');
 
 const DB = require('./DB').DB;
+const EventDB = require('./DB').EventDB;
 const Cashier = require('./Cashier').Cashier;
 
-const CONFIG_FILENAME = 'config.json';
+const CONFIG_FILENAME = 'config.bit';
 
 let config = {
 	dbhost : 'localhost',
@@ -82,13 +83,22 @@ let db = new DB({
 	password: config.dbpass.toString(),
 	dateStrings: true,
 	multipleStatements: true
-},config);
+}, config);
+let eventdb = new EventDB({
+	host: config.dbhost,
+	port: config.dbport,
+	user: config.dbuser,
+	database: config.dbname,
+	password: config.dbpass.toString(),
+	dateStrings: true,
+	multipleStatements: true
+}, config);
 BigInt.prototype.toJSON = function() { return this.toString() }
 
 let start_cashier = function(config, db) {
 	if (config.cashier_interval_ms) {
 		console.info(`Starting cashier with interval ${config.cashier_interval_ms}`);
-		let cashier = new Cashier(config, db);
+		let cashier = new Cashier(config, db, eventdb);
 		cashier.start();
 	} else {
 		console.info(`Cashier is OFF`);
