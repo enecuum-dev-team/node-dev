@@ -57,6 +57,10 @@ class ContractFactory{
             case "claim_init" :             return new Contracts.ClaimInitContract(data);
             case "claim_confirm" :          return new Contracts.ClaimConfirmContract(data);
             case "claim" :                  return new Contracts.ClaimContract(data);
+            case "bridge_set_owner" :       return new Contracts.BridgeSetOwnerContract(data);
+            case "bridge_set_threshold" :   return new Contracts.BridgeSetThresholdContract(data);
+            case "bridge_add_validator" :   return new Contracts.BridgeAddValidatorContract(data);
+            case "bridge_remove_validator": return new Contracts.BridgeRemoveValidatorContract(data);
             default :                       return null;
         }
     }

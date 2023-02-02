@@ -519,6 +519,7 @@ CREATE TABLE `minted` (
   `wrapped_hash` varchar(64) NOT NULL,
   `origin_network` int NOT NULL,
   `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` TINYINT unsigned NOT NULL,
   PRIMARY KEY (`wrapped_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -536,6 +537,8 @@ CREATE TABLE `transferred` (
   `ticker` varchar(10) NOT NULL,
   `origin_network` int NOT NULL,
   `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` TINYINT unsigned NOT NULL,
+  `name` varchar(40) NOT NULL,
   PRIMARY KEY (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -547,5 +550,22 @@ CREATE TABLE `confirmations` (
   `transfer_id` varchar(64) NOT NULL,
   PRIMARY KEY (`transfer_id`, `validator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+
+CREATE TABLE `bridge_settings` (
+  `owner` varchar(66) NOT NULL,
+  `threshold` TINYINT unsigned DEFAULT 1,
+  PRIMARY KEY (`owner`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `validators` (
+  `pubkey` varchar(66) NOT NULL,
+  PRIMARY KEY (`pubkey`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `known_networks` (
+  `network_id` int NOT NULL,
+  `decimals` TINYINT unsigned NOT NULL,
+  PRIMARY KEY (`network_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dump completed on 2020-04-14 15:09:51

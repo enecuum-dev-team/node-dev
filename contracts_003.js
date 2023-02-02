@@ -2338,7 +2338,7 @@ class LockContract extends Contract {
         }
         if (!cValidate(this.data.parameters, paramsModel))
             throw new ContractError("Validation error")
-        if (Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == this.data.parameters.dst_network) === undefined)
+        if (substate.get_known_networks().find(network => network.id == this.data.parameters.dst_network) === undefined)
             throw new ContractError("Unknown network")
         return true
     }
@@ -2387,8 +2387,6 @@ class LockContract extends Contract {
             return await burn_contract.execute(_tx, substate)
         }
         let validateDecimals = (params) => {
-            let dstDecimals = Utils.BRIDGE_KNOWN_NETWORKS.find(network => network.id == params.dst_network).decimals
-            let srcDecimals = substate.get_token_info(params.hash).decimals
             if (dstDecimals < srcDecimals)
                 return BigInt(params.amount) % BigInt("1" + "0".repeat(srcDecimals - dstDecimals)) == 0
             return true
@@ -2396,14 +2394,18 @@ class LockContract extends Contract {
 
         let data = this.data.parameters
         let wrappedToken = substate.get_minted_token(data.hash)
+        let dstDecimals = substate.get_known_networks().find(network => network.id == data.dst_network).decimals
+        let srcDecimals = substate.get_token_info(data.hash).decimals
+        if (wrappedToken && wrappedToken.origin_network == data.dst_network)
+            dstDecimals = wrappedToken.origin_decimals
+        if (!validateDecimals(data))
+            throw new ContractError("Lock contract: Fraction too low")
+
         let res
         if (wrappedToken) {
             res = await burn_tokens(data.hash, data.amount)
         } else {
-            if (validateDecimals(data))
-                res = await lock_tokens(data.hash, data.amount)
-            else 
-                throw new ContractError("Lock contract: Fraction too low.")
+            res = await lock_tokens(data.hash, data.amount)
         }
         return res
     }
@@ -2434,10 +2436,12 @@ class ClaimInitContract extends Contract {
             origin_network : cTypes.int,
             nonce : cTypes.int,
             transfer_id : cTypes.enqHash64,
-            ticker : cTypes.str
+            ticker : cTypes.str,
+            origin_decimals : cTypes.byte,
+            name : cTypes.str40
         }
         cValidate(this.data.parameters, paramsModel)
-        if (Number(Utils.BRIDGE_NETWORK_ID) !== Number(his.data.parameters.dst_network))
+        if (Number(Utils.BRIDGE_NETWORK_ID) !== Number(this.data.parameters.dst_network))
             throw new ContractError("Wrong network id")
         let modelTmp = {...paramsModel}
         delete modelTmp.transfer_id
@@ -2490,7 +2494,7 @@ class ClaimConfirmContract extends Contract {
 
     async execute(tx, substate, kblock, config) {
         let data = this.data.parameters
-        if (!Utils.BRIDGE_VALIDATORS.find(id => id === data.validator_id))
+        if (!substate.get_validators().find(id => id === data.validator_id))
             throw new ContractError(`Unknown validator: ${data.validator_id}`)
         if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
             throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
@@ -2499,7 +2503,7 @@ class ClaimConfirmContract extends Contract {
         let cfactory = new ContractMachine.ContractFactory(config)
 
         let confirmations = substate.add_confirmation(data)
-        if (confirmations === Utils.BRIDGE_THRESHOLD) {
+        if (confirmations === substate.get_bridge_settings().threshold) {
             let claim_object = {
                 type : "claim",
                 parameters : {
@@ -2591,18 +2595,19 @@ class ClaimContract extends Contract {
             }
         }
 
-        let createToken = async (amount, originalTicker) => {
+        let createToken = async (ticket) => {
+            let amount, ticker, name = ticket
             let token_create_object = {
                 type : "create_token",
                 parameters : {
                     fee_type : 2,
                     fee_value : 100000000n,
                     fee_min : 100000000n,
-                    ticker : "WR" + originalTicker.toUpperCase(),
+                    ticker : ticker.toUpperCase(),
                     decimals : 10n,
                     total_supply : BigInt(amount),
                     max_supply : BigInt(amount),
-                    name : "wrapped token",
+                    name : name,
                     minable : 0,
                     reissuable : 1,
                     referrer_stake : 0n,
@@ -2637,11 +2642,12 @@ class ClaimContract extends Contract {
                 await mint_tokens(ticket.amount, minted.wrapped_hash)
                 res = transfer(minted.wrapped_hash, ticket.amount, ticket.dst_address)
             } else {
-                let tokenCreateRes = await createToken(ticket.amount, ticket.ticker)
+                let tokenCreateRes = await createToken(ticket)
                 substate.minted_add({
                     wrapped_hash : tokenCreateRes.token_info.hash,
                     origin_network : ticket.origin_network,
-                    origin_hash : ticket.origin_hash
+                    origin_hash : ticket.origin_hash,
+                    origin_decimals : ticket.origin_decimals
                 })
                 res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)
             }
@@ -2650,11 +2656,146 @@ class ClaimContract extends Contract {
     }
 }
 
+class BridgeOwnerContract extends Contract {
+    constructor(data) {
+        super()
+        this.data = data
+        this.type = this.data.type
+        if(!this.validate())
+            throw new ContractError("Incorrect contract")
+    }
+
+    validate () {}
+
+    async execute(tx, substate, kblock, config) {
+        let {owner} = substate.get_bridge_settings()
+        if (tx.from !== owner)
+            throw new ContractError(`Only owner is allowed to control the bridge`)
+        let res = this.bridgeControl(tx, substate, kblock, config)
+        if (!res)
+            return {
+                amount_changes : [],
+                pos_changes : [],
+                post_action : []
+            }
+        return res
+    }
+}
+
+class BridgeSetOwnerContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            pubkey : cTypes.enqHash66
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        substate.set_bridge({
+            owner : this.data.parameters.pubkey
+        })
+    }
+}
+
+class BridgeSetThresholdContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            threshold : cTypes.int
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        substate.set_bridge({
+            threshold : this.data.parameters.threshold
+        })
+    }
+}
+
+class BridgeAddValidatorContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            pubkey : cTypes.enqHash66
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        let pk = this.data.parameters.pubkey
+        if (substate.validators.find(validator => validator === pk))
+            throw new ContractError(`Validator ${pk} already exists`)
+        substate.add_validator(pk)
+    }
+}
+
+class BridgeRemoveValidatorContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            pubkey : cTypes.enqHash66
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        let pk = this.data.parameters.pubkey
+        if (!substate.validators.find(validator => validator === pk))
+            throw new ContractError(`Validator ${pk} doesn't exist`)
+        substate.remove_validator(pk)
+    }
+}
+
+class BridgeAddNetworkContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            id : cTypes.int,
+            decimals : cTypes.byte
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        let {id, decimals} = this.data.parameters
+        substate.add_network(id, decimals)
+    }
+}
+
+class BridgeRemoveNetworkContract extends BridgeOwnerContract {
+    constructor(data) { super(data) }
+
+    validate () {
+        let paramsModel = {
+            id : cTypes.int,
+        }
+        return cValidate(this.data.parameters, paramsModel)
+    }
+
+    async bridgeControl(tx, substate, kblock, config) {
+        substate.remove_network(this.data.parameters.id)
+    }
+}
+
 module.exports.Contract = Contract;
 
 module.exports.TokenCreateContract = TokenCreateContract;
 module.exports.TokenMintContract = TokenMintContract;
 module.exports.TokenBurnContract = TokenBurnContract;
+
+module.exports.BridgeSetOwnerContract = BridgeSetOwnerContract;
+module.exports.BridgeSetThresholdContract = BridgeSetThresholdContract;
+module.exports.BridgeAddValidatorContract = BridgeAddValidatorContract;
+module.exports.BridgeRemoveValidatorContract = BridgeRemoveValidatorContract;
+module.exports.BridgeAddNetworkContract = BridgeAddNetworkContract;
+module.exports.BridgeRemoveNetworkContract = BridgeRemoveNetworkContract;
 
 module.exports.LockContract = LockContract;
 module.exports.ClaimInitContract = ClaimInitContract;

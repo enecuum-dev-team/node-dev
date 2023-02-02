@@ -136,6 +136,9 @@ class DB {
             DELETE FROM  minted;
             DELETE FROM  transferred;
             DELETE FROM  confirmations;
+            DELETE FROM  validators;
+            DELETE FROM  known_networks;
+            DELETE FROM  bridge_settings;
 			DELETE FROM  farms;
 			DELETE FROM  farmers`);
 
@@ -213,14 +216,14 @@ class DB {
 			if (snapshot.minted && snapshot.minted.length > 0) {
                 let minted_chunks = snapshot.minted.chunk(INSERT_CHUNK_SIZE);
                 minted_chunks.forEach(chunk => {
-					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin_network, origin_hash) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin_network, minted.origin_hash])]));
+					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin_network, origin_hash, origin_decimals) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin_network, minted.origin_hash, minted.origin_decimals])]));
 				});
 			}
             let transferred = [];
 			if (snapshot.transferred && snapshot.transferred.length > 0) {
                 let transferred_chunks = snapshot.transferred.chunk(INSERT_CHUNK_SIZE);
                 transferred_chunks.forEach(chunk => {
-					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, dst_network, src_network, src_hash, nonce, transfer_id, ticker, amount, origin_network, origin_hash) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.dst_network, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker, transferred.amount, transferred.origin_network, transferred.origin_hash])]));
+					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, dst_network, src_network, src_hash, nonce, transfer_id, ticker, amount, origin_network, origin_hash, origin_decimals, name) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.dst_network, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker, transferred.amount, transferred.origin_network, transferred.origin_hash, transferred.origin_decimals, transferred.name])]));
 				});
 			}
             let confirmations = [];
@@ -229,6 +232,30 @@ class DB {
                 confirmations_chunks.forEach(chunk => {
 					confirmations.push(mysql.format("INSERT INTO confirmations (validator_id, validator_sign, transfer_id) VALUES ? ", [chunk.map(confirmations => [confirmations.validator_id, confirmations.validator_sign, confirmations.transfer_id])]));
 				});
+			}
+
+            let validators = [];
+            if (snapshot.validators && snapshot.validators.length > 0) {
+                let validators_chunks = snapshot.validators.chunk(INSERT_CHUNK_SIZE);
+                validators_chunks.forEach(chunk => {
+					validators.push(mysql.format("INSERT INTO validators (pubkey) VALUES ? ", [chunk.map(validator => [validator.pubkey])]));
+				});
+			}
+
+            let known_networks = [];
+            if (snapshot.known_networks && snapshot.known_networks.length > 0) {
+                let known_networks_chunks = snapshot.known_networks.chunk(INSERT_CHUNK_SIZE);
+                known_networks_chunks.forEach(chunk => {
+					known_networks.push(mysql.format("INSERT INTO known_networks (network_id, decimals) VALUES ? ", [chunk.map(network => [network.network_id, network.decimals])]));
+				});
+			}
+
+            let bridge_settings = [];
+            if (snapshot.bridge_settings && snapshot.bridge_settings.length > 0) {
+                let bridge_settings_chunks = snapshot.bridge_settings.chunk(INSERT_CHUNK_SIZE);
+                bridge_settings_chunks.forEach(chunk => {
+                    bridge_settings.push(mysql.format("INSERT INTO bridge_settings (threshold, owner) VALUES ? ", [chunk.map(bridge_settings => [bridge_settings.threshold, bridge_settings.owner])]));
+                });
 			}
 
 			let cashier_ptr = mysql.format("INSERT INTO stat (`key`, `value`) VALUES ('cashier_ptr', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(value)", snapshot.kblocks_hash);
@@ -607,6 +634,9 @@ class DB {
         snapshot.minted = [];
         snapshot.transferred = [];
         snapshot.confirmations = [];
+        snapshot.validators = [];
+        snapshot.known_networks = [];
+        snapshot.bridge_settings = [];
 		let kblock = await this.get_kblock(hash);
 		if(kblock && kblock.length > 0 && kblock[0].n >= this.app_config.FORKS.fork_block_002){
 			snapshot.dex_pools = await this.request(mysql.format("SELECT pair_id, asset_1, volume_1, asset_2, volume_2, pool_fee, token_hash FROM dex_pools ORDER BY pair_id"));
@@ -616,6 +646,9 @@ class DB {
             snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
             snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY transfer_id"));
             snapshot.confirmations = await this.request(mysql.format("SELECT * FROM confirmations ORDER BY transfer_id"));
+            snapshot.validators = await this.request(mysql.format("SELECT * FROM validators"));
+            snapshot.known_networks = await this.request(mysql.format("SELECT * FROM known_networks"));
+            snapshot.bridge_settings = await this.request(mysql.format("SELECT * FROM bridge_settings"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
@@ -1147,15 +1180,39 @@ class DB {
 
         substate.transferred = substate.transferred.filter(a => a.changed === true);
         if(substate.transferred.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`, `amount`, `origin_network`, `origin_hash`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker, a.amount, a.origin_network, a.origin_hash])]));
+            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`, `amount`, `origin_network`, `origin_hash`, `origin_decimals`, `name`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker, a.amount, a.origin_network, a.origin_hash, a.origin_decimals, a.name])]));
     
         substate.confirmations = substate.confirmations.filter(a => a.changed === true);
         if(substate.confirmations.length > 0)
             state_sql.push(	mysql.format("INSERT INTO confirmations (`validator_id`, `validator_sign`, `transfer_id`) VALUES ?", [substate.confirmations.map(a => [a.validator_id, a.validator_sign, a.transfer_id])]));
 
+        let validators_delete = substate.validators.filter(a => a.delete === true);
+        if(validators_delete.length > 0){
+			for (let validator of validators_delete) {
+				state_sql.push(	mysql.format("DELETE FROM validators WHERE pubkey = ?", [validator.pubkey]));
+			}
+		}
+        substate.validators = substate.validators.filter(a => a.changed === true);
+        if(substate.validators.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO validators (`pubkey`) VALUES ?", [substate.validators.map(a => [a.pubkey])]));
+
+        let known_networks_delete = substate.known_networks.filter(a => a.delete === true);
+        if(known_networks_delete.length > 0){
+			for (let network of known_networks_delete) {
+				state_sql.push(	mysql.format("DELETE FROM known_networks WHERE network_id = ?", [network.network_id]));
+			}
+		}
+        substate.known_networks = substate.known_networks.filter(a => a.changed === true);
+        if(substate.known_networks.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO known_networks (`network_id`, `decimals`) VALUES ? ON DUPLICATE KEY UPDATE `decimals` = VALUES(decimals)", [substate.known_networks.map(a => [a.network_id, a.decimals])]));
+
+        substate.bridge_settings = substate.bridge_settings.filter(a => a.changed === true);
+        if(substate.bridge_settings.length > 0)
+            state_sql.push(	mysql.format("UPDATE bridge_settings SET owner = ?, threshold = ? LIMIT 1", [bridge_settings[0].owner, bridge_settings[0].threshold]));
+
         substate.minted = substate.minted.filter(a => a.changed === true);
         if(substate.minted.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin_network`, `origin_hash`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin_network, a.origin_hash])]));
+            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin_network`, `origin_hash`, `origin_decimals`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin_network, a.origin_hash, a.origin_decimals])]));
     
 		substate.poses = substate.poses.filter(a => a.changed === true);
 		if(substate.poses.length > 0)
@@ -1503,15 +1560,25 @@ class DB {
 		return res;
 	}
 
-    async get_minted_all () {
+    async get_known_networks() {
+        return await this.request('SELECT * FROM known_networks');
+    }
+    async get_validators() {
+        return await this.request('SELECT * FROM validators');
+    }
+    async get_bridge_settings() {
+        return await this.request('SELECT * FROM bridge_settings');
+    }
+
+    async get_minted_all() {
         return await this.request('SELECT * FROM minted');
     }
-    async get_minted (wrapped_hash) {
+    async get_minted(wrapped_hash) {
         if (!wrapped_hash)
             return [];
         return (await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash])))[0];
     }
-    async get_minted_by_origin (origin_hash, origin_network) {
+    async get_minted_by_origin(origin_hash, origin_network) {
         if(!origin_hash || !origin_network)
             return null;
         let res = await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ? and origin_network = ?`, [origin_hash, origin_network]));
@@ -1519,10 +1586,10 @@ class DB {
             return res[0];
         return null;
     }
-    async get_transferred_all () {
+    async get_transferred_all() {
         return await this.request('SELECT * FROM transferred');
     }
-    async get_confirmations_all () {
+    async get_confirmations_all() {
         return await this.request('SELECT * FROM confirmations');
     }
     async get_transferred_by_hashes(transfer_ids){
@@ -1530,25 +1597,26 @@ class DB {
 			return [];
 		return await this.request(mysql.format(`SELECT transferred.* FROM transferred WHERE transferred.transfer_id in (?)`, [transfer_ids]));
 	}
-    async get_transferred (src_address, dst_address, src_network) {
+    async get_transferred(src_address, dst_address, src_network) {
         if (!src_address || !dst_address || !src_network)
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
     }
-    async get_transferred_by_id (id) {
+    async get_transferred_by_id(id) {
         if (!id)
             return [];
         return await this.request(mysql.format('SELECT * FROM transferred WHERE transfer_id = ?', [id]));
     }
-    async get_transferred_by_dst_address (dst_address, src_address, src_network, src_hash) {
+    async get_transferred_by_dst_address(dst_address, src_address, src_network, src_hash) {
         if (!dst_address || !src_address || !src_network || !src_hash)
             return [];
         return await this.request(mysql.format(`SELECT * FROM transferred WHERE 
-        dst_address = ? AND
-        src_address = ? AND
-        src_network = ? AND
-        src_hash = ?
-        ORDER BY nonce DESC LIMIT 1`, [dst_address, src_address, src_network, src_hash]));
+            dst_address = ? AND
+            src_address = ? AND
+            src_network = ? AND
+            src_hash = ?
+            ORDER BY nonce DESC LIMIT 1`, [dst_address, src_address, src_network, src_hash]
+        ));
     }
 
 	async get_farms(ids){
