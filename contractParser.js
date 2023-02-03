@@ -40,7 +40,9 @@ let schema = {
     "bridge_set_owner" :        "2700",
     "bridge_set_threshold" :    "2800",
     "bridge_add_validator" :    "2900",
-    "bridge_remove_validator" : "2a00"
+    "bridge_remove_validator" : "2a00",
+    "bridge_add_network" :      "2b00",
+    "bridge_remove_network" :   "2c00"
 };
 const contracts_000 = [
     "0100", "0200", "0300", "0400", "1000",
@@ -60,7 +62,7 @@ const contracts_003 = [
     "1b00", "1c00", "1d00", "1e00", "1f00",
     "2000", "2100", "2200", "2300", "2400",
     "2500", "2600", "2700", "2800", "2900", 
-    "2a00"
+    "2a00", "2b00", "2c00"
 ];
 class ContractParser {
     constructor() {

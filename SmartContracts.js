@@ -61,6 +61,8 @@ class ContractFactory{
             case "bridge_set_threshold" :   return new Contracts.BridgeSetThresholdContract(data);
             case "bridge_add_validator" :   return new Contracts.BridgeAddValidatorContract(data);
             case "bridge_remove_validator": return new Contracts.BridgeRemoveValidatorContract(data);
+            case "bridge_add_network" :     return new Contracts.BridgeAddNetworkContract(data);
+            case "bridge_remove_network" :  return new Contracts.BridgeRemoveNetworkContract(data);
             default :                       return null;
         }
     }

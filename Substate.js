@@ -320,7 +320,9 @@ class Substate {
             case "bridge_set_owner"         :
             case "bridge_set_threshold"     :
             case "bridge_add_validator"     :
-            case "bridge_remove_validator"  : {
+            case "bridge_remove_validator"  :
+            case "bridge_add_network"       :
+            case "bridge_remove_network"    : {
                 // the bridge owner
             } 
                 break;
