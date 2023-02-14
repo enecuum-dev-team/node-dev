@@ -122,9 +122,7 @@ class Substate {
         this.minted = await this.db.get_minted_all();
         this.transferred = await this.db.get_transferred_all();
         this.confirmations = await this.db.get_confirmations_all();
-        this.validators = await this.db.get_validators();
         this.bridge_settings = await this.db.get_bridge_settings();
-        this.known_networks = await this.db.get_known_networks();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -148,9 +146,7 @@ class Substate {
         this.minted = state.minted.map(a => Object.assign({}, a));
         this.transferred = state.transferred.map(a => Object.assign({}, a));
         this.confirmations = state.confirmations.map(a => Object.assign({}, a));
-        this.validators = state.validators.map(a => Object.assign({}, a));
         this.bridge_settings = state.bridge_settings.map(a => Object.assign({}, a));
-        this.known_networks = state.known_networks.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
         let type = contract.type;
@@ -350,39 +346,26 @@ class Substate {
     }
 
     remove_validator(pubkey) {
-        let changes = {
-            pubkey,
-            delete : true
-        }
-        this.validators.push(changes)
-    } 
+        let validators = this.get_validators().filter(validator => validator !== pubkey)
+        this.set_bridge({validators})
+    }
     add_validator(pubkey) {
-        let changes = {
-            pubkey,
-            changed : true
-        }
-        this.validators.push(changes)
-    } 
-    get_validators() {
-        return this.validators
+        let validators = this.get_validators().push(pubkey)
+        this.set_bridge({validators})
     }
     remove_network(network_id) {
-        let changes = {
-            network_id,
-            delete : true
-        }
-        this.known_networks.push(changes)
+        let known_networks = this.get_known_networks().filter(network => network.id !== network_id)
+        this.set_bridge({known_networks})
     } 
     add_network(network_id, decimals) {
-        let changes = {
-            network_id,
-            decimals,
-            changed : true
-        }
-        this.known_networks.push(changes)
+        let known_networks = this.get_known_networks().push({id: network_id, decimals})
+        this.set_bridge({known_networks})
     } 
+    get_validators() {
+        return this.get_bridge_settings().validators
+    }
     get_known_networks() {
-        return this.known_networks
+        return this.get_bridge_settings().known_networks
     }
     set_bridge(changes) {
         let ch = this.bridge_settings[0]
@@ -391,14 +374,7 @@ class Substate {
         this.bridge_settings.push(changes)
     }
     get_bridge_settings() {
-        if (this.bridge_settings.length)
-            return this.bridge_settings[0]
-        return {
-            owner : Utils.BRIDGE_DEFAULT_OWNER,
-            threshold : 1,
-            validators : this.get_validators(),
-            known_networks : this.get_known_networks()
-        }
+        return this.bridge_settings[0]
     }
 
     get_tickers_all(){

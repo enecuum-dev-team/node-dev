@@ -2334,7 +2334,8 @@ class LockContract extends Contract {
             dst_address : cTypes.hexStr1_66,
             dst_network : cTypes.int,
             amount : cTypes.str,
-            hash : cTypes.enqHash64
+            hash : cTypes.enqHash64,
+            nonce :  cTypes.int
         }
         if (!cValidate(this.data.parameters, paramsModel))
             throw new ContractError("Validation error")
@@ -2728,7 +2729,7 @@ class BridgeAddValidatorContract extends BridgeOwnerContract {
 
     async bridgeControl(tx, substate, kblock, config) {
         let pk = this.data.parameters.pubkey
-        if (substate.validators.find(validator => validator === pk))
+        if (substate.get_validators().find(validator => validator === pk))
             throw new ContractError(`Validator ${pk} already exists`)
         substate.add_validator(pk)
     }
@@ -2746,7 +2747,7 @@ class BridgeRemoveValidatorContract extends BridgeOwnerContract {
 
     async bridgeControl(tx, substate, kblock, config) {
         let pk = this.data.parameters.pubkey
-        if (!substate.validators.find(validator => validator === pk))
+        if (!substate.get_validators().find(validator => validator === pk))
             throw new ContractError(`Validator ${pk} doesn't exist`)
         substate.remove_validator(pk)
     }

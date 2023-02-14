@@ -549,23 +549,16 @@ CREATE TABLE `confirmations` (
   `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
   `transfer_id` varchar(64) NOT NULL,
   PRIMARY KEY (`transfer_id`, `validator_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_settings`;
 
 CREATE TABLE `bridge_settings` (
   `owner` varchar(66) NOT NULL,
   `threshold` TINYINT unsigned DEFAULT 1,
+  `validators` varchar(1000),
+  `known_networks` varchar(1000),
   PRIMARY KEY (`owner`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-CREATE TABLE `validators` (
-  `pubkey` varchar(66) NOT NULL,
-  PRIMARY KEY (`pubkey`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-CREATE TABLE `known_networks` (
-  `network_id` int NOT NULL,
-  `decimals` TINYINT unsigned NOT NULL,
-  PRIMARY KEY (`network_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dump completed on 2020-04-14 15:09:51
