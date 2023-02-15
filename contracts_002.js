@@ -1104,7 +1104,7 @@ class PoolLiquidityRemoveContract extends Contract {
             // new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
             // new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
             lt_amount : params.amount
-        }))
+        }));
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1171,6 +1171,7 @@ class PoolLiquiditySellExactContract extends Contract {
             return null;
         let params = this.data.parameters;
 
+        let events = [];
         let BURN_ADDRESS = Utils.DEX_BURN_ADDRESS;
         let CMD_ADDRESS = Utils.DEX_COMMANDER_ADDRESS;
         let ENX_TOKEN_HASH = this.enx_hash;
@@ -1241,17 +1242,17 @@ class PoolLiquiditySellExactContract extends Contract {
         });
         substate.tokens_change(tok_data);
         substate.pools_change(pool_data);
-        let event = {
-            type : this.type,
-            txhash : tx.hash,
-            data : {
-                params : params,
-                in : amount_in,
-                out : amount_out,
-                cmd_lt_amount : cmd_lt_amount
-            }
-        };
 
+        events.push(createEvent(this.type, tx.hash, tx.n,{
+            pool_id : pool_info.token_hash,
+            old_volume1 : pool_info.volume_1,
+            old_volume2 : pool_info.volume_2,
+            amount_in : amount_in,
+            amount_out : amount_out,
+            new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            lt_amount : cmd_lt_amount
+        }));
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1261,7 +1262,7 @@ class PoolLiquiditySellExactContract extends Contract {
                 out : amount_out,
                 cmd_lt_amount : cmd_lt_amount
             },
-            events : [event]
+            events : events
         };
     }
 }
@@ -1319,7 +1320,7 @@ class PoolLiquidityBuyExactContract extends Contract {
         if(this.data.type === undefined)
             return null;
         let params = this.data.parameters;
-
+        let events = [];
         let BURN_ADDRESS = Utils.DEX_BURN_ADDRESS;
         let CMD_ADDRESS = Utils.DEX_COMMANDER_ADDRESS;
         let ENX_TOKEN_HASH = this.enx_hash;
@@ -1394,16 +1395,17 @@ class PoolLiquidityBuyExactContract extends Contract {
         });
         substate.tokens_change(tok_data);
         substate.pools_change(pool_data);
-        let event = {
-            type : this.type,
-            txhash : tx.hash,
-            data : {
-                params : params,
-                in : amount_in,
-                out : amount_out,
-                cmd_lt_amount : cmd_lt_amount
-            }
-        };
+
+        events.push(createEvent(this.type, tx.hash, tx.n,{
+            pool_id : pool_info.token_hash,
+            old_volume1 : pool_info.volume_1,
+            old_volume2 : pool_info.volume_2,
+            amount_in : amount_in,
+            amount_out : amount_out,
+            new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            lt_amount : cmd_lt_amount
+        }));
         return {
             amount_changes : [],
             pos_changes : [],
@@ -1413,7 +1415,7 @@ class PoolLiquidityBuyExactContract extends Contract {
                 out : amount_out,
                 cmd_lt_amount : cmd_lt_amount
             },
-            events : [event]
+            events : events
         };
     }
 }

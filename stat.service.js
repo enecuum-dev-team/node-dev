@@ -275,6 +275,9 @@ class StatService {
         return new_n;//console.log(ind)
     }
     async update_dex_info(){
+        function abs(a){
+            return a < 0n ? -a : a;
+        }
         let n = (await this.db.get_stats('update_dex_info'))[0];
         if(n === undefined || n === null)
             return;
@@ -283,27 +286,29 @@ class StatService {
         if(n.value === null)
             n.value = 0;
         n = n.value;
-        let kblock = (await this.db.get_kblock_by_n(n))[0];
+
         let events = await this.eventdb.getEventsAfter(n);
         //console.log(events)
         let new_n = n;
-        let DEX_EVENT_TYPES = ["pool_remove_liquidity", "pool_add_liquidity"];
+        let DEX_EVENT_TYPES = ["pool_remove_liquidity", "pool_add_liquidity", "pool_sell_exact", "pool_buy_exact"];
+        let DEX_SWAP_TYPES = ["pool_sell_exact", "pool_buy_exact"];
         for(let event of events){
             if(event.n > new_n)
                 new_n = event.n;
             if(!DEX_EVENT_TYPES.includes(event.type))
                 continue;
-            event.data = JSON.parse(event.data)
-            let last_entry = await this.db.dex_history_get_last_entry();
+            event.data = JSON.parse(event.data);
+            let last_entry = await this.db.dex_history_get_pool_last_entry(event.data.pool_id);
+            let kblock = (await this.db.get_kblock_by_n(event.n))[0];
 
             let entry = {
                 hash : event.hash,
                 action : event.type,
-                n : event.n,
-                v1_at : last_entry.v1_at || "0" ,
-                v2_at : last_entry.v2_at || "0" ,
+                block_n : event.n,
+                block_time : kblock.time,
+                v1_at : (last_entry !== undefined ? last_entry.v1_at : 0n ),
+                v2_at : (last_entry !== undefined ? last_entry.v2_at : 0n ),
                 pool_id : event.data.pool_id,
-                price : 0,
             };
             if(event.type === "pool_add_liquidity"){
                 entry.tvl1 = BigInt(event.data.old_volume1) + BigInt(event.data.liq_add1);
@@ -312,6 +317,12 @@ class StatService {
             if(event.type === "pool_remove_liquidity"){
                 entry.tvl1 = BigInt(event.data.old_volume1) - BigInt(event.data.liq_remove1);
                 entry.tvl2 = BigInt(event.data.old_volume2) - BigInt(event.data.liq_remove2);
+            }
+            if(DEX_SWAP_TYPES.includes(event.type)){
+                entry.tvl1 = BigInt(event.data.new_volume_1);
+                entry.tvl2 = BigInt(event.data.new_volume_2);
+                entry.v1_at = BigInt(entry.v1_at) + abs(BigInt(event.data.new_volume_1) - BigInt(event.data.old_volume1));
+                entry.v2_at = BigInt(entry.v2_at) + abs(BigInt(event.data.new_volume_2) - BigInt(event.data.old_volume2));
             }
             console.log(entry);
             await this.db.dex_history_add_entry(entry);

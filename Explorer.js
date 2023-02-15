@@ -1067,26 +1067,43 @@ class DexInfoRouter{
 		this.db = db;
 
 		this.router.get('/tickers', async (req, res, next) => {
-			let pools = await this.db.dex_get_pools_all();
-			let data = [];
-			for (let pool of pools) {
-				let tokens_info = await this.db.get_tokens([pool.asset_1, pool.asset_2]);
-				if(tokens_info.length !== 2)
-					continue;
-				// (volume_1 / POW(10,T1.decimals) / (volume_2/POW(10,T2.decimals)))
-				let cur_price = ((pool.volume_2 / Math.pow(10, tokens_info[1].decimals)) / (pool.volume_1 / Math.pow(10, tokens_info[0].decimals)));
-				let rec = {
-					ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
-					base_currency : tokens_info[0].ticker,
-					target_currency : tokens_info[1].ticker,
-					last_price : cur_price,
-					base_volume : pool.volume_1,
-					target_volume : pool.volume_2,
-					pool_id : pool.pair_id,
-				};
-				data.push(rec);
+			try{
+				let pools = await this.db.dex_get_pools_all();
+				let data = [];
+				for (let pool of pools) {
+					let tokens_info = await this.db.get_tokens([pool.asset_1, pool.asset_2]);
+					if(tokens_info.length !== 2)
+						continue;
+					let cur_price = ((pool.volume_2 / Math.pow(10, tokens_info[1].decimals)) / (pool.volume_1 / Math.pow(10, tokens_info[0].decimals)));
+					let day = 24 * 60 * 60 * 1000;
+					let rec = {
+						ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
+						base_currency : tokens_info[0].ticker,
+						target_currency : tokens_info[1].ticker,
+						pool_id : pool.pair_id,
+						last_price : cur_price
+					};
+
+					let last_entry = await this.db.dex_history_get_pool_last_entry(pool.token_hash);
+					if(last_entry){
+						let past_entry = await this.db.dex_history_get_24h_volume(pool.token_hash, last_entry.block_time - day, last_entry.block_time);
+						let v1 = BigInt(last_entry.v1_at) - BigInt(past_entry.v1_at);
+						let v2 = BigInt(last_entry.v2_at) - BigInt(past_entry.v2_at);
+						rec.base_volume = v1.toString();
+						rec.target_volume = v2.toString();
+					}
+					else{
+						rec.base_volume = "0";
+						rec.target_volume = "0";
+					}
+
+					data.push(rec);
+				}
+				res.send(data);
 			}
-			res.send(data);
+			catch (e) {
+				next(e);
+			}
 		});
 
 		this.router.get('/pairs', async (req, res, next) => {
