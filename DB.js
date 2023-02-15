@@ -2423,20 +2423,37 @@ class DB {
 		return res;
 	}
 	async dex_history_get_last_entry(){
-		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
-		let res = (await this.request(mysql.format(`SELECT * FROM dex_history where i = (SELECT MAX(i) from dex_history);`)));
-		if(res.length === 0){
-			return {}
+		let res = (await this.request(mysql.format(`SELECT * FROM dex_history WHERE i = 
+								(SELECT MAX(i) from dex_history);`)));
+		if(res.length === 0) {
+			return;
 		}
-		return res;
+		return res[0];
+	}
+	async dex_history_get_pool_last_entry(pool_id){
+		let sql = mysql.format(`SELECT * FROM dex_history WHERE pool_id = ? ORDER BY i DESC LIMIT 1;`, [pool_id]);
+		let res = await this.request(sql);
+		if(res.length === 0){
+			return;
+		}
+		return res[0];
+	}
+	// SELECT * FROM dex_history WHERE pool_id = "" and block_time BETWEEN ? and ? order by i desc limit 1;
+	async dex_history_get_24h_volume(pool_id, start, end){
+		let sql = mysql.format(`SELECT * FROM dex_history WHERE i = 
+			(SELECT MIN(i) FROM dex_history WHERE block_time BETWEEN ? and ?);`, [start, end]);
+		let res = await this.request(sql);
+		if(res.length === 0){
+			return;
+		}
+		return res[0];
 	}
 	async dex_history_add_entry(e){
-		// let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE volume_1 > 0 and volume_2 > 0`))); !!!ALARM!!! check strange requeset
 		let sql = mysql.format(`INSERT INTO dex_history (
-		hash, action, pool_id, block, caller, 
-		v1_at, v2_at, v1_change, v2_change, lt_change) VALUES (?)`,
-			[[e.hash, e.action, null, e.n, null,
-				e.v1_at, e.v2_at, null, null, null]]);
+		hash, action, pool_id, block_n, block_time, caller, 
+		v1_at, v2_at, tvl1, tvl2, lt_change) VALUES (?)`,
+			[[e.hash, e.action, e.pool_id, e.block_n, e.block_time, null,
+				e.v1_at, e.v2_at, e.tvl1, e.tvl2, null]]);
 		console.log(sql)
 		let res = await this.request(sql);
 		if(res.length === 0){
@@ -2476,7 +2493,7 @@ class EventDB extends DB {
 	}
 	async getEventsAfter(after_n){
 
-		let sql = mysql.format(`SELECT * FROM events WHERE n > ? order by n desc`, [after_n]);
+		let sql = mysql.format(`SELECT * FROM events WHERE n > ? order by time asc`, [after_n]);
 		return await this.request(sql);
 		//console.log(sql);
 		//console.log(events);
