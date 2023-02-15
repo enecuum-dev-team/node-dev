@@ -82,7 +82,7 @@ class Explorer {
             if (!req.query.dst_address || !req.query.src_address || !req.query.src_network || !req.query.src_hash)
                 res.send([])
             else
-                res.send(await this.db.get_transferred_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
+                res.send(await this.db.get_bridge_claim_transfers_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
         })
 
         this.app.get('/api/v1/bridge_minted_token', async (req, res) => {

@@ -523,9 +523,9 @@ CREATE TABLE `minted` (
   PRIMARY KEY (`wrapped_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS `transferred`;
+DROP TABLE IF EXISTS `bridge_claim_transfers`;
 
-CREATE TABLE `transferred` (
+CREATE TABLE `bridge_claim_transfers` (
   `nonce` bigint(20) NOT NULL,
   `src_address` varchar(66) NOT NULL,
   `dst_address` varchar(66) NOT NULL,
@@ -542,9 +542,17 @@ CREATE TABLE `transferred` (
   PRIMARY KEY (`transfer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS `confirmations`;
+DROP TABLE IF EXISTS `bridge_lock_transfers`;
 
-CREATE TABLE `confirmations` (
+CREATE TABLE `bridge_lock_transfers` (
+  `channel_id` varchar(66) NOT NULL,
+  `nonce` bigint(20) NOT NULL,
+  PRIMARY KEY (`channel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_confirmations`;
+
+CREATE TABLE `bridge_confirmations` (
   `validator_id` varchar(66) NOT NULL,
   `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
   `transfer_id` varchar(64) NOT NULL,
