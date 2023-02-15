@@ -39,6 +39,8 @@ class Substate {
         this.minted = [];
         this.transferred = [];
         this.confirmations = [];
+        this.validators = [];
+        this.bridge_settings = [];
     }
     async loadState(){
         // TODO: optimized selection
@@ -120,6 +122,7 @@ class Substate {
         this.minted = await this.db.get_minted_all();
         this.transferred = await this.db.get_transferred_all();
         this.confirmations = await this.db.get_confirmations_all();
+        this.bridge_settings = await this.db.get_bridge_settings();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -143,6 +146,7 @@ class Substate {
         this.minted = state.minted.map(a => Object.assign({}, a));
         this.transferred = state.transferred.map(a => Object.assign({}, a));
         this.confirmations = state.confirmations.map(a => Object.assign({}, a));
+        this.bridge_settings = state.bridge_settings.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
         let type = contract.type;
@@ -308,6 +312,17 @@ class Substate {
                 this.accounts.push(tx.to)
             }
                 break;
+
+            case "bridge_set_owner"         :
+            case "bridge_set_threshold"     :
+            case "bridge_add_validator"     :
+            case "bridge_remove_validator"  :
+            case "bridge_add_network"       :
+            case "bridge_remove_network"    : {
+                // the bridge owner
+            } 
+                break;
+
             default : return false;
         }
     }
@@ -329,6 +344,39 @@ class Substate {
         }
         return true;
     }
+
+    remove_validator(pubkey) {
+        let validators = this.get_validators().filter(validator => validator !== pubkey)
+        this.set_bridge({validators})
+    }
+    add_validator(pubkey) {
+        let validators = this.get_validators().push(pubkey)
+        this.set_bridge({validators})
+    }
+    remove_network(network_id) {
+        let known_networks = this.get_known_networks().filter(network => network.id !== network_id)
+        this.set_bridge({known_networks})
+    } 
+    add_network(network_id, decimals) {
+        let known_networks = this.get_known_networks().push({id: network_id, decimals})
+        this.set_bridge({known_networks})
+    } 
+    get_validators() {
+        return this.get_bridge_settings().validators
+    }
+    get_known_networks() {
+        return this.get_bridge_settings().known_networks
+    }
+    set_bridge(changes) {
+        let ch = this.bridge_settings[0]
+        changes.changed = true
+        changes = Object.assign(ch, changes)
+        this.bridge_settings.push(changes)
+    }
+    get_bridge_settings() {
+        return this.bridge_settings[0]
+    }
+
     get_tickers_all(){
         return this.tokens;
     }

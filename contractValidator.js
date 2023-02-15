@@ -55,10 +55,21 @@ const cTypes = {
         type : "string",
         regexp : /^((0x[0-9a-fA-F]{1,62})|[0-9a-fA-F]{1,64})$/i
     },
+
     int : {
         id : 0xB,
         type : "number",
         validate : num => Number.isSafeInteger(num)
+    },
+    byte : {
+        id : 0xC,
+        type : "number",
+        validate : num => num >= 0 && num < 256
+    },
+    str40 : {
+        id : 0xD,
+        type : "string",
+        validate : str => str.length < 41
     }
 }
 
@@ -68,6 +79,14 @@ module.exports = {
         let compareTypes = (param, paramModel, key) => {
             if (typeof param !== paramModel.type)
                 throw new ContractError(`Incorrect parameter '${key}' type.`)
+        }
+
+        let checkWithValidation = (param, paramModel, key, type) => {
+            if (paramModel.id === cTypes[type].id) {
+                compareTypes(param, paramModel, key)
+                if (!paramModel.validate(param))
+                    throw new ContractError(`Incorrect parameter '${key}' type. Must be ${type}.`)
+            }
         }
 
         for (let key in paramsModel) {
@@ -100,17 +119,10 @@ module.exports = {
                     throw new ContractError(`Incorrect parameter '${key}' type. Must be array.`)
             }
 
-            if (paramModel.id === cTypes.obj.id) {
-                compareTypes(param, paramModel, key)
-                if (!paramModel.validate(param))
-                    throw new ContractError(`Incorrect parameter '${key}' type. Must be object.`)
-            }
-
-            if (paramModel.id === cTypes.int.id) {
-                compareTypes(param, paramModel, key)
-                if (!paramModel.validate(param))
-                    throw new ContractError(`Incorrect parameter '${key}' type. Must be int.`)
-            }
+            checkWithValidation(param, paramModel, key, "obj")
+            checkWithValidation(param, paramModel, key, "int")
+            checkWithValidation(param, paramModel, key, "byte")
+            checkWithValidation(param, paramModel, key, "str40")
 
             if (paramModel.id === cTypes.str.id) {
                 compareTypes(param, paramModel, key)

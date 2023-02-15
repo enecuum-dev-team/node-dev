@@ -105,6 +105,16 @@ class ExplorerRouter {
 		this.app.get('/api/v1/network_info', async (req, res) => {
 			console.trace('requested network_info', req.query);
 			let native_token = (await this.db.get_tokens_info([this.config.native_token_hash]))[0];
+            let bridge = this.config.bridge
+            let bridge_settings = await this.db.get_bridge_settings()
+            if (bridge_settings.length) {
+                bridge.BRIDGE_OWNER = bridge_settings[0].owner
+                bridge.BRIDGE_THRESHOLD = bridge_settings[0].threshold
+            }
+            let validators = await this.db.get_validators()
+            bridge.BRIDGE_VALIDATORS = validators
+            let known_networks = await this.db.get_known_networks()
+            bridge.BRIDGE_KNOWN_NETWORKS = known_networks
 			let data = {
 				target_speed: this.config.target_speed,
 				reward_ratio: this.config.reward_ratio,
@@ -121,7 +131,7 @@ class ExplorerRouter {
 					min_stake:this.config.mblock_slots.min_stake
 				},
 				dex : this.config.dex,
-                bridge : this.config.bridge
+                bridge : bridge
 			};
 			res.send(data);
 		});

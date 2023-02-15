@@ -73,6 +73,12 @@
         "lock" :                    0,
         "claim_init" :              0,
         "claim_confirm" :           0,
-        "claim" :                   0
+        "claim" :                   0,
+        "bridge_set_owner" :        0,
+        "bridge_set_threshold" :    0,
+        "bridge_add_validator" :    0,
+        "bridge_remove_validator" : 0,
+        "bridge_add_network" :      0,
+        "bridge_remove_network" :   0
     }
 }
