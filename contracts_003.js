@@ -513,7 +513,7 @@ class BridgeOwnerContract extends Contract {
         let {owner} = substate.get_bridge_settings()
         if (tx.from !== owner)
             throw new ContractError(`Only owner is allowed to control the bridge`)
-        let res = this.bridgeControl(tx, substate, kblock, config)
+        let res = await this.bridgeControl(tx, substate, kblock, config)
         if (!res)
             return {
                 amount_changes : [],
