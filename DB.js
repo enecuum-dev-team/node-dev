@@ -1499,7 +1499,21 @@ class DB {
 			WHERE L.id = ? AND L.token = ?`, [id, token])))[0];
 		return (balance !== undefined) ? balance : ({amount : 0, decimals : 10});
 	}
-
+	async get_full_native_balance(id, token){
+		let data = await this.get_balance(id, token);
+		data.ledger = data.amount;
+		if(token === Utils.ENQ_TOKEN_NAME){
+			let delegated_data = await this.get_delegated_balance(id);
+			let transit = await this.get_transit_balance(id);
+			let undelegated = await this.get_undelegated_balance(id);
+			data.delegated = delegated_data.delegated;
+			data.reward = delegated_data.reward;
+			data.transit = transit;
+			data.undelegated = undelegated;
+			data.amount = BigInt(data.ledger) + BigInt(data.delegated) + BigInt(data.reward) + BigInt(data.transit) + BigInt(data.undelegated);
+		}
+		return data;
+	}
 	async get_balance_all(id){
 		let balance = await this.request(mysql.format(`SELECT L.amount as amount, L.token as token, T.ticker as ticker, T.decimals as decimals, IFNULL(T.minable, 0) as minable, IFNULL(T.reissuable, 0) as reissuable
 			FROM ledger as L 

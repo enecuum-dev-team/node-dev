@@ -54,9 +54,12 @@ class StatService {
             '0270a88ea6f7c5ea2a2ec3878008d878a70fd5d4ca27d5866d0eec3594cab0b912',
             '026df0aa41967d8d47082c36b29a164aa1c90cdd07cb02d373daaba90b8eca5301'
         ];
+        if(Utils.blacklist !== undefined)
+            exclude = exclude.concat(Utils.blacklist);
+        exclude = exclude.filter((v, i, a) => a.indexOf(v) === i);
         let circ = BigInt((await this.db.get_tokens([Utils.ENQ_TOKEN_NAME]))[0].total_supply);
         for(let wallet of exclude){
-            let balance = await this.db.get_balance(wallet, Utils.ENQ_TOKEN_NAME);
+            let balance = await this.db.get_full_native_balance(wallet, Utils.ENQ_TOKEN_NAME);
             circ -= BigInt(balance.amount);
         }
         return circ;
