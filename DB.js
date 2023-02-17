@@ -134,8 +134,9 @@ class DB {
 			DELETE FROM  tokens_index;
 			DELETE FROM  dex_pools;
             DELETE FROM  minted;
-            DELETE FROM  transferred;
-            DELETE FROM  confirmations;
+            DELETE FROM  bridge_claim_transfers;
+            DELETE FROM  bridge_lock_transfers;
+            DELETE FROM  bridge_confirmations;
             DELETE FROM  bridge_settings;
 			DELETE FROM  farms;
 			DELETE FROM  farmers`);
@@ -217,18 +218,25 @@ class DB {
 					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin_network, origin_hash, origin_decimals) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin_network, minted.origin_hash, minted.origin_decimals])]));
 				});
 			}
-            let transferred = [];
-			if (snapshot.transferred && snapshot.transferred.length > 0) {
-                let transferred_chunks = snapshot.transferred.chunk(INSERT_CHUNK_SIZE);
-                transferred_chunks.forEach(chunk => {
-					transferred.push(mysql.format("INSERT INTO transferred (src_address, dst_address, dst_network, src_network, src_hash, nonce, transfer_id, ticker, amount, origin_network, origin_hash, origin_decimals, name) VALUES ? ", [chunk.map(transferred => [transferred.src_address, transferred.dst_address, transferred.dst_network, transferred.src_network, transferred.src_hash, transferred.nonce, transferred.transfer_id, transferred.ticker, transferred.amount, transferred.origin_network, transferred.origin_hash, transferred.origin_decimals, transferred.name])]));
+            let bridge_claim_transfers = [];
+			if (snapshot.bridge_claim_transfers && snapshot.bridge_claim_transfers.length > 0) {
+                let bridge_claim_transfers_chunks = snapshot.bridge_claim_transfers.chunk(INSERT_CHUNK_SIZE);
+                bridge_claim_transfers_chunks.forEach(chunk => {
+					bridge_claim_transfers.push(mysql.format("INSERT INTO bridge_claim_transfers (src_address, dst_address, dst_network, src_network, src_hash, nonce, transfer_id, ticker, amount, origin_network, origin_hash, origin_decimals, name) VALUES ? ", [chunk.map(bridge_claim_transfers => [bridge_claim_transfers.src_address, bridge_claim_transfers.dst_address, bridge_claim_transfers.dst_network, bridge_claim_transfers.src_network, bridge_claim_transfers.src_hash, bridge_claim_transfers.nonce, bridge_claim_transfers.transfer_id, bridge_claim_transfers.ticker, bridge_claim_transfers.amount, bridge_claim_transfers.origin_network, bridge_claim_transfers.origin_hash, bridge_claim_transfers.origin_decimals, bridge_claim_transfers.name])]));
 				});
 			}
-            let confirmations = [];
-            if (snapshot.confirmations && snapshot.confirmations.length > 0) {
-                let confirmations_chunks = snapshot.confirmations.chunk(INSERT_CHUNK_SIZE);
+            let bridge_lock_transfers = [];
+			if (snapshot.bridge_lock_transfers && snapshot.bridge_lock_transfers.length > 0) {
+                let bridge_lock_transfers_chunks = snapshot.bridge_lock_transfers.chunk(INSERT_CHUNK_SIZE);
+                bridge_lock_transfers_chunks.forEach(chunk => {
+					bridge_lock_transfers.push(mysql.format("INSERT INTO bridge_lock_transfers (channel_id, nonce) VALUES ? ", [chunk.map(bridge_lock_transfers => [bridge_lock_transfers.channel_id, bridge_lock_transfers.nonce])]));
+				});
+			}
+            let bridge_confirmations = [];
+            if (snapshot.bridge_confirmations && snapshot.bridge_confirmations.length > 0) {
+                let confirmations_chunks = snapshot.bridge_confirmations.chunk(INSERT_CHUNK_SIZE);
                 confirmations_chunks.forEach(chunk => {
-					confirmations.push(mysql.format("INSERT INTO confirmations (validator_id, validator_sign, transfer_id) VALUES ? ", [chunk.map(confirmations => [confirmations.validator_id, confirmations.validator_sign, confirmations.transfer_id])]));
+					bridge_confirmations.push(mysql.format("INSERT INTO bridge_confirmations (validator_id, validator_sign, transfer_id) VALUES ? ", [chunk.map(bridge_confirmations => [bridge_confirmations.validator_id, bridge_confirmations.validator_sign, bridge_confirmations.transfer_id])]));
 				});
 			}
 
@@ -644,8 +652,9 @@ class DB {
 		snapshot.farms = [];
 		snapshot.farmers = [];
         snapshot.minted = [];
-        snapshot.transferred = [];
-        snapshot.confirmations = [];
+        snapshot.bridge_lock_transfers = [];
+        snapshot.bridge_claim_transfers = [];
+        snapshot.bridge_confirmations = [];
         snapshot.bridge_settings = [];
 		let kblock = await this.get_kblock(hash);
 		if(kblock && kblock.length > 0 && kblock[0].n >= this.app_config.FORKS.fork_block_002){
@@ -654,8 +663,9 @@ class DB {
 			snapshot.farmers = await this.request(mysql.format("SELECT farm_id, farmer_id, stake, level FROM farmers ORDER BY farmer_id"));
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
             snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
-            snapshot.transferred = await this.request(mysql.format("SELECT * FROM transferred ORDER BY transfer_id"));
-            snapshot.confirmations = await this.request(mysql.format("SELECT * FROM confirmations ORDER BY transfer_id"));
+            snapshot.bridge_lock_transfers = await this.request(mysql.format("SELECT * FROM bridge_lock_transfers ORDER BY channel_id"));
+            snapshot.bridge_claim_transfers = await this.request(mysql.format("SELECT * FROM bridge_claim_transfers ORDER BY transfer_id"));
+            snapshot.bridge_confirmations = await this.request(mysql.format("SELECT * FROM bridge_confirmations ORDER BY transfer_id"));
             snapshot.bridge_settings = await this.request(mysql.format("SELECT * FROM bridge_settings"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
@@ -1186,13 +1196,17 @@ class DB {
 		if(substate.tokens.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO tokens (`hash`, `owner`, `fee_type`, `fee_value`, `fee_min`, `ticker`, `caption`, `decimals`, `total_supply`, `reissuable`, `minable`, `max_supply`, `block_reward`, `min_stake`, `referrer_stake`, `ref_share`) VALUES ? ON DUPLICATE KEY UPDATE `total_supply` = VALUES(total_supply)", [substate.tokens.map(a => [a.hash, a.owner, a.fee_type, a.fee_value, a.fee_min, a.ticker, a.caption, a.decimals, a.total_supply, a.reissuable, a.minable, a.max_supply, a.block_reward, a.min_stake, a.referrer_stake, a.ref_share ])]));
 
-        substate.transferred = substate.transferred.filter(a => a.changed === true);
-        if(substate.transferred.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO transferred (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`, `amount`, `origin_network`, `origin_hash`, `origin_decimals`, `name`) VALUES ?", [substate.transferred.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker, a.amount, a.origin_network, a.origin_hash, a.origin_decimals, a.name])]));
+        substate.bridge_claim_transfers = substate.bridge_claim_transfers.filter(a => a.changed === true);
+        if(substate.bridge_claim_transfers.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_claim_transfers (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `transfer_id`, `ticker`, `amount`, `origin_network`, `origin_hash`, `origin_decimals`, `name`) VALUES ?", [substate.bridge_claim_transfers.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.transfer_id, a.ticker, a.amount, a.origin_network, a.origin_hash, a.origin_decimals, a.name])]));
     
-        substate.confirmations = substate.confirmations.filter(a => a.changed === true);
-        if(substate.confirmations.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO confirmations (`validator_id`, `validator_sign`, `transfer_id`) VALUES ?", [substate.confirmations.map(a => [a.validator_id, a.validator_sign, a.transfer_id])]));
+        substate.bridge_lock_transfers = substate.bridge_lock_transfers.filter(a => a.changed === true);
+        if(substate.bridge_lock_transfers.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_lock_transfers (`channel_id`, `nonce`) VALUES ? ON DUPLICATE KEY UPDATE `nonce` = VALUES(nonce)", [substate.bridge_lock_transfers.map(a => [a.channel_id, a.nonce])]));
+        
+        substate.bridge_confirmations = substate.bridge_confirmations.filter(a => a.changed === true);
+        if(substate.bridge_confirmations.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_confirmations (`validator_id`, `validator_sign`, `transfer_id`) VALUES ?", [substate.bridge_confirmations.map(a => [a.validator_id, a.validator_sign, a.transfer_id])]));
 
         substate.bridge_settings = substate.bridge_settings.filter(a => a.changed === true);
         if(substate.bridge_settings.length > 0) {
@@ -1581,31 +1595,37 @@ class DB {
             return res[0];
         return null;
     }
-    async get_transferred_all() {
-        return await this.request('SELECT * FROM transferred');
+    async get_bridge_lock_transfer_by_id(id) {
+        return await this.request(mysql.format('SELECT * FROM bridge_lock_transfers WHERE channel_id = ?', [id]));
+    }
+    async get_bridge_lock_transfers_all() {
+        return await this.request('SELECT * FROM bridge_lock_transfers');
+    }
+    async get_bridge_claim_transfers_all() {
+        return await this.request('SELECT * FROM bridge_claim_transfers');
     }
     async get_confirmations_all() {
-        return await this.request('SELECT * FROM confirmations');
+        return await this.request('SELECT * FROM bridge_confirmations');
     }
-    async get_transferred_by_hashes(transfer_ids){
+    async get_bridge_claim_transfers_by_hashes(transfer_ids){
 		if(!transfer_ids.length)
 			return [];
-		return await this.request(mysql.format(`SELECT transferred.* FROM transferred WHERE transferred.transfer_id in (?)`, [transfer_ids]));
+		return await this.request(mysql.format(`SELECT bridge_claim_transfers.* FROM bridge_claim_transfers WHERE bridge_claim_transfers.transfer_id in (?)`, [transfer_ids]));
 	}
-    async get_transferred(src_address, dst_address, src_network) {
+    async get_bridge_claim_transfers(src_address, dst_address, src_network) {
         if (!src_address || !dst_address || !src_network)
             return [];
-        return await this.request(mysql.format('SELECT * FROM transferred WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
+        return await this.request(mysql.format('SELECT * FROM bridge_claim_transfers WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
     }
-    async get_transferred_by_id(id) {
+    async get_bridge_claim_transfers_by_id(id) {
         if (!id)
             return [];
-        return await this.request(mysql.format('SELECT * FROM transferred WHERE transfer_id = ?', [id]));
+        return await this.request(mysql.format('SELECT * FROM bridge_claim_transfers WHERE transfer_id = ?', [id]));
     }
-    async get_transferred_by_dst_address(dst_address, src_address, src_network, src_hash) {
+    async get_bridge_claim_transfers_by_dst_address(dst_address, src_address, src_network, src_hash) {
         if (!dst_address || !src_address || !src_network || !src_hash)
             return [];
-        return await this.request(mysql.format(`SELECT * FROM transferred WHERE 
+        return await this.request(mysql.format(`SELECT * FROM bridge_claim_transfers WHERE 
             dst_address = ? AND
             src_address = ? AND
             src_network = ? AND

@@ -37,8 +37,9 @@ class Substate {
         this.farms = [];
         this.farmers = [];
         this.minted = [];
-        this.transferred = [];
-        this.confirmations = [];
+        this.bridge_claim_transfers = [];
+        this.bridge_lock_transfers = [];
+        this.bridge_confirmations = [];
         this.validators = [];
         this.bridge_settings = [];
     }
@@ -55,8 +56,8 @@ class Substate {
         this.lt_hashes = this.pools.map(h => h.token_hash);
         if(this.lt_hashes.length > 0)
             this.tokens = this.tokens.concat(this.lt_hashes);
-        if(this.transferred.length > 0) {
-            let tickets = await this.db.get_transferred_by_hashes(this.transferred);
+        if(this.bridge_claim_transfers.length > 0) {
+            let tickets = await this.db.get_bridge_claim_transfers_by_hashes(this.bridge_claim_transfers);
             for (let ticket of tickets) {
                 this.accounts.push(ticket.dst_address)
                 let minted = await this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network)
@@ -120,8 +121,9 @@ class Substate {
         this.farmers = await this.db.get_farmers_by_farmer(this.farmers);
 
         this.minted = await this.db.get_minted_all();
-        this.transferred = await this.db.get_transferred_all();
-        this.confirmations = await this.db.get_confirmations_all();
+        this.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_all();
+        this.bridge_lock_transfers = await this.db.get_bridge_lock_transfers_all();
+        this.bridge_confirmations = await this.db.get_confirmations_all();
         this.bridge_settings = await this.db.get_bridge_settings();
     }
     setState(state){
@@ -144,8 +146,9 @@ class Substate {
         this.farms = state.farms.map(a => Object.assign({}, a));
         this.farmers = state.farmers.map(a => Object.assign({}, a));
         this.minted = state.minted.map(a => Object.assign({}, a));
-        this.transferred = state.transferred.map(a => Object.assign({}, a));
-        this.confirmations = state.confirmations.map(a => Object.assign({}, a));
+        this.bridge_claim_transfers = state.bridge_claim_transfers.map(a => Object.assign({}, a));
+        this.bridge_lock_transfers = state.bridge_lock_transfers.map(a => Object.assign({}, a));
+        this.bridge_confirmations = state.bridge_confirmations.map(a => Object.assign({}, a));
         this.bridge_settings = state.bridge_settings.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
@@ -306,7 +309,7 @@ class Substate {
             }
                 break;
             case "claim_confirm" : {
-                this.transferred.push(contract.data.parameters.transfer_id)
+                this.bridge_claim_transfers.push(contract.data.parameters.transfer_id)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)
@@ -345,6 +348,20 @@ class Substate {
         return true;
     }
 
+    get_channel_by_id(channel_id) {
+        let ch = this.bridge_lock_transfers.find(transfer => transfer.channel_id === channel_id)
+        if (!ch)
+            return {
+                nonce : 0
+            }
+        return ch
+    }
+    change_channel(lock_params) {
+        this.bridge_lock_transfers.push({
+            changed : true,
+            ...lock_params
+        })
+    }
     remove_validator(pubkey) {
         let validators = this.get_validators().filter(validator => validator !== pubkey)
         this.set_bridge({validators})
@@ -438,10 +455,10 @@ class Substate {
             return null
         return this.minted.find(token => token.origin_hash === origin_hash && token.origin_network === origin_network)
     }
-    get_transferred (src_address, dst_address, src_network, src_hash) {
+    get_bridge_claim_transfers (src_address, dst_address, src_network, src_hash) {
         if(!src_address || !dst_address || !src_network || !src_hash)
             return null
-        let res = this.transferred.filter(tranfer => tranfer.src_address == src_address && tranfer.dst_address == dst_address && tranfer.src_network == src_network && tranfer.src_hash == src_hash)
+        let res = this.bridge_claim_transfers.filter(tranfer => tranfer.src_address == src_address && tranfer.dst_address == dst_address && tranfer.src_network == src_network && tranfer.src_hash == src_hash)
         if (res.length) {
             res.sort((a, b) => a.nonce > b.nonce ? -1 : 1)
             res = res[0]
@@ -449,27 +466,27 @@ class Substate {
             res = null
         return res
     }
-    get_transferred_by_id(id) {
+    get_bridge_claim_transfers_by_id(id) {
         if(!id)
             return null
-        return this.transferred.find(tranfer => tranfer.transfer_id === id)
+        return this.bridge_claim_transfers.find(tranfer => tranfer.transfer_id === id)
     }
-    get_last_transferred () {
-        let len = this.transferred.length
-        return len ? this.transferred[len - 1] : null
+    get_last_bridge_claim_transfers () {
+        let len = this.bridge_claim_transfers.length
+        return len ? this.bridge_claim_transfers[len - 1] : null
     }
     transfers_add (changes) {
         changes.changed = true
-        this.transferred.push(changes)
+        this.bridge_claim_transfers.push(changes)
     }
     add_confirmation (changes) {
         if (!changes.validator_id || !changes.validator_sign || !changes.transfer_id) 
             return null
-        if (this.confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.transfer_id === changes.transfer_id))
+        if (this.bridge_confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.transfer_id === changes.transfer_id))
             throw new ContractError(`Validator has already confirm transfer: ${changes.transfer_id}`)
         changes.changed = true
-        this.confirmations.push(changes)
-        return this.confirmations.reduce((prev, cur) => {
+        this.bridge_confirmations.push(changes)
+        return this.bridge_confirmations.reduce((prev, cur) => {
             if (cur.transfer_id === changes.transfer_id)
                 ++prev
             return prev

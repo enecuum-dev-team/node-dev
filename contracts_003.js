@@ -230,11 +230,25 @@ class LockContract extends Contract {
         }
         let validateDecimals = (params) => {
             if (dstDecimals < srcDecimals)
-                return BigInt(params.amount) % BigInt("1" + "0".repeat(srcDecimals - dstDecimals)) == 0
+                return BigInt(params.amount) % (10n ** BigInt(srcDecimals - dstDecimals)) == 0
             return true
         }
+        let get_channel_id = function (lock_data) {
+            const model = ["dst_address", "dst_network", "amount", "hash"]
+            let valuesFromObject = model.map(lock_param => lock_data[lock_param])
+            valuesFromObject.push(tx.from)
+            return crypto.createHash('sha256').update(valuesFromObject.sort().join("")).digest('hex')
+        }
+
 
         let data = this.data.parameters
+
+        let channel_id = get_channel_id(data)
+        let channel = substate.get_channel_by_id(channel_id)
+        if (Number(++channel.nonce) !== data.nonce)
+            throw new ContractError(`Wrong nonce of the bridge lock transfer. Prev: ${channel.nonce - 1}, cur: ${channel.nonce}, channel_id: ${channel.channel_id}`)
+        substate.change_channel(channel)
+
         let wrappedToken = substate.get_minted_token(data.hash)
         let dstDecimals = substate.get_known_networks().find(network => network.id == data.dst_network).decimals
         let srcDecimals = substate.get_token_info(data.hash).decimals
@@ -296,7 +310,7 @@ class ClaimInitContract extends Contract {
     
     async execute(tx, substate, kblock, config) {
         let data = this.data.parameters
-        let last_t = substate.get_transferred(data.src_address, data.dst_address, data.src_network, data.src_hash)
+        let last_t = substate.get_bridge_claim_transfers(data.src_address, data.dst_address, data.src_network, data.src_hash)
         if (last_t === null)
             last_t = {nonce : 0}
         if (Number(last_t.nonce) + 1 !== data.nonce)
@@ -344,8 +358,8 @@ class ClaimConfirmContract extends Contract {
         let cparser = new ContractParser(config)
         let cfactory = new ContractMachine.ContractFactory(config)
 
-        let confirmations = substate.add_confirmation(data)
-        if (confirmations === substate.get_bridge_settings().threshold) {
+        let bridge_confirmations = substate.add_confirmation(data)
+        if (bridge_confirmations === substate.get_bridge_settings().threshold) {
             let claim_object = {
                 type : "claim",
                 parameters : {
@@ -474,7 +488,7 @@ class ClaimContract extends Contract {
             return await token_create_contract.execute(_tx, substate)
         }
 
-        let ticket = substate.get_transferred_by_id(this.data.parameters.transfer_id)
+        let ticket = substate.get_bridge_claim_transfers_by_id(this.data.parameters.transfer_id)
         let res
         if (Number(ticket.origin_network) === Number(ticket.dst_network)) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
