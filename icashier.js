@@ -19,7 +19,7 @@ const DB = require('./DB').DB;
 const EventDB = require('./DB').EventDB;
 const Cashier = require('./Cashier').Cashier;
 
-const CONFIG_FILENAME = 'config.bit';
+const CONFIG_FILENAME = 'config.json';
 
 let config = {
 	dbhost : 'localhost',

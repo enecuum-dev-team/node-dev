@@ -29,7 +29,7 @@ class Explorer {
 		this.app.use(express.json());
 		this.app.use(express.static('explorer'));
 
-		let expRouter = new DexInfoRouter(db).getRouter();;//new ExplorerRouter(db, pending, stake_limits, config).getRouter();
+		let expRouter = new ExplorerRouter(db, pending, stake_limits, config).getRouter();
 		let dexRouter = new DexInfoRouter(db).getRouter();
 
 		this.app.listen(port, function(){
@@ -1120,8 +1120,8 @@ class DexInfoRouter{
 						rec.target_volume = v2.toString();
 					}
 					else{
-						rec.base_volume = "0";
-						rec.target_volume = "0";
+						rec.base_volume = 0;
+						rec.target_volume = 0;
 					}
 
 					data.push(rec);
