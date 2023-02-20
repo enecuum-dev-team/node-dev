@@ -15,7 +15,7 @@
 const crypto = require('crypto');
 const enq = require('./Enq');
 const fs = require('fs');
-const config = JSON.parse(fs.readFileSync('./config.bit', 'utf8'));
+const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 const rsasign = require('jsrsasign');
 let rx = require('./node_modules/node-randomx/addon');

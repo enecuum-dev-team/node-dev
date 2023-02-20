@@ -309,6 +309,7 @@ class StatService {
                 v1_at : (last_entry !== undefined ? last_entry.v1_at : 0n ),
                 v2_at : (last_entry !== undefined ? last_entry.v2_at : 0n ),
                 pool_id : event.data.pool_id,
+                prev : (last_entry !== undefined ? last_entry.i : null )
             };
             if(event.type === "pool_add_liquidity"){
                 entry.tvl1 = BigInt(event.data.old_volume1) + BigInt(event.data.liq_add1);

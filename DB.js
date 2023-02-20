@@ -2313,22 +2313,27 @@ class DB {
 		}
 		return res[0];
 	}
-	// SELECT * FROM dex_history WHERE pool_id = "" and block_time BETWEEN ? and ? order by i desc limit 1;
+
 	async dex_history_get_24h_volume(pool_id, start, end){
-		let sql = mysql.format(`SELECT * FROM dex_history WHERE i = 
-			(SELECT MIN(i) FROM dex_history WHERE block_time BETWEEN ? and ?);`, [start, end]);
+		let sql = mysql.format(`SELECT i, prev FROM dex_history WHERE pool_id = ?
+			and block_time BETWEEN ? and ? order by block_time asc limit 1`, [pool_id, start, end]);
 		let res = await this.request(sql);
 		if(res.length === 0){
 			return;
 		}
-		return res[0];
+		let sql2 = mysql.format(`SELECT * FROM dex_history WHERE i = ?`, [(res[0].prev === null ? res[0].i : res[0].prev)]);
+		let res2 = await this.request(sql2);
+		if(res2.length === 0){
+			return;
+		}
+		return res2[0];
 	}
 	async dex_history_add_entry(e){
 		let sql = mysql.format(`INSERT INTO dex_history (
 		hash, action, pool_id, block_n, block_time, caller, 
-		v1_at, v2_at, tvl1, tvl2, lt_change) VALUES (?)`,
+		v1_at, v2_at, tvl1, tvl2, lt_change, prev) VALUES (?)`,
 			[[e.hash, e.action, e.pool_id, e.block_n, e.block_time, null,
-				e.v1_at, e.v2_at, e.tvl1, e.tvl2, null]]);
+				e.v1_at, e.v2_at, e.tvl1, e.tvl2, null, e.prev]]);
 		console.log(sql)
 		let res = await this.request(sql);
 		if(res.length === 0){

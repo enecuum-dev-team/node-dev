@@ -17,7 +17,7 @@ const fs = require('fs');
 const argv = require('yargs').argv;
 const DB = require('./DB').DB;
 
-const CONFIG_FILENAME = 'config.bit';
+const CONFIG_FILENAME = 'config.json';
 
 let config = {
     dbhost : 'localhost',
