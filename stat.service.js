@@ -308,6 +308,8 @@ class StatService {
                 block_time : kblock.time,
                 v1_at : (last_entry !== undefined ? last_entry.v1_at : 0n ),
                 v2_at : (last_entry !== undefined ? last_entry.v2_at : 0n ),
+                v1_change : abs(BigInt(event.data.new_volume1) - BigInt(event.data.old_volume1)),
+                v2_change : abs(BigInt(event.data.new_volume2) - BigInt(event.data.old_volume2)),
                 pool_id : event.data.pool_id,
                 prev : (last_entry !== undefined ? last_entry.i : null )
             };
@@ -320,10 +322,11 @@ class StatService {
                 entry.tvl2 = BigInt(event.data.old_volume2) - BigInt(event.data.liq_remove2);
             }
             if(DEX_SWAP_TYPES.includes(event.type)){
-                entry.tvl1 = BigInt(event.data.new_volume_1);
-                entry.tvl2 = BigInt(event.data.new_volume_2);
-                entry.v1_at = BigInt(entry.v1_at) + abs(BigInt(event.data.new_volume_1) - BigInt(event.data.old_volume1));
-                entry.v2_at = BigInt(entry.v2_at) + abs(BigInt(event.data.new_volume_2) - BigInt(event.data.old_volume2));
+                entry.tvl1 = BigInt(event.data.new_volume1);
+                entry.tvl2 = BigInt(event.data.new_volume2);
+                entry.v1_at = BigInt(entry.v1_at) + abs(BigInt(event.data.new_volume1) - BigInt(event.data.old_volume1));
+                entry.v2_at = BigInt(entry.v2_at) + abs(BigInt(event.data.new_volume2) - BigInt(event.data.old_volume2));
+
             }
             console.log(entry);
             await this.db.dex_history_add_entry(entry);

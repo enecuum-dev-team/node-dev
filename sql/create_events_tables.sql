@@ -12,8 +12,10 @@ CREATE TABLE `dex_history` (
   `tvl2` varchar(45) DEFAULT NULL,
   `lt_change` varchar(45) DEFAULT NULL,
   `i` bigint(11) NOT NULL AUTO_INCREMENT,
-  PRIMARY KEY (`i`),
-  UNIQUE KEY `i_UNIQUE` (`i`)
+  `prev` bigint(11) DEFAULT NULL,
+  `v1_change` varchar(45) DEFAULT NULL,
+  `v2_change` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`i`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `events`;
@@ -26,3 +28,5 @@ CREATE TABLE `events` (
   `i` int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`i`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=latin1;
+
+INSERT INTO `stat` VALUES ('update_dex_info','0',NULL,15);

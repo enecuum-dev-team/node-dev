@@ -965,25 +965,15 @@ class PoolLiquidityAddContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-        // events.push({
-        //     type : this.type,
-        //     txhash : tx.hash,
-        //     data : {
-        //         old_volume_1 : pool_info.volume_1,
-        //         old_volume_2 : pool_info.volume_2,
-        //         new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-        //         new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
-        //         lt_amount : lt_amount
-        //     }
-        // });
+
         events.push(createEvent(this.type, tx.hash, tx.n,{
             pool_id : pool_info.token_hash,
             old_volume1 : pool_info.volume_1,
             old_volume2 : pool_info.volume_2,
             liq_add1 : amount_1,
             liq_add2 : amount_2,
-            // new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-            // new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            new_volume1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume2 : pool_info.volume_2 + pool_data.volume_2,
             lt_amount : lt_amount
         }))
         return {
@@ -1087,25 +1077,15 @@ class PoolLiquidityRemoveContract extends Contract {
         });
         substate.pools_change(pool_data);
         substate.tokens_change(tok_data);
-        // events.push({
-        //     type : this.type,
-        //     txhash : tx.hash,
-        //     data : {
-        //         old_volume_1 : pool_info.volume_1,
-        //         old_volume_2 : pool_info.volume_2,
-        //         new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-        //         new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
-        //         lt_amount : params.amount
-        //     }
-        // });
+
         events.push(createEvent(this.type, tx.hash, tx.n,{
             pool_id : pool_info.token_hash,
             old_volume1 : pool_info.volume_1,
             old_volume2 : pool_info.volume_2,
             liq_remove1 : amount_1,
             liq_remove2 : amount_2,
-            // new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-            // new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            new_volume1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume2 : pool_info.volume_2 + pool_data.volume_2,
             lt_amount : params.amount
         }));
         return {
@@ -1252,8 +1232,8 @@ class PoolLiquiditySellExactContract extends Contract {
             old_volume2 : pool_info.volume_2,
             amount_in : amount_in,
             amount_out : amount_out,
-            new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-            new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            new_volume1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume2 : pool_info.volume_2 + pool_data.volume_2,
             lt_amount : cmd_lt_amount
         }));
         return {
@@ -1405,8 +1385,8 @@ class PoolLiquidityBuyExactContract extends Contract {
             old_volume2 : pool_info.volume_2,
             amount_in : amount_in,
             amount_out : amount_out,
-            new_volume_1 : pool_info.volume_1 + pool_data.volume_1,
-            new_volume_2 : pool_info.volume_2 + pool_data.volume_2,
+            new_volume1 : pool_info.volume_1 + pool_data.volume_1,
+            new_volume2 : pool_info.volume_2 + pool_data.volume_2,
             lt_amount : cmd_lt_amount
         }));
         return {

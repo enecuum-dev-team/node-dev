@@ -641,8 +641,8 @@ class Cashier {
         //if(this.config.indexer_mode === 1){
             for(let st of statuses){
                 if ((st.status === Utils.TX_STATUS.REJECTED) || (st.status === Utils.TX_STATUS.CONFIRMED)) {
-                    this.eindex_entry(rewards, 'iin', st.to, st.hash, st.amount);
-                    this.eindex_entry(rewards, 'iout', st.from, st.hash, st.amount);
+                    this.eindex_entry(rewards, 'iin', st.to, st.hash, st.amount, kblock.n);
+                    this.eindex_entry(rewards, 'iout', st.from, st.hash, st.amount, kblock.n);
                 }
                 if (st.status === Utils.TX_STATUS.CONFIRMED) {
                     if(tokens_counts[st.ticker] === undefined)
@@ -1308,8 +1308,8 @@ class Cashier {
         if(this.config.indexer_mode === 1){
             for(let st of statuses){
                 if ((st.status === Utils.TX_STATUS.REJECTED) || (st.status === Utils.TX_STATUS.CONFIRMED)) {
-                    this.eindex_entry(rewards, 'iin', st.to, st.hash, st.amount);
-                    this.eindex_entry(rewards, 'iout', st.from, st.hash, st.amount);
+                    this.eindex_entry(rewards, 'iin', st.to, st.hash, st.amount, kblock.n);
+                    this.eindex_entry(rewards, 'iout', st.from, st.hash, st.amount, kblock.n);
                 }
                 if (st.status === Utils.TX_STATUS.CONFIRMED) {
                     if(tokens_counts[st.ticker] === undefined)
