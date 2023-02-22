@@ -137,15 +137,18 @@ class TokenCreateContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         if(this.data.type === undefined)
             return null;
 
         let params = this.data.parameters;
 
         // Check token exist
-        let existing = await db.get_tickers_all();
+        let existing = await substate.get_tickers_all();
+        let existing_db = await substate.db.get_tickers_all();
         if (existing.some(d => d.ticker === params.ticker))
+            throw new ContractError(`Ticker ${params.ticker} already exist`);
+        if (existing_db.some(d => d.ticker === params.ticker))
             throw new ContractError(`Ticker ${params.ticker} already exist`);
 
         let tok_data = {
@@ -161,6 +164,7 @@ class TokenCreateContract extends Contract {
             reissuable : params.reissuable || 0,
             minable : params.minable || 0
         };
+
         if(params.minable === 1){
             tok_data.max_supply =       params.max_supply;
             tok_data.block_reward =     params.block_reward;
@@ -168,24 +172,21 @@ class TokenCreateContract extends Contract {
             tok_data.referrer_stake =   params.referrer_stake;
             tok_data.ref_share =        params.ref_share;
         }
+        substate.tokens_add(tok_data);
+        substate.accounts_change({
+            id : tx.from,
+            amount : tok_data.total_supply,
+            token : tx.hash,
+        });
         return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : tok_data.total_supply,
-                    token_hash : tx.hash,
-                }
-            ],
+            amount_changes : [],
             pos_changes : [],
-            post_action : [this.sqlInsertToken(tok_data)],
+            post_action : [],
             token_info : {
                 hash : tx.hash,
                 ticker : params.ticker
             }
         };
-    }
-    sqlInsertToken(data) {
-        return super.mysql.format(`INSERT INTO tokens SET ?`, [data])
     }
 }
 class PosCreateContract extends Contract {
@@ -221,14 +222,14 @@ class PosCreateContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         if(this.data.type === undefined)
             return null;
 
         let params = this.data.parameters;
 
         if(params.name){
-            let existing = await db.get_pos_names();
+            let existing = await substate.get_pos_names();
             if (existing.some(d => d.name === params.name))
                 throw new ContractError(`Contract with name ${params.name} already exist`);
         }
@@ -239,15 +240,12 @@ class PosCreateContract extends Contract {
             fee : params.fee,
             name : params.name || null
         };
-
+        substate.poses_add(pos_data);
         return {
             amount_changes : [],
             pos_changes : [],
-            post_action : [this.sqlInsertPos(pos_data)]
+            post_action : []
         };
-    }
-    sqlInsertPos(data) {
-        return super.mysql.format(`INSERT INTO poses SET ?`, [data])
     }
 }
 class PosDelegateContract extends Contract {
@@ -283,7 +281,7 @@ class PosDelegateContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         /**
          * check pos_id exist
          * change tx.from balance = balance - amount
@@ -295,38 +293,26 @@ class PosDelegateContract extends Contract {
         let params = this.data.parameters;
 
         // Check pos contract exist
-        let existing = await db.get_pos_contract_all();
-        if (!existing.some(d => d.id === params.pos_id))
+        let existing = await substate.get_pos_contract_all();
+        if (!existing.some(d => d.pos_id === params.pos_id))
             throw new ContractError(`POS contract ${params.pos_id} doesn't exist`);
         let lend_data = {
             pos_id : params.pos_id,
             delegator : tx.from,
             amount : params.amount
         };
+        substate.accounts_change({
+            id : tx.from,
+            amount : BigInt(-1) * BigInt(params.amount),
+            token : tx.ticker,
+        });
+        substate.delegators_add(lend_data);
 
         return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : BigInt(-1) * BigInt(params.amount),
-                    token_hash : tx.ticker,
-                }
-            ],
-            pos_changes : [
-                {
-                    pos_id : params.pos_id,
-                    delegator : tx.from,
-                    delegated : params.amount,
-                    undelegated : BigInt(0),
-                    reward : BigInt(0)
-                }
-            ],
-            post_action : [this.sqlInsertDelegates(lend_data)]
+            amount_changes : [],
+            pos_changes : [],
+            post_action : []
         };
-    }
-    sqlInsertDelegates(data) {
-        return super.mysql.format(`INSERT INTO delegates (pos_id, delegator, amount) VALUES (?)
-        ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount)`, [[data.pos_id, data.delegator, data.amount]])
     }
 }
 class PosUndelegateContract extends Contract {
@@ -362,7 +348,7 @@ class PosUndelegateContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db, kblock) {
+    async execute(tx, substate, kblock) {
         /**
          * get lend row from delegates table
          * check amount <= delegated amount
@@ -374,19 +360,19 @@ class PosUndelegateContract extends Contract {
 
         let params = this.data.parameters;
 
-        let leased = (await db.get_pos_delegates(params.pos_id, [tx.from]))[0];
+        let leased = await substate.get_pos_delegates(params.pos_id, tx.from);
         if(!leased)
             throw new ContractError("pos_id not found");
-        if(params.amount > leased.amount)
+        if(params.amount > leased.delegated)
             throw new ContractError("Unbond amount is bigger than leased amount");
 
         // Amount will be deducted from current DB value in finalize_macroblock
         let delegates_data = {
             pos_id : params.pos_id,
             delegator : tx.from,
-            amount : BigInt(-1) *  BigInt(params.amount),
+            amount : BigInt(-1) * BigInt(params.amount),
         };
-
+        substate.delegators_change(delegates_data);
         let undelegates_data = {
             id : tx.hash,
             pos_id : params.pos_id,
@@ -394,32 +380,13 @@ class PosUndelegateContract extends Contract {
             amount : params.amount,
             height : kblock.n
         };
+        substate.undelegates_add(undelegates_data);
 
         return {
             amount_changes : [],
-            pos_changes : [
-                {
-                    pos_id : params.pos_id,
-                    delegator : tx.from,
-                    delegated : BigInt(-1) *  BigInt(params.amount),
-                    undelegated : params.amount,
-                    reward : BigInt(0)
-                }
-            ],
-            post_action : [
-                this.sqlUpdateDelegates(delegates_data),
-                this.sqlInsertUndelegates(undelegates_data)
-            ]
+            pos_changes : [],
+            post_action : []
         };
-    }
-    sqlUpdateDelegates(data) {
-        // TODO: CAST(? AS UNSIGNED INTEGER)
-        return super.mysql.format(`UPDATE delegates SET amount = amount + ? WHERE pos_id = ? AND delegator = ?`,
-            [data.amount, data.pos_id, data.delegator])
-    }
-    sqlInsertUndelegates(data) {
-        return super.mysql.format(`INSERT INTO undelegates (id, pos_id, amount, height) VALUES (?)`,
-            [[data.id, data.pos_id, data.amount, data.height]])
     }
 }
 class PosTransferContract extends Contract {
@@ -446,7 +413,7 @@ class PosTransferContract extends Contract {
             throw new ContractError("Incorrect undelegate_id format");
         return true;
     }
-    async execute(tx, db, kblock) {
+    async execute(tx, substate, kblock) {
         /**
          * get undelegated from undelegates table by undelegated_id
          * check TRANSFER_LOCK time
@@ -458,56 +425,41 @@ class PosTransferContract extends Contract {
 
         let params = this.data.parameters;
 
-        let transfer = (await db.get_pos_undelegates(params.undelegate_id))[0];
-        let und_tx = (await db.get_tx(params.undelegate_id))[0];
-        if(und_tx === undefined) {
-            throw new ContractError("Undelegate TX not found");
-        }
-        if(und_tx.status !== 3) {
-            throw new ContractError("Invalid undelegate TX status");
-        }
-        if(und_tx.from !== tx.from) {
+        let transfer = await substate.get_pos_undelegates(params.undelegate_id);
+        if(transfer.delegator !== tx.from) {
             throw new ContractError("Undelegate TX sender and transfer TX sender doesn't match");
         }
         if(!transfer)
             throw new ContractError("Transfer not found");
-
-        if(transfer.amount === 0)
+        if(BigInt(transfer.amount) === BigInt(0))
             throw new ContractError("Transfer has already been processed");
-        if(!this.checkTime(transfer, db.app_config.transfer_lock, kblock))
+        if(!this.checkTime(transfer, substate.get_transfer_lock(), kblock))
             throw new ContractError("Freeze time has not passed yet");
 
         let data = {
             id : params.undelegate_id,
-            amount : BigInt(0)
+            pos_id : params.pos_id,
+            delegator : tx.from,
+            amount : BigInt(0),
+            height : kblock.n
         };
+
+        substate.accounts_change({
+            id : tx.from,
+            amount : transfer.amount,
+            token : tx.ticker,
+        });
+        substate.undelegates_change(data);
+
         return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : transfer.amount,
-                    token_hash : tx.ticker,
-                }
-            ],
-            pos_changes : [
-                {
-                    pos_id : transfer.pos_id,
-                    delegator : tx.from,
-                    delegated : BigInt(0),
-                    undelegated : BigInt(0),
-                    transfer : params.undelegate_id,
-                    reward : BigInt(0)
-                }
-            ],
-            post_action : [this.sqlUpdateUndelegates(data)]
+            amount_changes : [],
+            pos_changes : [],
+            post_action : []
         };
     }
 
     checkTime(transfer, transfer_lock, kblock){
         return (BigInt(kblock.n) - BigInt(transfer.height)) >= BigInt(transfer_lock);
-    }
-    sqlUpdateUndelegates(data) {
-        return super.mysql.format(`UPDATE undelegates SET amount = ? WHERE id = ?`, [data.amount, data.id])
     }
 }
 class PosGetRewardContract extends Contract {
@@ -534,7 +486,7 @@ class PosGetRewardContract extends Contract {
             throw new ContractError("Incorrect pos_id format");
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         /**
          * check pos exist
          * get delegator's reward
@@ -544,42 +496,30 @@ class PosGetRewardContract extends Contract {
         if(this.data.type === undefined)
             return null;
         let params = this.data.parameters;
-        let leased = (await db.get_pos_delegates(params.pos_id, [tx.from]))[0];
+        let leased = await substate.get_pos_delegates(params.pos_id, tx.from);
         if(!leased)
             throw new ContractError("Delegate not found");
         if(leased.reward <=  BigInt(0))
             throw new ContractError(`Delegator ${tx.from} has no reward on contract ${params.pos_id}`);
 
         let data = {
+            hash : tx.hash,
             pos_id : params.pos_id,
             delegator : tx.from,
-            amount : BigInt(-1) *  BigInt(leased.reward)
+            amount : BigInt(leased.reward)
         };
 
+        substate.accounts_change({
+            id : tx.from,
+            amount : leased.reward,
+            token : tx.ticker,
+        });
+        substate.claim_reward(data);
         return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : leased.reward,
-                    token_hash : tx.ticker,
-                }
-            ],
-            pos_changes : [
-                {
-                    pos_id : params.pos_id,
-                    delegator : tx.from,
-                    delegated : BigInt(0),
-                    undelegated : BigInt(0),
-                    reward : BigInt(-1) *  BigInt(leased.reward)
-                }
-            ],
-            post_action : [this.sqlUpdateDelegatesReward(data)]
+            amount_changes : [],
+            pos_changes : [],
+            post_action : []
         };
-    }
-    sqlUpdateDelegatesReward(data) {
-        // TODO: CAST(? AS UNSIGNED INTEGER)
-        return super.mysql.format(`UPDATE delegates SET reward = reward + ? WHERE pos_id = ? AND delegator = ?`,
-            [data.amount, data.pos_id, data.delegator])
     }
 }
 class TokenMintContract extends Contract {
@@ -614,7 +554,7 @@ class TokenMintContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         /**
          * check token exist
          * check token reissuable
@@ -626,7 +566,7 @@ class TokenMintContract extends Contract {
         if(this.data.type === undefined)
             return null;
         let params = this.data.parameters;
-        let token_info = (await db.get_tokens(params.token_hash))[0];
+        let token_info = await substate.get_token_info(params.token_hash);
         if(!token_info)
             throw new ContractError("Token not found");
         if(token_info.owner !== tx.from)
@@ -639,22 +579,21 @@ class TokenMintContract extends Contract {
             token_hash : params.token_hash,
             mint_amount : params.amount
         };
-
-        return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : params.amount,
-                    token_hash : params.token_hash,
-                }
-            ],
-            pos_changes : [],
-            post_action : [this.sqlUpdateTokensSupply(data)]
+        let tok_data = {
+            hash : params.token_hash,
+            total_supply : params.amount
         };
-    }
-    sqlUpdateTokensSupply(data) {
-        return super.mysql.format(`UPDATE tokens SET total_supply = total_supply + CAST(? AS UNSIGNED INTEGER) WHERE hash = ?`,
-            [data.mint_amount, data.token_hash])
+        substate.tokens_change(tok_data);
+        substate.accounts_change({
+            id : tx.from,
+            amount : params.amount,
+            token : params.token_hash,
+        });
+        return {
+            amount_changes : [],
+            pos_changes : [],
+            post_action : []
+        };
     }
 }
 class TokenBurnContract extends Contract {
@@ -689,19 +628,19 @@ class TokenBurnContract extends Contract {
         }
         return true;
     }
-    async execute(tx, db) {
+    async execute(tx, substate) {
         /**
          * check token exist
          * check token reissuable
          * check token owner
-         * chech new amount > 0
+         * check new amount > 0
          * update tokens table total_supply = total_supply - amount
          * update token owner's ledger amount
          */
         if(this.data.type === undefined)
             return null;
         let params = this.data.parameters;
-        let token_info = (await db.get_tokens(params.token_hash))[0];
+        let token_info = await substate.get_token_info(params.token_hash);
         if(!token_info)
             throw new ContractError("Token not found");
         if(token_info.owner !== tx.from)
@@ -710,31 +649,27 @@ class TokenBurnContract extends Contract {
             throw new ContractError("Token is not reissuable");
         // if((token_info.total_supply - params.amount) < 0)
         //     throw new ContractError("Total supply can't be negative");
-        let data = {
-            token_hash : params.token_hash,
-            burn_amount : params.amount
-        };
 
+        let tok_data = {
+            hash : params.token_hash,
+            total_supply : BigInt(-1) * params.amount
+        };
+        substate.tokens_change(tok_data);
+        substate.accounts_change({
+            id : tx.from,
+            amount : BigInt(-1) * params.amount,
+            token : params.token_hash,
+        });
         return {
-            amount_changes : [
-                {
-                    id : tx.from,
-                    amount_change : BigInt(-1) * params.amount,
-                    token_hash : params.token_hash,
-                }
-            ],
+            amount_changes : [],
             pos_changes : [],
-            post_action : [this.sqlUpdateTokensSupply(data)],
+            post_action : [],
             token_info : {
                 hash : params.token_hash,
                 db_supply : token_info.total_supply,
                 supply_change :  BigInt(-1) * params.amount
             }
         };
-    }
-    sqlUpdateTokensSupply(data) {
-        return super.mysql.format(`UPDATE tokens SET total_supply = total_supply - CAST(? AS UNSIGNED INTEGER) WHERE hash = ?`,
-            [data.burn_amount, data.token_hash])
     }
 }
 

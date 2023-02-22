@@ -1371,11 +1371,7 @@ class Cashier {
             }
             if (next) {
                 console.trace(`cashier cur_block: ${cur_hash} , next_block: ${next.hash}`);
-                if(block.n >= this.config.FORKS.fork_block_002){
-                    await this.ledger_update_002(block, this.config.cashier_chunk_size);
-                }
-                else
-                    await this.ledger_update_000(block, this.config.cashier_chunk_size);
+                await this.ledger_update_002(block, this.config.cashier_chunk_size);
             } else {
                 console.trace(`Cashier block ${cur_hash} not closed yet`)
             }
