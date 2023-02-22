@@ -2255,8 +2255,9 @@ class DB {
 	}
 
 	async dex_get_pool_info(pair_id){
-		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE pair_id = ?`, pair_id)));
-		return res.length !== 0;
+		let res = await this.request(mysql.format(`SELECT * FROM dex_pools WHERE pair_id = ?`, [pair_id]));
+		if(res.length !== 0)
+			return res[0];
 	}
 
 	async dex_get_pools_all(){
@@ -2297,6 +2298,22 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+	async dex_history_get_by_pool(options){
+		let sql = mysql.format(`SELECT * FROM dex_history WHERE pool_id = ?
+             AND action IN (?) 
+             AND block_time BETWEEN ? AND ? 
+             ORDER BY block_time DESC`, [options.pool_id, options.types, options.start_time, options.end_time]);
+		if(options.limit !== 0)
+			sql = mysql.format(`SELECT * FROM dex_history WHERE pool_id = ?
+             AND action IN (?) 
+             AND block_time BETWEEN ? AND ? 
+             ORDER BY block_time DESC LIMIT ?`, [options.pool_id, options.types, options.start_time, options.end_time, options.limit]);
+		let res = await this.request(sql);
+		if(res.length === 0) {
+			return [];
+		}
+		return res;
+	}
 	async dex_history_get_last_entry(){
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_history WHERE i = 
 								(SELECT MAX(i) from dex_history);`)));
@@ -2331,9 +2348,9 @@ class DB {
 	async dex_history_add_entry(e){
 		let sql = mysql.format(`INSERT INTO dex_history (
 		hash, action, pool_id, block_n, block_time, caller, 
-		v1_at, v2_at, tvl1, tvl2, lt_change, prev) VALUES (?)`,
+		v1_at, v2_at, tvl1, tvl2, lt_change, v1_change, v2_change, prev) VALUES (?)`,
 			[[e.hash, e.action, e.pool_id, e.block_n, e.block_time, null,
-				e.v1_at, e.v2_at, e.tvl1, e.tvl2, null, e.prev]]);
+				e.v1_at, e.v2_at, e.tvl1, e.tvl2, null, e.v1_change, e.v2_change, e.prev]]);
 		console.log(sql)
 		let res = await this.request(sql);
 		if(res.length === 0){

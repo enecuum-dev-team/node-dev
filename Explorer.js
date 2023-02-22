@@ -29,7 +29,7 @@ class Explorer {
 		this.app.use(express.json());
 		this.app.use(express.static('explorer'));
 
-		let expRouter = new ExplorerRouter(db, pending, stake_limits, config).getRouter();
+		let expRouter = new DexInfoRouter(db).getRouter();//new ExplorerRouter(db, pending, stake_limits, config).getRouter();
 		let dexRouter = new DexInfoRouter(db).getRouter();
 
 		this.app.listen(port, function(){
@@ -1077,9 +1077,12 @@ class DexInfoRouter{
 					let cur_price = ((pool.volume_2 / Math.pow(10, tokens_info[1].decimals)) / (pool.volume_1 / Math.pow(10, tokens_info[0].decimals)));
 					let day = 24 * 60 * 60 * 1000;
 					let rec = {
-						ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
-						base_currency : tokens_info[0].ticker,
-						target_currency : tokens_info[1].ticker,
+						ticker_id : pool.pair_id,
+						ticker_id_symbols : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
+						base_currency : tokens_info[0].hash,
+						target_currency : tokens_info[1].hash,
+						base_currency_symbol : tokens_info[0].ticker,
+						target_currency_symbol : tokens_info[1].ticker,
 						pool_id : pool.pair_id,
 						last_price : cur_price
 					};
@@ -1096,7 +1099,6 @@ class DexInfoRouter{
 						rec.base_volume = 0;
 						rec.target_volume = 0;
 					}
-
 					data.push(rec);
 				}
 				res.send(data);
@@ -1114,12 +1116,69 @@ class DexInfoRouter{
 				if(tokens_info.length !== 2)
 					continue;
 				let rec = {
-					ticker_id : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
-					base : tokens_info[0].ticker,
-					target : tokens_info[1].ticker,
-					pool_id : pool.pair_id,
+					ticker_id : pool.pair_id,
+					base : pool.asset_1,
+					target : pool.asset_2,
+					ticker_id_symbols : `${tokens_info[0].ticker}_${tokens_info[1].ticker}`,
+					base_symbol : tokens_info[0].ticker,
+					target_symbol : tokens_info[1].ticker,
 				};
 				data.push(rec);
+			}
+			res.send(data);
+		});
+		this.router.get('/historical_trades', async (req, res, next) => {
+			// TODO: validation
+			let fields = ["ticker_id", "type", "start_time", "end_time", "limit"];
+			let num_fiels = ["start_time", "end_time", "limit"];
+			let types = {
+				buy : ["pool_buy_exact"],
+				sell : ["pool_sell_exact"],
+				all : ["pool_buy_exact", "pool_sell_exact"]
+			};
+
+			let options = {
+				ticker_id : req.query.ticker_id,	// pair_id
+				type : req.query.type,	// contract name, buy / sell / liqmoves?
+				limit : req.query.limit,	// limit of rows, 0 for full history
+				start_time : req.query.start_time,
+				end_time : req.query.end_time,
+			};
+			if (fields.some(key => options[key] === undefined)){
+				return res.status(400).send({result: false, msg : "Not enough params"});
+			}
+
+			for(let key of num_fiels){
+				options[key] = Number(options[key]);
+				if(!Number.isInteger(options[key]))
+					return res.status(400).send({result: false, msg : `${key} is not a number`});
+				if(options[key] < 0)
+					return res.status(400).send({result: false, msg : `${key} should be non-negative`});
+			}
+			if(!Object.keys(types).includes(options.type))
+				return res.status(400).send({result: false, msg : `Unsupported filter: ${options.type}`});
+			options.types = types[options.type];
+			let data = [];
+			let pool = await this.db.dex_get_pool_info(options.ticker_id);
+			if(!pool)
+				return res.status(400).send({result: false, msg : `ticker_id ${options.ticker_id} not found`});
+			options.pool_id = pool.token_hash;
+			let recs = await this.db.dex_history_get_by_pool(options);
+			let tokens_info = await this.db.get_tokens([pool.asset_1, pool.asset_2]);
+			if(tokens_info.length !== 2)
+				res.send(data);
+
+			for (let rec of recs) {
+				let price = ((rec.v2_change / Math.pow(10, tokens_info[1].decimals)) / (rec.v1_change / Math.pow(10, tokens_info[0].decimals)));
+				let trade = {
+					trade_id : rec.i,
+					price : price,
+					base_volume : Number(rec.v1_change),
+					target_volume : Number(rec.v2_change),
+					trade_timestamp : rec.block_time,
+					type : rec.action,
+				};
+				data.push(trade);
 			}
 			res.send(data);
 		});
