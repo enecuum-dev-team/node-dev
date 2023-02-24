@@ -1137,7 +1137,7 @@ class DB {
 		return this.transaction([sql_i, sw].join(';'));
 	}
 
-	process_ledger_mblocks_002(txs, mblocks, rewards, kblock, tokens_counts, substate){
+	process_ledger_mblocks_002(txs, mblocks, rewards, kblock, tokens_counts, substate, old_del){
 		let sts = [];
 		let pnd = [];
 		let ind = [];
@@ -1217,7 +1217,7 @@ class DB {
 		for( let pos in substate.delegation_ledger){
 			for( let del in substate.delegation_ledger[pos]){
 				if(substate.delegation_ledger[pos][del].changed === true){
-					if(substate.delegation_ledger[pos][del].delegated === 0n && substate.delegation_ledger[pos][del].reward === 0n){
+					if(substate.delegation_ledger[pos][del].delegated === 0n && substate.delegation_ledger[pos][del].reward === 0n && old_del !== true){
 						state_sql.push(	mysql.format(`DELETE FROM delegates WHERE pos_id = ? AND delegator = ?;`, [pos, del]));
 					}
 					else

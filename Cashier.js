@@ -660,8 +660,10 @@ class Cashier {
         }
         //return;
         time = process.hrtime();
-
-        await this.db.process_ledger_mblocks_002(statuses, chunk.mblocks, rewards, kblock, tokens_counts, substate);
+        if(kblock.n >= this.config.FORKS.fork_block_002)
+            await this.db.process_ledger_mblocks_002(statuses, chunk.mblocks, rewards, kblock, tokens_counts, substate);
+        else
+            await this.db.process_ledger_mblocks_002(statuses, chunk.mblocks, rewards, kblock, tokens_counts, substate, true);
 
         time = process.hrtime(time);
         console.debug(`cashier_timing: mblocks chunk ${hash} saved in`, Utils.format_time(time));

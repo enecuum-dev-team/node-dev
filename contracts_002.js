@@ -9,6 +9,7 @@
  *
  * Added new fee type 2
  * Non-unique token tickers
+ * Remove empty delegator wntries
  * Added DEX contracts
  * Added Farms contracts
  * Added Commander ENEX contracts WITHOUT ENX
