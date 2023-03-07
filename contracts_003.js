@@ -2339,12 +2339,13 @@ class LockContract extends Contract {
         }
         if (!cValidate(this.data.parameters, paramsModel))
             throw new ContractError("Validation error")
-        if (substate.get_known_networks().find(network => network.id == this.data.parameters.dst_network) === undefined)
-            throw new ContractError("Unknown network")
         return true
     }
     
     async execute(tx, substate, kblock, config) {
+        if (substate.get_known_networks().find(network => network.id == this.data.parameters.dst_network) === undefined)
+            throw new ContractError("Unknown network")
+
         let cparser = new ContractParser(config)
         let cfactory = new ContractMachine.ContractFactory(config)
         let lock_tokens = async (hash, amount) => {
@@ -2392,20 +2393,18 @@ class LockContract extends Contract {
                 return BigInt(params.amount) % (10n ** BigInt(srcDecimals - dstDecimals)) == 0
             return true
         }
-        let get_channel_id = function (lock_data) {
-            const model = ["dst_address", "dst_network", "amount", "hash"]
-            let valuesFromObject = model.map(lock_param => lock_data[lock_param])
-            valuesFromObject.push(tx.from)
-            return crypto.createHash('sha256').update(valuesFromObject.sort().join("")).digest('hex')
-        }
-
 
         let data = this.data.parameters
 
-        let channel_id = get_channel_id(data)
-        let channel = substate.get_channel_by_id(channel_id)
+        let channel = substate.get_channel_by_id({
+            src_address : tx.from, 
+            src_hash : data.hash,
+            dst_network : data.dst_network, 
+            dst_address : data.dst_address
+        })
+
         if (Number(++channel.nonce) !== data.nonce)
-            throw new ContractError(`Wrong nonce of the bridge lock transfer. Prev: ${channel.nonce - 1}, cur: ${channel.nonce}, channel_id: ${channel.channel_id}`)
+            throw new ContractError(`Wrong nonce of the bridge lock transfer. Prev: ${channel.nonce - 1}, cur: ${data.nonce}, channel_id: ${channel.channel_id}`)
         substate.change_channel(channel)
 
         let wrappedToken = substate.get_minted_token(data.hash)
@@ -2507,63 +2506,7 @@ class ClaimConfirmContract extends Contract {
         return cValidate(this.data.parameters, paramsModel)
     }
 
-    async execute(tx, substate, kblock, config) {
-        let data = this.data.parameters
-        if (!substate.get_validators().find(id => id === data.validator_id))
-            throw new ContractError(`Unknown validator: ${data.validator_id}`)
-        if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
-            throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
-
-        let cparser = new ContractParser(config)
-        let cfactory = new ContractMachine.ContractFactory(config)
-
-        let bridge_confirmations = substate.add_confirmation(data)
-        if (bridge_confirmations === substate.get_bridge_settings().threshold) {
-            let claim_object = {
-                type : "claim",
-                parameters : {
-                    transfer_id : data.transfer_id
-                }
-            }
-            let claim_data = cparser.dataFromObject(claim_object)
-            let claim_contract = cfactory.createContract(claim_data)
-            let _tx = {
-                amount : tx.amount,
-                from : tx.from,
-                data : claim_data,
-                ticker : tx.ticker,
-                hash : tx.hash,
-                to : tx.to
-            }
-            
-            return await claim_contract.execute(_tx, substate, kblock, config)
-        }
-        return {
-            amount_changes : [],
-            pos_changes : [],
-            post_action : []
-        }
-    }
-}
-
-class ClaimContract extends Contract {
-    constructor(data) {
-        super()
-        this.data = data
-        this.type = this.data.type
-        if(!this.validate())
-            throw new ContractError("Incorrect contract")
-    }
-
-    validate () {
-        let paramsModel = {
-            transfer_id : cTypes.enqHash64
-        }
-
-        return cValidate(this.data.parameters, paramsModel)
-    }
-
-    async execute(tx, substate, kblock, config) {
+    async executeClaim(tx, substate, kblock, config) {
         let cfactory = new ContractMachine.ContractFactory(config)
         let cparser = new ContractParser(config)
         let mint_tokens = async (amount, hash) => {
@@ -2611,7 +2554,7 @@ class ClaimContract extends Contract {
         }
 
         let createToken = async (ticket) => {
-            let amount, ticker, name = ticket
+            let {amount, ticker, name} = ticket
             let token_create_object = {
                 type : "create_token",
                 parameters : {
@@ -2668,6 +2611,24 @@ class ClaimContract extends Contract {
             }
         }
         return res
+    }
+
+    async execute(tx, substate, kblock, config) {
+        let data = this.data.parameters
+        if (!substate.get_validators().find(id => id === data.validator_id))
+            throw new ContractError(`Unknown validator: ${data.validator_id}`)
+        if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
+            throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
+
+        let bridge_confirmations = substate.add_confirmation(data)
+        if (bridge_confirmations === substate.get_bridge_settings().threshold)
+            return await this.executeClaim(tx, substate, kblock, config)
+
+        return {
+            amount_changes : [],
+            pos_changes : [],
+            post_action : []
+        }
     }
 }
 
@@ -2815,7 +2776,6 @@ module.exports.BridgeRemoveNetworkContract = BridgeRemoveNetworkContract;
 module.exports.LockContract = LockContract;
 module.exports.ClaimInitContract = ClaimInitContract;
 module.exports.ClaimConfirmContract = ClaimConfirmContract;
-module.exports.ClaimContract = ClaimContract;
 
 module.exports.PosCreateContract = PosCreateContract;
 module.exports.PosDelegateContract = PosDelegateContract;

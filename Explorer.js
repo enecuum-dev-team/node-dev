@@ -85,6 +85,20 @@ class Explorer {
                 res.send(await this.db.get_bridge_claim_transfers_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
         })
 
+        this.app.get('/api/v1/bridge_last_lock_transfer', async (req, res) => {
+            console.trace('requested transfers', req.query);
+            if (!req.query.dst_address || !req.query.src_address || !req.query.dst_network || !req.query.src_hash)
+                res.send("0")
+            else {
+                let channel_id = Utils.get_lock_transfer_id(req.query)
+                let lock_transfer = await this.db.get_last_bridge_lock_transfer_by_id(channel_id)
+                if (!lock_transfer.length)
+                    res.send("0")
+                else
+                    res.send(lock_transfer[0].nonce.toString())
+            }
+        })
+
         this.app.get('/api/v1/bridge_minted_token', async (req, res) => {
             console.trace('requested minted_token', req.query);
             try {
@@ -102,6 +116,8 @@ class Explorer {
             if (bridge_settings.length) {
                 bridge.BRIDGE_OWNER = bridge_settings[0].owner
                 bridge.BRIDGE_THRESHOLD = bridge_settings[0].threshold
+                bridge.BRIDGE_VALIDATORS = bridge_settings[0].validators
+                bridge.BRIDGE_KNOWN_NETWORKS = bridge_settings[0].known_networks
             }
             let validators = await this.db.get_validators()
             bridge.BRIDGE_VALIDATORS = validators
