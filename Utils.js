@@ -178,6 +178,11 @@ let utils = {
 			return null;
 		}
 	},
+    get_lock_transfer_id : function(lock_data) {
+        const model = ["dst_address", "dst_network", "src_address", "src_hash"]
+        let valuesFromObject = model.map(lock_param => lock_data[lock_param])
+        return crypto.createHash('sha256').update(valuesFromObject.sort().join("")).digest('hex')
+    },
 	check_valid_percent_params : function(param_obj){
 		let len = Object.keys(param_obj).length;
 		if(len < 1)

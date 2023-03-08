@@ -301,14 +301,14 @@ class Substate {
                 this.farms.push(Utils.DEX_SPACE_STATION_ID);
             }
                 break;
-            case "lock" : {
+            case "bridge_lock" : {
                 this.tokens.push(contract.data.parameters.hash)
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
             }
                 break;
-            case "claim_confirm" : {
+            case "bridge_claim_confirm" : {
                 this.bridge_claim_transfers.push(contract.data.parameters.transfer_id)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
                 this.accounts.push(tx.from)
@@ -348,10 +348,12 @@ class Substate {
         return true;
     }
 
-    get_channel_by_id(channel_id) {
+    get_channel_by_id(lock_data) {
+        let channel_id = Utils.get_lock_transfer_id(lock_data)
         let ch = this.bridge_lock_transfers.find(transfer => transfer.channel_id === channel_id)
         if (!ch)
             return {
+                channel_id,
                 nonce : 0
             }
         return ch
@@ -486,8 +488,11 @@ class Substate {
             throw new ContractError(`Validator has already confirm transfer: ${changes.transfer_id}`)
         changes.changed = true
         this.bridge_confirmations.push(changes)
+        return this.get_confirmations_by_tid(changes.transfer_id)
+    }
+    get_confirmations_by_tid (transfer_id) {
         return this.bridge_confirmations.reduce((prev, cur) => {
-            if (cur.transfer_id === changes.transfer_id)
+            if (cur.transfer_id === transfer_id)
                 ++prev
             return prev
         }, 0)

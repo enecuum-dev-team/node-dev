@@ -53,10 +53,9 @@ class ContractFactory{
             case "dex_cmd_distribute" :     return new Contracts.DexCmdDistributeContract(data);
             case "pool_sell_exact_routed" : return new Contracts.PoolLiquiditySellExactRoutedContract(data);
             case "pool_buy_exact_routed" :  return new Contracts.PoolLiquidityBuyExactRoutedContract(data);
-            case "lock" :                   return new Contracts.LockContract(data);
-            case "claim_init" :             return new Contracts.ClaimInitContract(data);
-            case "claim_confirm" :          return new Contracts.ClaimConfirmContract(data);
-            case "claim" :                  return new Contracts.ClaimContract(data);
+            case "bridge_lock" :            return new Contracts.LockContract(data);
+            case "bridge_claim_init" :      return new Contracts.ClaimInitContract(data);
+            case "bridge_claim_confirm" :   return new Contracts.ClaimConfirmContract(data);
             case "bridge_set_owner" :       return new Contracts.BridgeSetOwnerContract(data);
             case "bridge_set_threshold" :   return new Contracts.BridgeSetThresholdContract(data);
             case "bridge_add_validator" :   return new Contracts.BridgeAddValidatorContract(data);

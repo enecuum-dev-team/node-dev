@@ -33,10 +33,10 @@ let schema = {
     "pool_sell_exact_routed" :  "2000",
     "pool_buy_exact" :          "2100",
     "pool_buy_exact_routed" :   "2200",
-    "lock" :                    "2300",
-    "claim_init" :              "2400",
-    "claim_confirm" :           "2500",
-    "claim" :                   "2600",
+    "bridge_lock" :             "2300",
+    "bridge_claim_init" :       "2400",
+    "bridge_claim_confirm" :    "2500",
+    // "claim" :                   "2600",
     "bridge_set_owner" :        "2700",
     "bridge_set_threshold" :    "2800",
     "bridge_add_validator" :    "2900",
@@ -61,8 +61,8 @@ const contracts_003 = [
     "1600", "1700", "1800", "1900", "1a00",
     "1b00", "1c00", "1d00", "1e00", "1f00",
     "2000", "2100", "2200", "2300", "2400",
-    "2500", "2600", "2700", "2800", "2900", 
-    "2a00", "2b00", "2c00"
+    "2500", "2700", "2800", "2900", "2a00", 
+    "2b00", "2c00"
 ];
 class ContractParser {
     constructor() {

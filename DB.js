@@ -1598,6 +1598,9 @@ class DB {
     async get_bridge_lock_transfer_by_id(id) {
         return await this.request(mysql.format('SELECT * FROM bridge_lock_transfers WHERE channel_id = ?', [id]));
     }
+    async get_last_bridge_lock_transfer_by_id(id) {
+        return await this.request(mysql.format('SELECT * FROM bridge_lock_transfers WHERE channel_id = ? ORDER BY nonce DESC LIMIT 1', [id]));
+    }
     async get_bridge_lock_transfers_all() {
         return await this.request('SELECT * FROM bridge_lock_transfers');
     }
