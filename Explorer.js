@@ -1090,10 +1090,14 @@ class DexInfoRouter{
 					let last_entry = await this.db.dex_history_get_pool_last_entry(pool.token_hash);
 					if(last_entry){
 						let past_entry = await this.db.dex_history_get_24h_volume(pool.token_hash, last_entry.block_time - day, last_entry.block_time);
+						if(last_entry.i === past_entry.i){
+							past_entry.v1_at = 0;
+							past_entry.v2_at = 0;
+						}
 						let v1 = BigInt(last_entry.v1_at) - BigInt(past_entry.v1_at);
 						let v2 = BigInt(last_entry.v2_at) - BigInt(past_entry.v2_at);
-						rec.base_volume = v1.toString();
-						rec.target_volume = v2.toString();
+						rec.base_volume = Number(v1.toString());
+						rec.target_volume = Number(v2.toString());
 					}
 					else{
 						rec.base_volume = 0;
