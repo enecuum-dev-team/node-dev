@@ -2554,7 +2554,11 @@ class ClaimConfirmContract extends Contract {
         }
 
         let createToken = async (ticket) => {
-            let {amount, ticker, name} = ticket
+            let {amount, ticker, name, origin_decimals} = ticket
+            let decimals = 10n
+            origin_decimals = BigInt(origin_decimals)
+            if (origin_decimals > decimals)
+                decimals = origin_decimals
             let token_create_object = {
                 type : "create_token",
                 parameters : {
@@ -2562,7 +2566,7 @@ class ClaimConfirmContract extends Contract {
                     fee_value : 100000000n,
                     fee_min : 100000000n,
                     ticker : ticker.toUpperCase(),
-                    decimals : 10n,
+                    decimals : BigInt(decimals),
                     total_supply : BigInt(amount),
                     max_supply : BigInt(amount),
                     name : name,
