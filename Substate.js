@@ -369,7 +369,8 @@ class Substate {
         this.set_bridge({validators})
     }
     add_validator(pubkey) {
-        let validators = this.get_validators().push(pubkey)
+        let validators = this.get_validators()
+        validators.push(pubkey)
         this.set_bridge({validators})
     }
     remove_network(network_id) {
@@ -377,7 +378,8 @@ class Substate {
         this.set_bridge({known_networks})
     } 
     add_network(network_id, decimals) {
-        let known_networks = this.get_known_networks().push({id: network_id, decimals})
+        let known_networks = this.get_known_networks()
+        known_networks.push({id: network_id, decimals})
         this.set_bridge({known_networks})
     } 
     get_validators() {

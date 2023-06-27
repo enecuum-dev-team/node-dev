@@ -1180,9 +1180,15 @@ class DB {
 
         substate.bridge_settings = substate.bridge_settings.filter(a => a.changed === true);
         if(substate.bridge_settings.length > 0) {
-            let validators = JSON.stringify(bridge_settings[0].validators);
-            let known_networks = JSON.stringify(bridge_settings[0].known_networks);
-            state_sql.push(	mysql.format("UPDATE bridge_settings SET owner = ?, threshold = ?, validators = ?, known_networks = ? LIMIT 1", [bridge_settings[0].owner, bridge_settings[0].threshold, validators, known_networks]));
+            let validators = JSON.stringify(substate.bridge_settings[0].validators);
+            let known_networks = JSON.stringify(substate.bridge_settings[0].known_networks);
+            state_sql.push(	mysql.format(
+                "INSERT INTO bridge_settings SET owner = ?, threshold = ?, validators = ?, known_networks = ? ON DUPLICATE KEY UPDATE owner = ?, threshold = ?, validators = ?, known_networks = ?", 
+                [
+                    substate.bridge_settings[0].owner, substate.bridge_settings[0].threshold, validators, known_networks,
+                    substate.bridge_settings[0].owner, substate.bridge_settings[0].threshold, validators, known_networks
+                ]
+            ));
         }
 
         substate.minted = substate.minted.filter(a => a.changed === true);

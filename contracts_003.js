@@ -2397,14 +2397,14 @@ class LockContract extends Contract {
         let data = this.data.parameters
 
         let channel = substate.get_channel_by_id({
-            src_address : tx.from, 
+            src_address : tx.from,
             src_hash : data.hash,
-            dst_network : data.dst_network, 
+            dst_network : data.dst_network,
             dst_address : data.dst_address
         })
 
         if (Number(++channel.nonce) !== data.nonce)
-            throw new ContractError(`Wrong nonce of the bridge lock transfer. Prev: ${channel.nonce - 1}, cur: ${data.nonce}, channel_id: ${channel.channel_id}`)
+            throw new ContractError(`Wrong nonce of the bridge lock transfer. Prev: ${Number(channel.nonce) - 1}, cur: ${data.nonce}, channel_id: ${channel.channel_id}`)
         substate.change_channel(channel)
 
         let wrappedToken = substate.get_minted_token(data.hash)
@@ -2465,7 +2465,7 @@ class ClaimInitContract extends Contract {
             throw new ContractError(`Wrong transfer_id. Expected: ${transfer_id}, actual: ${this.data.parameters.transfer_id}`)
         return true
     }
-    
+
     async execute(tx, substate, kblock, config) {
         let data = this.data.parameters
         let last_t = substate.get_bridge_claim_transfers(data.src_address, data.dst_address, data.src_network, data.src_hash)

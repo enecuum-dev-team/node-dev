@@ -119,10 +119,6 @@ class Explorer {
                 bridge.BRIDGE_VALIDATORS = bridge_settings[0].validators
                 bridge.BRIDGE_KNOWN_NETWORKS = bridge_settings[0].known_networks
             }
-            let validators = await this.db.get_validators()
-            bridge.BRIDGE_VALIDATORS = validators
-            let known_networks = await this.db.get_known_networks()
-            bridge.BRIDGE_KNOWN_NETWORKS = known_networks
 			let data = {
 				target_speed: this.config.target_speed,
 				reward_ratio: this.config.reward_ratio,
