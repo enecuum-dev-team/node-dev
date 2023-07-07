@@ -310,6 +310,7 @@ class Substate {
                 break;
             case "bridge_claim_confirm" : {
                 this.bridge_claim_transfers.push(contract.data.parameters.transfer_id)
+                this.tokens.push(tx.ticker)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
                 this.accounts.push(tx.from)
                 this.accounts.push(tx.to)
@@ -416,7 +417,7 @@ class Substate {
     get_transfer_lock(){
         return this.db.app_config.transfer_lock;
     }
-    get_token_info (hash) {
+    get_token_info(hash) {
         if(!hash)
             return null;
         return this.tokens.find(a => a.hash === hash);

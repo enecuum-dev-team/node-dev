@@ -2557,14 +2557,16 @@ class ClaimConfirmContract extends Contract {
             let {amount, ticker, name, origin_decimals} = ticket
             let decimals = 10n
             origin_decimals = BigInt(origin_decimals)
-            if (origin_decimals > decimals)
+            if (origin_decimals < decimals)
                 decimals = origin_decimals
+
+            let native_token = substate.get_token_info(tx.ticker)
             let token_create_object = {
                 type : "create_token",
                 parameters : {
                     fee_type : 2,
-                    fee_value : 100000000n,
-                    fee_min : 100000000n,
+                    fee_value : BigInt(native_token.fee_value),
+                    fee_min : BigInt(native_token.fee_min),
                     ticker : ticker.toUpperCase(),
                     decimals : BigInt(decimals),
                     total_supply : BigInt(amount),
