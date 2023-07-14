@@ -533,13 +533,13 @@ CREATE TABLE `bridge_claim_transfers` (
   `amount` bigint(20) unsigned DEFAULT NULL,
   `dst_network` int NOT NULL,
   `src_hash` varchar(64) NOT NULL,
-  `transfer_id` varchar(64) NOT NULL,
+  `ticket_hash` varchar(64) NOT NULL,
   `ticker` varchar(10) NOT NULL,
   `origin_network` int NOT NULL,
   `origin_hash` varchar(64) NOT NULL,
   `origin_decimals` TINYINT unsigned NOT NULL,
   `name` varchar(40) NOT NULL,
-  PRIMARY KEY (`transfer_id`)
+  PRIMARY KEY (`ticket_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `bridge_lock_transfers`;
@@ -555,8 +555,8 @@ DROP TABLE IF EXISTS `bridge_confirmations`;
 CREATE TABLE `bridge_confirmations` (
   `validator_id` varchar(66) NOT NULL,
   `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
-  `transfer_id` varchar(64) NOT NULL,
-  PRIMARY KEY (`transfer_id`, `validator_id`)
+  `ticket_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`ticket_hash`, `validator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `bridge_settings`;

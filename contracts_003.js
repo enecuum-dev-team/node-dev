@@ -2457,7 +2457,7 @@ class ClaimInitContract extends Contract {
             origin_hash : cTypes.hexStr1_64,
             origin_network : cTypes.int,
             nonce : cTypes.int,
-            transfer_id : cTypes.enqHash64,
+            ticket_hash : cTypes.enqHash64,
             ticker : cTypes.str,
             origin_decimals : cTypes.byte,
             name : cTypes.str40
@@ -2466,11 +2466,11 @@ class ClaimInitContract extends Contract {
         if (Number(Utils.BRIDGE_NETWORK_ID) !== Number(this.data.parameters.dst_network))
             throw new ContractError("Wrong network id")
         let modelTmp = {...paramsModel}
-        delete modelTmp.transfer_id
+        delete modelTmp.ticket_hash
         let paramsStr = Object.keys(modelTmp).map(v => crypto.createHash('sha256').update(this.data.parameters[v].toString().toLowerCase()).digest('hex')).join("")
-        let transfer_id = crypto.createHash('sha256').update(paramsStr).digest('hex')
-        if (transfer_id !== this.data.parameters.transfer_id)
-            throw new ContractError(`Wrong transfer_id. Expected: ${transfer_id}, actual: ${this.data.parameters.transfer_id}`)
+        let ticket_hash = crypto.createHash('sha256').update(paramsStr).digest('hex')
+        if (ticket_hash !== this.data.parameters.ticket_hash)
+            throw new ContractError(`Wrong ticket_hash. Expected: ${ticket_hash}, actual: ${this.data.parameters.ticket_hash}`)
         return true
     }
 
@@ -2480,7 +2480,7 @@ class ClaimInitContract extends Contract {
         if (last_t === null)
             last_t = {nonce : 0}
         if (Number(last_t.nonce) + 1 !== data.nonce)
-            throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, transfer_id: ${data.transfer_id}`)
+            throw new ContractError(`Wrong nonce of the bridge transfer. Prev: ${last_t.nonce}, cur: ${data.nonce}, ticket_hash: ${data.ticket_hash}`)
         
         substate.transfers_add(data)
         return {
@@ -2509,7 +2509,7 @@ class ClaimConfirmContract extends Contract {
         let paramsModel = {
             validator_id : cTypes.enqHash66,
             validator_sign : cTypes.hexStr1_150,
-            transfer_id : cTypes.enqHash64
+            ticket_hash : cTypes.enqHash64
         }
 
         return cValidate(this.data.parameters, paramsModel)
@@ -2605,7 +2605,7 @@ class ClaimConfirmContract extends Contract {
             return await token_create_contract.execute(_tx, substate)
         }
 
-        let ticket = substate.get_bridge_claim_transfers_by_id(this.data.parameters.transfer_id)
+        let ticket = substate.get_bridge_claim_transfers_by_id(this.data.parameters.ticket_hash)
         let res
         if (Number(ticket.origin_network) === Number(ticket.dst_network)) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
@@ -2634,8 +2634,8 @@ class ClaimConfirmContract extends Contract {
         let data = this.data.parameters
         if (!substate.get_validators().find(id => id === data.validator_id))
             throw new ContractError(`Unknown validator: ${data.validator_id}`)
-        if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.transfer_id))
-            throw new ContractError(`Wrong validator sign. Transfer_id: ${data.transfer_id}`)
+        if (!Utils.ecdsa_verify(data.validator_id, data.validator_sign, data.ticket_hash))
+            throw new ContractError(`Wrong validator sign. Ticket_hash: ${data.ticket_hash}`)
 
         let bridge_confirmations = substate.add_confirmation(data)
         if (bridge_confirmations === substate.get_bridge_settings().threshold)

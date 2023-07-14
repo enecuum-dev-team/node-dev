@@ -309,7 +309,7 @@ class Substate {
             }
                 break;
             case "bridge_claim_confirm" : {
-                this.bridge_claim_transfers.push(contract.data.parameters.transfer_id)
+                this.bridge_claim_transfers.push(contract.data.parameters.ticket_hash)
                 this.tokens.push(tx.ticker)
                 this.accounts.push(Utils.BRIDGE_ADDRESS)
                 this.accounts.push(tx.from)
@@ -474,7 +474,7 @@ class Substate {
     get_bridge_claim_transfers_by_id(id) {
         if(!id)
             return null
-        return this.bridge_claim_transfers.find(tranfer => tranfer.transfer_id === id)
+        return this.bridge_claim_transfers.find(tranfer => tranfer.ticket_hash === id)
     }
     get_last_bridge_claim_transfers () {
         let len = this.bridge_claim_transfers.length
@@ -485,17 +485,17 @@ class Substate {
         this.bridge_claim_transfers.push(changes)
     }
     add_confirmation (changes) {
-        if (!changes.validator_id || !changes.validator_sign || !changes.transfer_id) 
+        if (!changes.validator_id || !changes.validator_sign || !changes.ticket_hash) 
             return null
-        if (this.bridge_confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.transfer_id === changes.transfer_id))
-            throw new ContractError(`Validator has already confirm transfer: ${changes.transfer_id}`)
+        if (this.bridge_confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.ticket_hash === changes.ticket_hash))
+            throw new ContractError(`Validator has already confirm transfer: ${changes.ticket_hash}`)
         changes.changed = true
         this.bridge_confirmations.push(changes)
-        return this.get_confirmations_by_tid(changes.transfer_id)
+        return this.get_confirmations_by_tid(changes.ticket_hash)
     }
-    get_confirmations_by_tid (transfer_id) {
+    get_confirmations_by_tid (ticket_hash) {
         return this.bridge_confirmations.reduce((prev, cur) => {
-            if (cur.transfer_id === transfer_id)
+            if (cur.ticket_hash === ticket_hash)
                 ++prev
             return prev
         }, 0)

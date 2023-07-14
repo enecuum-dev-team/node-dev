@@ -309,7 +309,7 @@ let utils = {
             'amount',
             'dst_network',
             'src_hash',
-            'transfer_id',
+            'ticket_hash',
             'ticker',
             'origin_network',
             'origin_hash',
@@ -329,7 +329,7 @@ let utils = {
         let str = [
             'validator_id',
             'validator_sign',
-            'transfer_id'
+            'ticket_hash'
         ];
         return this.hash_fields(confirmation, str);
     },
