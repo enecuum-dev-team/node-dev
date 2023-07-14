@@ -20,6 +20,7 @@ const NodeapiService = require('./nodeapi.service').NodeapiService;
 const Utils = require('./Utils');
 const Transport = require('./Transport').Tip;
 const ContractMachine = require('./SmartContracts');
+let zlib = require("zlib")
 //const swaggerJSDoc = require('swagger-jsdoc');
 let swaggerSpec;
 
@@ -1095,6 +1096,68 @@ class Explorer {
 		  res.setHeader('Content-Type', 'application/json');
 		  res.send(swaggerSpec);
 		  console.log(swaggerSpec);
+		});
+		this.app.get('/api/v1/ext/account_encode_data_transactions', async (req, res) => {
+            console.trace('test', req.query);
+            let data = await this.db.get_account_transactions(req.query.id, req.query.page, 10);
+            for (let rec of data.records) {
+                if(rec.data !== undefined){
+                    let compressed = rec.data;
+                    let decompressed = zlib.brotliDecompressSync(Buffer.from(compressed, 'base64'))
+                    rec.data_encode = JSON.parse(decompressed.toString())
+                }
+            }
+            res.send(data);
+        });
+		this.app.get('/api/v1/ext/bridge_transactions', async (req, res) => {
+			console.trace('test', req.query);
+			let page_size = req.query.page_size != undefined ? req.query.page_size : 10;
+			let data = await this.db.get_bridge_transactions(req.query.id, req.query.page, page_size);
+			for (let rec of data.records) {
+				if (rec.data !== undefined && rec.data !== "") {
+					console.log(rec.data)
+					let compressed = rec.data.substring(rec.data.indexOf("compressed_data") + 15 + 8);
+					console.log(compressed)
+					let decompressed = zlib.brotliDecompressSync(Buffer.from(compressed, 'base64'))
+					rec.data_encode = JSON.parse(decompressed.toString())
+					switch (rec.rectype) {
+						case "ibrgclaiminit":
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.data_encode.dst_address,
+								dst_network: rec.data_encode.dst_network,
+								nonce: rec.data_encode.nonce,
+								src_address: rec.data_encode.src_address,
+								src_hash: rec.data_encode.src_hash,
+								src_network: rec.data_encode.src_network
+							});
+							break;
+						case "ibrgburn":
+						case "ibrglock":
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.data_encode.dst_address,
+								dst_network: rec.data_encode.dst_network,
+								nonce: rec.data_encode.nonce,
+								src_address: rec.from,
+								src_hash: rec.data_encode.hash,
+								src_network: this.config.bridge.BRIDGE_NETWORK_ID
+							});
+							break;
+						case "ibrgmint":
+						case "ibrgunlock":
+							rec.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_by_hashes([rec.data_encode.transfer_id]);
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.bridge_claim_transfers[0].dst_address,
+								dst_network: rec.bridge_claim_transfers[0].dst_network,
+								nonce: rec.bridge_claim_transfers[0].nonce,
+								src_address: rec.bridge_claim_transfers[0].src_address,
+								src_hash: rec.bridge_claim_transfers[0].src_hash,
+								src_network: rec.bridge_claim_transfers[0].src_network
+							});
+							break;
+					}
+				}
+			}
+			res.send(data);
 		});
 		
 		let routes = [];

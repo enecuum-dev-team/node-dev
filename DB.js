@@ -256,7 +256,7 @@ class DB {
 				sql_put_snapshot = mysql.format("INSERT INTO snapshots SET ?", [{hash:snapshot.hash, kblocks_hash:snapshot.kblocks_hash, data:JSON.stringify(snapshot)}]);
 			}
 
-			return this.transaction([truncate, sprouts, kblock, sql_put_snapshot, ledger.join(';'), tokens.join(';'), tokens_index.join(';'), poses.join(';'), delegates.join(';'), undelegates.join(';'), dex_pools.join(';'), farms.join(';'), farmers.join(';'), cashier_ptr].join(';'));
+			return this.transaction([truncate, sprouts, kblock, sql_put_snapshot, ledger.join(';'), tokens.join(';'), tokens_index.join(';'), poses.join(';'), delegates.join(';'), undelegates.join(';'), dex_pools.join(';'), farms.join(';'), farmers.join(';'), minted.join(';'), bridge_claim_transfers.join(';'), bridge_lock_transfers.join(';'), bridge_confirmations.join(';'), bridge_settings.join(';'), cashier_ptr].join(';'));
         }catch (e) {
             console.error(e);
             return false;
@@ -1053,7 +1053,7 @@ class DB {
 
 	generate_eindex(rewards, time = null, tokens_counts){
 		let ind = [];
-		let idx_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref', 'iv', 'ic', 'ifk', 'ifg', 'ifl', 'idust', 'iswapout', 'ifrew', 'ipcreatelt', 'iliqaddlt', 'iliqrmv1', 'iliqrmv2', 'ifcloserew', 'ifdecrew'];
+		let idx_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref', 'iv', 'ic', 'ifk', 'ifg', 'ifl', 'idust', 'iswapout', 'ifrew', 'ipcreatelt', 'iliqaddlt', 'iliqrmv1', 'iliqrmv2', 'ifcloserew', 'ifdecrew', 'ibrgburn', 'ibrgburndata', 'ibrglock', 'ibrglockdata', 'ibrgmint', 'ibrgmintdata', 'ibrgunlock', 'ibrgunlockdata', 'ibrgclaiminit'];
 		let tx_types = ['iin', 'iout'];
 		let legacy_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref'];
 		for(let rec of rewards){
@@ -2415,6 +2415,7 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+
 	async prefork_002(){
 		/*
 			Функция выполняется перед блоком форка. Она меняет структуру таблиц для получения единообразного
@@ -2427,6 +2428,23 @@ class DB {
 									SET U.delegator = T.from;`);
 		let sql = [sql1, sql2, sql3];
 		return this.transaction(sql.join(';'));
+	}
+
+	async get_bridge_transactions(id, page_num, page_size){
+		let count = await this.request(mysql.format(`SELECT irew AS cnt FROM eindex WHERE id = ? AND irew IS NOT NULL ORDER BY irew DESC LIMIT 1`, id));
+		count = count[0].cnt;
+		let records = await this.request(mysql.format(`
+			SELECT I.i, I.hash, I.time as time, rectype, T.from, T.amount, T.data,
+				MAX(T.status) AS status, T.ticker as token_hash, TKN.fee_type, TKN.fee_value, TKN.fee_min
+			FROM eindex as I
+			LEFT JOIN transactions as T ON I.hash = T.hash
+			LEFT JOIN tokens as TKN ON T.ticker = TKN.hash
+			WHERE id = ?
+			AND I.irew between ? and ? 
+			GROUP BY I.i ORDER BY I.i DESC`,
+			[id, count - page_size * page_num - page_size + 1, count - page_size * page_num]));
+
+		return {records, page_count : Math.ceil(Number(count) / page_size), id};
 	}
 }
 

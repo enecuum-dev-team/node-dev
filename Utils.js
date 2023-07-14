@@ -181,6 +181,12 @@ let utils = {
         let valuesFromObject = model.map(lock_param => lock_data[lock_param])
         return crypto.createHash('sha256').update(valuesFromObject.sort().join("")).digest('hex')
     },
+	get_transfer_id : function(ticket){
+		let param_names = ["dst_address", "dst_network", "nonce", "src_address", "src_hash", "src_network"];
+		let params_str = param_names.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("");
+		let transfer_id = crypto.createHash('sha256').update(params_str).digest('hex');
+		return transfer_id;
+	},
 	check_valid_percent_params : function(param_obj){
 		let len = Object.keys(param_obj).length;
 		if(len < 1)

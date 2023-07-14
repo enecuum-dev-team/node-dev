@@ -2417,9 +2417,17 @@ class LockContract extends Contract {
 
         let res
         if (wrappedToken) {
-            res = await burn_tokens(data.hash, data.amount)
+            res = await burn_tokens(data.hash, data.amount);
+            res.bridge_burn = {
+                hash : data.hash,
+                amount : data.amount
+            }
         } else {
-            res = await lock_tokens(data.hash, data.amount)
+            res = await lock_tokens(data.hash, data.amount);
+            res.bridge_lock = {
+                hash : data.hash,
+                amount : data.amount
+            }
         }
         return res
     }
@@ -2478,7 +2486,8 @@ class ClaimInitContract extends Contract {
         return {
             amount_changes : [],
             pos_changes : [],
-            post_action : []
+            post_action : [],
+            claim_init : 0
         }
     }
 }
@@ -2600,6 +2609,7 @@ class ClaimConfirmContract extends Contract {
         let res
         if (Number(ticket.origin_network) === Number(ticket.dst_network)) {
             res = transfer(ticket.origin_hash, ticket.amount, ticket.dst_address)
+            res.bridge_unlock = ticket.amount;
         } else {
             let minted = substate.get_minted_token_by_origin(ticket.origin_hash, ticket.origin_network)
             if (minted !== null && minted !== undefined) {
@@ -2615,6 +2625,7 @@ class ClaimConfirmContract extends Contract {
                 })
                 res = transfer(tokenCreateRes.token_info.hash, ticket.amount, ticket.dst_address)
             }
+            res.bridge_mint = ticket.amount;
         }
         return res
     }
