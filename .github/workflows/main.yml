@@ -1,0 +1,93 @@
+name: Node-dev tests
+
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [ 16.x ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Configure ssh
+        run: |
+          mkdir ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/fullnode
+          chmod 600 ~/.ssh/fullnode
+          cat >> ~/.ssh/config << END
+          Host fullnode
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/fullnode
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_USER: root
+          SSH_KEY: ${{ secrets.SSH_SECRET }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+
+      - name: Clear machine
+        run: ssh fullnode "bash -ic 'pm2 delete all; rm -rf $W_DIR'"
+        env: 
+          W_DIR: ${{ github.event.repository.name }}
+      
+      - name: Extract branch name
+        id: vars
+        run: echo ::set-output name=branch::${GITHUB_REF#refs/*/}
+
+      - name: Clone repo
+        run: "bash -ic 'cd ${W_DIR}/.github/workflows; . ./clone_repo.bash'"
+
+      - name: Merge branches
+        run: ssh fullnode "bash -ic 'cd $W_DIR; git merge origin ${M_BRANCH}'"
+        env:
+          M_BRANCH: ${{ steps.vars.outputs.branch }}
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Update submodules
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./upd_submodules.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Prepare configs
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./prepare_configs.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Update modules
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./upd_modules.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Start node
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./start_node.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Restart test server
+        run: ssh fullnode "bash -ic 'cd ${W_DIR}/.github/workflows; . ./restart_test_server.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run first TS group
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./first_TS.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run second TS group
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./second_TS.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
+      - name: Run third TS group
+        run: ssh fullnode "bach -ic 'cd ${W_DIR}/.github/workflows; . ./third_TS.bash'"
+        env:
+          W_DIR: ${{ github.event.repository.name }}
+
