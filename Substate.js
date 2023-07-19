@@ -350,11 +350,15 @@ class Substate {
     }
 
     get_channel_by_id(lock_data) {
-        let channel_id = Utils.get_lock_transfer_id(lock_data)
+        let channel_id = Utils.get_channel_id(lock_data)
         let ch = this.bridge_lock_transfers.find(transfer => transfer.channel_id === channel_id)
         if (!ch)
             return {
                 channel_id,
+                dst_address: lock_data.dst_address,
+                dst_network: lock_data.dst_network,
+                src_address: lock_data.src_address,
+                src_hash: lock_data.src_hash,
                 nonce : 0
             }
         return ch

@@ -91,7 +91,7 @@ class Explorer {
             if (!req.query.dst_address || !req.query.src_address || !req.query.dst_network || !req.query.src_hash)
                 res.send("0")
             else {
-                let channel_id = Utils.get_lock_transfer_id(req.query)
+                let channel_id = Utils.get_channel_id(req.query)
                 let lock_transfer = await this.db.get_last_bridge_lock_transfer_by_id(channel_id)
                 if (!lock_transfer.length)
                     res.send("0")
@@ -1144,7 +1144,7 @@ class Explorer {
 							break;
 						case "ibrgmint":
 						case "ibrgunlock":
-							rec.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_by_hashes([rec.data_encode.transfer_id]);
+							rec.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_by_hashes([rec.data_encode.ticket_hash]);
 							rec.transfer_id = Utils.get_transfer_id({
 								dst_address: rec.bridge_claim_transfers[0].dst_address,
 								dst_network: rec.bridge_claim_transfers[0].dst_network,

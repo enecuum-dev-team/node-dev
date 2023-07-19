@@ -546,6 +546,10 @@ DROP TABLE IF EXISTS `bridge_lock_transfers`;
 
 CREATE TABLE `bridge_lock_transfers` (
   `channel_id` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `dst_network` int(11) DEFAULT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
   `nonce` bigint(20) NOT NULL,
   PRIMARY KEY (`channel_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

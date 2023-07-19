@@ -229,7 +229,7 @@ class DB {
 			if (snapshot.bridge_lock_transfers && snapshot.bridge_lock_transfers.length > 0) {
                 let bridge_lock_transfers_chunks = snapshot.bridge_lock_transfers.chunk(INSERT_CHUNK_SIZE);
                 bridge_lock_transfers_chunks.forEach(chunk => {
-					bridge_lock_transfers.push(mysql.format("INSERT INTO bridge_lock_transfers (channel_id, nonce) VALUES ? ", [chunk.map(bridge_lock_transfers => [bridge_lock_transfers.channel_id, bridge_lock_transfers.nonce])]));
+					bridge_lock_transfers.push(mysql.format("INSERT INTO bridge_lock_transfers (channel_id, dst_address, dst_network, src_address, src_hash, nonce) VALUES ? ", [chunk.map(bridge_lock_transfers => [bridge_lock_transfers.channel_id, bridge_lock_transfers.dst_address, bridge_lock_transfers.dst_network, bridge_lock_transfers.src_address, bridge_lock_transfers.src_hash, bridge_lock_transfers.nonce])]));
 				});
 			}
             let bridge_confirmations = [];
@@ -1172,7 +1172,7 @@ class DB {
     
         substate.bridge_lock_transfers = substate.bridge_lock_transfers.filter(a => a.changed === true);
         if(substate.bridge_lock_transfers.length > 0)
-            state_sql.push(	mysql.format("INSERT INTO bridge_lock_transfers (`channel_id`, `nonce`) VALUES ? ON DUPLICATE KEY UPDATE `nonce` = VALUES(nonce)", [substate.bridge_lock_transfers.map(a => [a.channel_id, a.nonce])]));
+            state_sql.push(	mysql.format("INSERT INTO bridge_lock_transfers (`channel_id`, `dst_address`, `dst_network`, `src_address`, `src_hash`, `nonce`) VALUES ? ON DUPLICATE KEY UPDATE `nonce` = VALUES(nonce)", [substate.bridge_lock_transfers.map(a => [a.channel_id, a.dst_address, a.dst_network, a.src_address, a.src_hash, a.nonce])]));
         
         substate.bridge_confirmations = substate.bridge_confirmations.filter(a => a.changed === true);
         if(substate.bridge_confirmations.length > 0)
