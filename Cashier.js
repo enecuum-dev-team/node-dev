@@ -607,8 +607,6 @@ class Cashier {
                         this.eindex_entry(rewards, 'ifcloserew', tx.from, tx.hash, res.farm_close_reward);
                     if(res.hasOwnProperty("farm_decrease_reward"))
                         this.eindex_entry(rewards, 'ifdecrew', tx.from, tx.hash, res.farm_decrease_reward, kblock.n);
-                    if(res.hasOwnProperty("events"))
-                        this.events.push(...res.events);
                     if(res.hasOwnProperty("bridge_burn")){
                         this.eindex_entry(rewards, 'ibrgburn', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.bridge_burn.amount);
                         //this.eindex_entry(rewards, 'ibrgburndata', tx.from, tx.hash, res.bridge_burn.amount)
