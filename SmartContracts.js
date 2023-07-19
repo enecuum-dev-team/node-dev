@@ -15,6 +15,7 @@
 const c0 = require('./contracts_000');
 const c1 = require('./contracts_001');
 const c2 = require('./contracts_002');
+const c3 = require('./contracts_003');
 const Utils = require('./Utils');
 const {ContractError} = require('./errors');
 const ContractParser = require('./contractParser').ContractParser;
@@ -29,10 +30,6 @@ class ContractFactory{
         let data = this.parser.parse(raw);
         let Contracts = getContractMachine(this.config.FORKS, n);
 
-        let ENX_TOKEN_HASH = "";
-        if (this.config.FORKS.fork_block_003 < n)
-            ENX_TOKEN_HASH = this.config.dex.DEX_ENX_TOKEN_HASH;
-
         switch(type) {
             case "create_token" :           return new Contracts.TokenCreateContract(data);
             case "create_pos" :             return new Contracts.PosCreateContract(data);
@@ -45,17 +42,26 @@ class ContractFactory{
             case "pool_create" :            return new Contracts.PoolCreateContract(data);
             case "pool_add_liquidity" :     return new Contracts.PoolLiquidityAddContract(data);
             case "pool_remove_liquidity":   return new Contracts.PoolLiquidityRemoveContract(data);
-            case "pool_sell_exact" :        return new Contracts.PoolLiquiditySellExactContract(data, ENX_TOKEN_HASH);
-            case "pool_buy_exact" :         return new Contracts.PoolLiquidityBuyExactContract(data, ENX_TOKEN_HASH);
+            case "pool_sell_exact" :        return new Contracts.PoolLiquiditySellExactContract(data);
+            case "pool_buy_exact" :         return new Contracts.PoolLiquidityBuyExactContract(data);
             case "farm_create" :            return new Contracts.FarmCreateContract(data);
             case "farm_increase_stake" :    return new Contracts.FarmIncreaseStakeContract(data);
             case "farm_decrease_stake" :    return new Contracts.FarmDecreaseStakeContract(data);
             case "farm_close_stake" :       return new Contracts.FarmCloseStakeContract(data);
             case "farm_get_reward" :        return new Contracts.FarmGetRewardContract(data);
             case "farm_add_emission" :      return new Contracts.FarmsAddEmissionContract(data);
-            case "dex_cmd_distribute" :     return new Contracts.DexCmdDistributeContract(data, ENX_TOKEN_HASH);
+            case "dex_cmd_distribute" :     return new Contracts.DexCmdDistributeContract(data);
             case "pool_sell_exact_routed" : return new Contracts.PoolLiquiditySellExactRoutedContract(data);
             case "pool_buy_exact_routed" :  return new Contracts.PoolLiquidityBuyExactRoutedContract(data);
+            case "bridge_lock" :            return new Contracts.LockContract(data);
+            case "bridge_claim_init" :      return new Contracts.ClaimInitContract(data);
+            case "bridge_claim_confirm" :   return new Contracts.ClaimConfirmContract(data);
+            case "bridge_set_owner" :       return new Contracts.BridgeSetOwnerContract(data);
+            case "bridge_set_threshold" :   return new Contracts.BridgeSetThresholdContract(data);
+            case "bridge_add_validator" :   return new Contracts.BridgeAddValidatorContract(data);
+            case "bridge_remove_validator": return new Contracts.BridgeRemoveValidatorContract(data);
+            case "bridge_add_network" :     return new Contracts.BridgeAddNetworkContract(data);
+            case "bridge_remove_network" :  return new Contracts.BridgeRemoveNetworkContract(data);
             default :                       return null;
         }
     }
@@ -81,7 +87,7 @@ class ContractFactory{
         if(tx.to !== db.ORIGIN.publisher){
             throw new ContractError(`Invalid recipient address, expected ${db.ORIGIN.publisher} , given ${tx.to}`);
         }
-        if(tx.ticker !== Utils.ENQ_TOKEN_NAME){
+        if (tx.ticker !== Utils.ENQ_TOKEN_NAME) {
             throw new ContractError(`Invalid token, expected ${Utils.ENQ_TOKEN_NAME} , given ${tx.ticker}`);
         }
         return contract;
@@ -95,7 +101,7 @@ class ContractFactory{
 }
 function getContractMachine(forks, n){
     //return n > forks.fork_block_002 ? c2 : c0;
-    let Contracts = [c0, c1, c2, c2]; // last c2 for enx_fork 
+    let Contracts = [c0, c1, c2, c3]; // last c2 for enx_fork 
     let fork_keys = Object.keys(forks);
     let idx = fork_keys.length - 1;
     for(let i = 0; i < fork_keys.length; i++){

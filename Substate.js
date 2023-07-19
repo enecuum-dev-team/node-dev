@@ -36,12 +36,14 @@ class Substate {
         this.claims = {};
         this.farms = [];
         this.farmers = [];
+        this.minted = [];
+        this.bridge_claim_transfers = [];
+        this.bridge_lock_transfers = [];
+        this.bridge_confirmations = [];
+        this.validators = [];
+        this.bridge_settings = [];
     }
     async loadState(){
-        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
-        this.accounts = this.accounts.filter(v => v !== null);
-        this.accounts = await this.db.get_accounts_all(this.accounts);
-
         // TODO: optimized selection
         // this.pools = await this.db.dex_get_pools(this.pools);
         // let more_pools = await this.db.dex_get_pools_by_lt(this.lt_hashes);
@@ -54,6 +56,20 @@ class Substate {
         this.lt_hashes = this.pools.map(h => h.token_hash);
         if(this.lt_hashes.length > 0)
             this.tokens = this.tokens.concat(this.lt_hashes);
+        if(this.bridge_claim_transfers.length > 0) {
+            let tickets = await this.db.get_bridge_claim_transfers_by_hashes(this.bridge_claim_transfers);
+            for (let ticket of tickets) {
+                this.accounts.push(ticket.dst_address)
+                let minted = await this.db.get_minted_by_origin(ticket.origin_hash, ticket.origin_network)
+                if (minted)
+                    this.tokens.push(minted.wrapped_hash)
+            }
+        }
+
+        this.accounts = this.accounts.filter((v, i, a) => a.indexOf(v) === i);
+        this.accounts = this.accounts.filter(v => v !== null);
+        this.accounts = await this.db.get_accounts_all(this.accounts);
+
         let tokens_a = this.pools.map(h => h.asset_1);
         let tokens_b = this.pools.map(h => h.asset_2);
         this.tokens = this.tokens.concat(tokens_a);
@@ -103,6 +119,12 @@ class Substate {
         this.farmers = this.farmers.filter((v, i, a) => a.indexOf(v) === i);
         this.farmers = this.farmers.filter(v => v !== null);
         this.farmers = await this.db.get_farmers_by_farmer(this.farmers);
+
+        this.minted = await this.db.get_minted_all();
+        this.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_all();
+        this.bridge_lock_transfers = await this.db.get_bridge_lock_transfers_all();
+        this.bridge_confirmations = await this.db.get_confirmations_all();
+        this.bridge_settings = await this.db.get_bridge_settings();
     }
     setState(state){
         this.delegation_ledger = JSON.parse(JSON.stringify(state.delegation_ledger));
@@ -123,6 +145,11 @@ class Substate {
         this.accounts = state.accounts.map(a => Object.assign({}, a));
         this.farms = state.farms.map(a => Object.assign({}, a));
         this.farmers = state.farmers.map(a => Object.assign({}, a));
+        this.minted = state.minted.map(a => Object.assign({}, a));
+        this.bridge_claim_transfers = state.bridge_claim_transfers.map(a => Object.assign({}, a));
+        this.bridge_lock_transfers = state.bridge_lock_transfers.map(a => Object.assign({}, a));
+        this.bridge_confirmations = state.bridge_confirmations.map(a => Object.assign({}, a));
+        this.bridge_settings = state.bridge_settings.map(a => Object.assign({}, a));
     }
     fillByContract(contract, tx){
         let type = contract.type;
@@ -274,6 +301,32 @@ class Substate {
                 this.farms.push(Utils.DEX_SPACE_STATION_ID);
             }
                 break;
+            case "bridge_lock" : {
+                this.tokens.push(contract.data.parameters.hash)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
+                this.accounts.push(Utils.BRIDGE_ADDRESS)
+            }
+                break;
+            case "bridge_claim_confirm" : {
+                this.bridge_claim_transfers.push(contract.data.parameters.ticket_hash)
+                this.tokens.push(tx.ticker)
+                this.accounts.push(Utils.BRIDGE_ADDRESS)
+                this.accounts.push(tx.from)
+                this.accounts.push(tx.to)
+            }
+                break;
+
+            case "bridge_set_owner"         :
+            case "bridge_set_threshold"     :
+            case "bridge_add_validator"     :
+            case "bridge_remove_validator"  :
+            case "bridge_add_network"       :
+            case "bridge_remove_network"    : {
+                // the bridge owner
+            } 
+                break;
+
             default : return false;
         }
     }
@@ -295,6 +348,61 @@ class Substate {
         }
         return true;
     }
+
+    get_channel_by_id(lock_data) {
+        let channel_id = Utils.get_channel_id(lock_data)
+        let ch = this.bridge_lock_transfers.find(transfer => transfer.channel_id === channel_id)
+        if (!ch)
+            return {
+                channel_id,
+                dst_address: lock_data.dst_address,
+                dst_network: lock_data.dst_network,
+                src_address: lock_data.src_address,
+                src_hash: lock_data.src_hash,
+                nonce : 0
+            }
+        return ch
+    }
+    change_channel(lock_params) {
+        this.bridge_lock_transfers.push({
+            changed : true,
+            ...lock_params
+        })
+    }
+    remove_validator(pubkey) {
+        let validators = this.get_validators().filter(validator => validator !== pubkey)
+        this.set_bridge({validators})
+    }
+    add_validator(pubkey) {
+        let validators = this.get_validators()
+        validators.push(pubkey)
+        this.set_bridge({validators})
+    }
+    remove_network(network_id) {
+        let known_networks = this.get_known_networks().filter(network => network.id !== network_id)
+        this.set_bridge({known_networks})
+    } 
+    add_network(network_id, decimals) {
+        let known_networks = this.get_known_networks()
+        known_networks.push({id: network_id, decimals})
+        this.set_bridge({known_networks})
+    } 
+    get_validators() {
+        return this.get_bridge_settings().validators
+    }
+    get_known_networks() {
+        return this.get_bridge_settings().known_networks
+    }
+    set_bridge(changes) {
+        let ch = this.bridge_settings[0]
+        changes.changed = true
+        changes = Object.assign(ch, changes)
+        this.bridge_settings.push(changes)
+    }
+    get_bridge_settings() {
+        return this.bridge_settings[0]
+    }
+
     get_tickers_all(){
         return this.tokens;
     }
@@ -313,7 +421,7 @@ class Substate {
     get_transfer_lock(){
         return this.db.app_config.transfer_lock;
     }
-    get_token_info(hash){
+    get_token_info(hash) {
         if(!hash)
             return null;
         return this.tokens.find(a => a.hash === hash);
@@ -345,6 +453,62 @@ class Substate {
         if(!farm_id || !farmer_id)
             return null;
         return this.farmers.find(a => ((a.farm_id === farm_id) && (a.farmer_id === farmer_id)));
+    }
+    get_minted_token (wrapped_hash) {
+        if (!wrapped_hash)
+            return null
+        return this.minted.find(token => token.wrapped_hash === wrapped_hash)
+    }
+    get_minted_token_by_origin (origin_hash, origin_network) {
+        if (!origin_hash || !origin_network)
+            return null
+        return this.minted.find(token => token.origin_hash === origin_hash && token.origin_network === origin_network)
+    }
+    get_bridge_claim_transfers (src_address, dst_address, src_network, src_hash) {
+        if(!src_address || !dst_address || !src_network || !src_hash)
+            return null
+        let res = this.bridge_claim_transfers.filter(tranfer => tranfer.src_address == src_address && tranfer.dst_address == dst_address && tranfer.src_network == src_network && tranfer.src_hash == src_hash)
+        if (res.length) {
+            res.sort((a, b) => a.nonce > b.nonce ? -1 : 1)
+            res = res[0]
+        } else
+            res = null
+        return res
+    }
+    get_bridge_claim_transfers_by_id(id) {
+        if(!id)
+            return null
+        return this.bridge_claim_transfers.find(tranfer => tranfer.ticket_hash === id)
+    }
+    get_last_bridge_claim_transfers () {
+        let len = this.bridge_claim_transfers.length
+        return len ? this.bridge_claim_transfers[len - 1] : null
+    }
+    transfers_add (changes) {
+        changes.changed = true
+        this.bridge_claim_transfers.push(changes)
+    }
+    add_confirmation (changes) {
+        if (!changes.validator_id || !changes.validator_sign || !changes.ticket_hash) 
+            return null
+        if (this.bridge_confirmations.find(confirmation => confirmation.validator_id === changes.validator_id && confirmation.ticket_hash === changes.ticket_hash))
+            throw new ContractError(`Validator has already confirm transfer: ${changes.ticket_hash}`)
+        changes.changed = true
+        this.bridge_confirmations.push(changes)
+        return this.get_confirmations_by_tid(changes.ticket_hash)
+    }
+    get_confirmations_by_tid (ticket_hash) {
+        return this.bridge_confirmations.reduce((prev, cur) => {
+            if (cur.ticket_hash === ticket_hash)
+                ++prev
+            return prev
+        }, 0)
+    }
+    minted_add (changes) {
+        if (this.get_minted_token(changes.wrapped_hash))
+            throw new ContractError(`Token ${changes.wrapped_hash} is already minted`)
+        changes.changed = true
+        this.minted.push(changes)
     }
     pools_add(changes){
         if(this.pools.find(a => a.hash === changes.pair_id))

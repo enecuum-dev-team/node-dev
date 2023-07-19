@@ -18,9 +18,12 @@
  */
 
 const Utils = require('./Utils');
+const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
 const ContractParser = require('./contractParser').ContractParser;
+const crypto = require('crypto');
+const zlib = require('zlib');
 
 let MAX_DECIMALS = BigInt(10);
 let ENQ_INTEGER_COIN = BigInt(10000000000);
@@ -1070,11 +1073,11 @@ class PoolLiquidityRemoveContract extends Contract {
     }
 }
 class PoolLiquiditySellExactContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1207,11 +1210,11 @@ class PoolLiquiditySellExactContract extends Contract {
     }
 }
 class PoolLiquidityBuyExactContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1821,11 +1824,11 @@ class FarmsAddEmissionContract extends Contract {
 }
 
 class DexCmdDistributeContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -2312,6 +2315,7 @@ class FarmGetRewardContract extends Contract {
         };
     }
 }
+
 
 module.exports.Contract = Contract;
 

@@ -513,4 +513,64 @@ CREATE TABLE `undelegates` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+DROP TABLE IF EXISTS `minted`;
+
+CREATE TABLE `minted` (
+  `wrapped_hash` varchar(64) NOT NULL,
+  `origin_network` int NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` TINYINT unsigned NOT NULL,
+  PRIMARY KEY (`wrapped_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_claim_transfers`;
+
+CREATE TABLE `bridge_claim_transfers` (
+  `nonce` bigint(20) NOT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `src_network` int NOT NULL,
+  `amount` bigint(20) unsigned DEFAULT NULL,
+  `dst_network` int NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  `ticket_hash` varchar(64) NOT NULL,
+  `ticker` varchar(10) NOT NULL,
+  `origin_network` int NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` TINYINT unsigned NOT NULL,
+  `name` varchar(40) NOT NULL,
+  PRIMARY KEY (`ticket_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_lock_transfers`;
+
+CREATE TABLE `bridge_lock_transfers` (
+  `channel_id` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `dst_network` int(11) DEFAULT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  `nonce` bigint(20) NOT NULL,
+  PRIMARY KEY (`channel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_confirmations`;
+
+CREATE TABLE `bridge_confirmations` (
+  `validator_id` varchar(66) NOT NULL,
+  `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
+  `ticket_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`ticket_hash`, `validator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `bridge_settings`;
+
+CREATE TABLE `bridge_settings` (
+  `owner` varchar(66) NOT NULL,
+  `threshold` TINYINT unsigned DEFAULT 1,
+  `validators` varchar(1000),
+  `known_networks` varchar(1000),
+  PRIMARY KEY (`owner`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 -- Dump completed on 2020-04-14 15:09:51

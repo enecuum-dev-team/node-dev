@@ -606,7 +606,24 @@ class Cashier {
                     if(res.hasOwnProperty("farm_close_reward"))
                         this.eindex_entry(rewards, 'ifcloserew', tx.from, tx.hash, res.farm_close_reward);
                     if(res.hasOwnProperty("farm_decrease_reward"))
-                        this.eindex_entry(rewards, 'ifdecrew', tx.from, tx.hash, res.farm_decrease_reward);
+                        this.eindex_entry(rewards, 'ifdecrew', tx.from, tx.hash, res.farm_decrease_reward, kblock.n);
+                    if(res.hasOwnProperty("bridge_burn")){
+                        this.eindex_entry(rewards, 'ibrgburn', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.bridge_burn.amount);
+                        //this.eindex_entry(rewards, 'ibrgburndata', tx.from, tx.hash, res.bridge_burn.amount)
+                    }
+                    if(res.hasOwnProperty("bridge_lock")){
+                        this.eindex_entry(rewards, 'ibrglock', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.bridge_lock.amount);
+                        //this.eindex_entry(rewards, 'ibrglockdata', res.bridge_lock.hash, tx.hash, res.bridge_lock.amount)
+                    }
+                    if(res.hasOwnProperty("bridge_unlock")){
+                        this.eindex_entry(rewards, 'ibrgunlock', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.bridge_unlock);
+                    }
+                    if(res.hasOwnProperty("bridge_mint")){
+                        this.eindex_entry(rewards, 'ibrgmint', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.bridge_mint);
+                    }
+                    if(res.hasOwnProperty("claim_init")){
+                        this.eindex_entry(rewards, 'ibrgclaiminit', this.config.bridge.BRIDGE_ADDRESS, tx.hash, res.claim_init);
+                    }
                 }
                 statuses.push(this.status_entry(Utils.TX_STATUS.CONFIRMED, tx));
                 console.silly(`approved tx `, Utils.JSON_stringify(tx));
@@ -1327,6 +1344,7 @@ class Cashier {
             if(block.n === this.config.FORKS.fork_block_002){
                 let res = await this.db.prefork_002();
             }
+            
             // Create temp snapshot (state) of current block
             let tmp_snapshot_hash = await this.db.get_tmp_snapshot_hash(cur_hash);
             if (!tmp_snapshot_hash) {
