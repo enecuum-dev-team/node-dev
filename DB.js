@@ -2430,6 +2430,21 @@ class DB {
 		return this.transaction(sql.join(';'));
 	}
 
+	async prefork_003(){
+		/*
+			Функция выполняется перед блоком форка.
+			В результате ошибки в контракте 'transfer' в сети были созданы монеты, не учтённые в total_supply токена.
+			Меняем total_supply и max_supply с учетом этих монет.
+		 */
+		let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
+		let minted = BigInt("797234300000000000");
+		let ts = BigInt(token_info[0].total_supply) + minted;
+		let ms = BigInt(token_info[0].max_supply) + minted;
+		let sql = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
+									[ts, ms, Utils.ENQ_TOKEN_NAME]);
+		return this.request(sql);
+	}
+
 	async get_bridge_transactions(id, page_num, page_size){
 		let count = await this.request(mysql.format(`SELECT irew AS cnt FROM eindex WHERE id = ? AND irew IS NOT NULL ORDER BY irew DESC LIMIT 1`, id));
 		count = count[0].cnt;
