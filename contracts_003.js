@@ -4,17 +4,16 @@
  *
  * ******************************************
  *
- * contracts_002.js
+ * contracts_003.js
  * Enecuum smart contracts logic
  *
  * Working with actual chain
- * Added DEX contracts
- * Added Farms contracts
- * Added Commander ENEX contracts
+ * Added Bridge contracts
+ * ENX should be bridged and set in config.json
  *
  * ******************************************
  *
- * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ * Authors: I. Velichko, K. Zhidanov, A. Prudanov, M. Vasil'ev
  */
 
 const Utils = require('./Utils');
