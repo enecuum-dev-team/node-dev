@@ -506,6 +506,10 @@ class Cashier {
             console.log(`Diff:    ${formula - ledger} \r\n`);
             //if(formula - ledger !== BigInt(0))
             //    throw new Error(`There is a diff after block calculation, cashier stopped`);
+
+            // calc Diff
+            await this.diffCheck();
+
             return;
         }
 
@@ -1387,6 +1391,154 @@ class Cashier {
             if (run_once === false)
                 setTimeout(this.cashier.bind(this, run_once), this.config.cashier_interval_ms);
         }
+    }
+    async diffCheck(){
+        let state = await this.calculate_supply();
+        if(this.previous_state !== undefined){
+            this.cmp_supply(this.previous_state, state);
+        }
+        this.previous_state = state;
+    }
+
+    add(origin, value){
+        if (origin){
+            return BigInt(origin) + BigInt(value);
+        } else {
+            return BigInt(value);
+        }
+    }
+
+    pad(s){
+        return (s.toString() + "               ").substring(0, 9);
+    }
+
+    async calculate_supply(){
+        let base_token = Utils.ENQ_TOKEN_NAME;
+        let base_block_reward = BigInt(30460000000);
+
+        let farms = await this.db.request(`select * from farms;`);
+        let farmers = await this.db.request(`select *, level as entry_level from farmers;`);
+        let tokens = await this.db.request(`select * from tokens;`);
+        let accounts = await this.db.request(`select * from ledger;`);
+        let pools = await this.db.request(`select * from dex_pools;`);
+
+        let delegates = await this.db.request(`select * from delegates;`);
+        let undelegates = await this.db.request(`select * from undelegates;`);
+
+        let block = (await this.db.request(`SELECT n FROM kblocks WHERE hash = (SELECT \`value\` FROM stat WHERE \`key\` = 'cashier_ptr');`))[0].n;
+
+        //в базе много блоков
+        //let block = (await this.db.request(`select MAX(n) as n from kblocks;`))[0].n;
+
+        console.info(`block = ${block}`);
+
+        let supply = {};
+
+        //delegates
+        delegates.forEach(d => {
+            supply[base_token] = this.add(supply[base_token], BigInt(d.amount));
+            supply[base_token] = this.add(supply[base_token], BigInt(d.reward));
+        });
+
+        //undelegates
+        undelegates.forEach(u => {
+            supply[base_token] = this.add(supply[base_token], BigInt(u.amount));
+        });
+
+        //farms
+        farms.forEach((farm) => {
+            let {last_block, level, emission, block_reward, total_stake, reward_token, stake_token} = farm;
+
+            farm.emission = BigInt(farm.emission);
+
+            let distributed;
+            if  ((BigInt(block) - BigInt(last_block)) * BigInt(block_reward) < BigInt(emission)){
+                distributed = (BigInt(block) - BigInt(last_block)) * BigInt(block_reward);
+            } else {
+                distributed = BigInt(emission);
+            }
+            //console.silly(BigInt(distributed));
+
+            //if (false){
+            if (farm.total_stake > 0){
+                farm.emission = farm.emission - distributed;
+
+                distributed *= BigInt('10000000000000000000');
+                let new_level;
+                if (BigInt(total_stake) != 0){
+                    new_level = BigInt(level) + BigInt(distributed) / BigInt(total_stake);
+                } else {
+                    new_level = BigInt(level);
+                }
+                //console.silly(new_level);
+
+                farmers.filter(f => farm.farm_id === f.farm_id).forEach(farmer => {
+                    let {stake, entry_level} = farmer;
+
+                    let farmer_reward = (BigInt(stake) * (new_level - BigInt(entry_level))) / BigInt('10000000000000000000');
+                    //console.silly(BigInt(farmer_reward));
+
+                    supply[reward_token] = this.add(supply[reward_token], farmer_reward);
+                })
+            }
+
+            supply[reward_token] = this.add(supply[reward_token], farm.emission);
+            supply[stake_token] = this.add(supply[stake_token], farm.total_stake);
+        });
+
+        //ledger
+        accounts.forEach(account => {
+            supply[account.token] = this.add(supply[account.token], account.amount);
+        });
+
+        //pools
+        pools.forEach(pool => {
+            supply[pool.asset_1] = this.add(supply[pool.asset_1], pool.volume_1);
+            supply[pool.asset_2] = this.add(supply[pool.asset_2], pool.volume_2);
+        });
+
+        //block reward
+        //supply[base_token] = supply[base_token] - base_block_reward;
+        //console.log(calculated_supply);
+        //console.info(`${Object.keys(supply).length} tokens calculated`);
+
+        let diff_count = 0;
+
+        let result = [];
+
+        tokens.forEach(token => {
+            let supply_diff = BigInt(token.total_supply) - supply[token.hash];
+            result.push({hash:token.hash, ticker: token.ticker, supply:BigInt(token.total_supply), calculated_supply:supply[token.hash], diff: supply_diff});
+            /*
+            if (token.hash === base_token){
+                console.info({hash:token.hash, ticker: token.ticker, supply:BigInt(token.total_supply), calculated_supply:supply[token.hash], diff: supply_diff});
+            }*/
+
+            /*
+            if (supply_diff != 0){
+                console.warn(result[result.length-1]);
+                diff_count++;
+            }
+            */
+        });
+        //console.info(`${diff_count} diffs`);
+        return result;
+    }
+
+    cmp_supply(supply_old, supply_new){
+        let result = [];
+        supply_new.forEach(n => {
+            let i = supply_old.findIndex(o => n.hash === o.hash);
+            if (i > -1){
+                let o = supply_old[i];
+                if (n.diff != 0 || o.diff != 0){
+                    //console.warn(`diffs not match for token ${o.hash}  supply_diff: ${n.calculated_supply - o.calculated_supply} `);
+                    console.warn(`diffs not match for token ${o.hash}  supply:${n.supply/10000000000n}  calculated_supply:${n.calculated_supply/10000000000n}  supply_diff: ${n.calculated_supply - n.supply}  supply_diff_diff: ${n.calculated_supply - o.calculated_supply} `);
+                    result.push({hash: o.hash, ticker: o.ticker, old_supply: o.calculated_supply, new_supply: n.calculated_supply, supply_diff: n.calculated_supply - o.calculated_supply});
+                }
+            }
+        });
+        return result;
     }
 }
 
