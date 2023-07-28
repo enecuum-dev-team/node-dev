@@ -161,6 +161,8 @@ class ContractParser {
         else {
             for (let key in obj) {
                 let code = this.schema[key];
+                if (code === undefined)
+                    throw new Error(`Serialize_object error: Key '${key}' has no code in the schema`)
                 let res = this.serialize_object(obj[key]);
                 binary += this.sizeMarker(res.length + 8) + code + res;
             }
