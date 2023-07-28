@@ -48,6 +48,7 @@ const contracts_000 = [
     "0100", "0200", "0300", "0400", "1000",
     "1100", "1200", "1300", "1400"
 ];
+const contracts_001 = contracts_000;
 const contracts_002 = [
     "0100", "0200", "0300", "0400", "1000",
     "1100", "1200", "1300", "1400", "1500",
@@ -55,6 +56,7 @@ const contracts_002 = [
     "1b00", "1c00", "1d00", "1e00", "1f00",
     "2000", "2100", "2200"
 ];
+const contracts_pre_003 = contracts_002;
 const contracts_003 = [
     "0100", "0200", "0300", "0400", "1000",
     "1100", "1200", "1300", "1400", "1500",
@@ -98,7 +100,7 @@ class ContractParser {
         }
     }
     getContractsId(forks, n){
-        let Contracts = [contracts_000, contracts_000, contracts_002, contracts_003, contracts_003]; // first duplicate contracts_000 but fork_001 didn`t change the contracts list
+        let Contracts = [contracts_000, contracts_001, contracts_002, contracts_pre_003, contracts_003];
         let fork_keys = Object.keys(forks);
         let idx = fork_keys.length - 1;
         for(let i = 0; i < fork_keys.length; i++){
