@@ -87,6 +87,7 @@
         "fork_block_000": 0,
         "fork_block_001": 41000,
         "fork_block_002": 4676958,
+        "fork_block_pre_003": 4985104,
         "fork_block_003": 9999999
     },
     "randomx": {

@@ -100,8 +100,7 @@ class ContractFactory{
     }
 }
 function getContractMachine(forks, n){
-    //return n > forks.fork_block_002 ? c2 : c0;
-    let Contracts = [c0, c1, c2, c3]; // last c2 for enx_fork 
+    let Contracts = [c0, c1, c2, c2, c3];
     let fork_keys = Object.keys(forks);
     let idx = fork_keys.length - 1;
     for(let i = 0; i < fork_keys.length; i++){
@@ -112,9 +111,5 @@ function getContractMachine(forks, n){
     return Contracts[idx];
 }
 
-// module.exports = {
-//     getContractMachine,
-//     ContractFactory
-// };
 module.exports.getContractMachine = getContractMachine;
 module.exports.ContractFactory = ContractFactory;

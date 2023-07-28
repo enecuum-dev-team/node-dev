@@ -151,7 +151,7 @@ class Substate {
         this.bridge_confirmations = state.bridge_confirmations.map(a => Object.assign({}, a));
         this.bridge_settings = state.bridge_settings.map(a => Object.assign({}, a));
     }
-    fillByContract(contract, tx){
+    fillByContract(contract, tx, n = Number.MAX_SAFE_INTEGER){
         let type = contract.type;
         switch(type) {
             case "create_token" : {
@@ -164,38 +164,47 @@ class Substate {
                 break;
             case "delegate" : {
                 // create empty structure for [pos_id][delegator]
-                if (!this.delegation_ledger.hasOwnProperty(contract.data.parameters.pos_id)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id] = {}
+                let pos_id = contract.data.parameters.pos_id.toLowerCase();
+                let from = tx.from.toLowerCase();
+                if (!this.delegation_ledger.hasOwnProperty(pos_id)) {
+                    this.delegation_ledger[pos_id] = {}
                 }
-                if (!this.delegation_ledger[contract.data.parameters.pos_id].hasOwnProperty(tx.from)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id][tx.from] = {}
+                if (!this.delegation_ledger[pos_id].hasOwnProperty(from)) {
+                    this.delegation_ledger[pos_id][from] = {}
                 }
             }
                 break;
             case "undelegate" : {
                 // create empty structure for [pos_id][delegator]
-                if (!this.delegation_ledger.hasOwnProperty(contract.data.parameters.pos_id)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id] = {}
+                let pos_id = contract.data.parameters.pos_id.toLowerCase();
+                let from = tx.from.toLowerCase();
+                if (!this.delegation_ledger.hasOwnProperty(pos_id)) {
+                    this.delegation_ledger[pos_id] = {}
                 }
-                if (!this.delegation_ledger[contract.data.parameters.pos_id].hasOwnProperty(tx.from)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id][tx.from] = {}
+                if (!this.delegation_ledger[pos_id].hasOwnProperty(from)) {
+                    this.delegation_ledger[pos_id][from] = {}
                 }
             }
                 break;
             case "transfer" : {
                 // create empty undelegate structure for TX
-                if (!this.undelegates.hasOwnProperty(contract.data.parameters.undelegate_id)) {
-                    this.undelegates[contract.data.parameters.undelegate_id] = {}
+                let und_id = contract.data.parameters.undelegate_id;
+                if(n >= this.config.FORKS.fork_block_pre_003)
+                    und_id = contract.data.parameters.undelegate_id.toLowerCase();
+                if (!this.undelegates.hasOwnProperty(und_id)) {
+                    this.undelegates[und_id] = {}
                 }
             }
                 break;
             case "pos_reward" : {
                 // create empty structure for [pos_id][delegator]
-                if (!this.delegation_ledger.hasOwnProperty(contract.data.parameters.pos_id)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id] = {}
+                let pos_id = contract.data.parameters.pos_id.toLowerCase();
+                let from = tx.from.toLowerCase();
+                if (!this.delegation_ledger.hasOwnProperty(pos_id)) {
+                    this.delegation_ledger[pos_id] = {}
                 }
-                if (!this.delegation_ledger[contract.data.parameters.pos_id].hasOwnProperty(tx.from)) {
-                    this.delegation_ledger[contract.data.parameters.pos_id][tx.from] = {}
+                if (!this.delegation_ledger[pos_id].hasOwnProperty(from)) {
+                    this.delegation_ledger[pos_id][from] = {}
                 }
             }
                 break;

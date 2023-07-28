@@ -555,7 +555,7 @@ class Cashier {
                     // Create contract to get it's params. Without execution
                     contracts[tx.hash] = await CFactory.create(_tx, this.db, kblock);
                     // Pass contract's params to substate to add data
-                    substate.fillByContract(contracts[tx.hash], tx);
+                    substate.fillByContract(contracts[tx.hash], tx, kblock.n);
 
                 } catch (err) {
                     //if(err instanceof ContractError)
@@ -1344,7 +1344,9 @@ class Cashier {
             if(block.n === this.config.FORKS.fork_block_002){
                 let res = await this.db.prefork_002();
             }
-            
+            if(block.n === this.config.FORKS.fork_block_003){
+                let res = await this.db.prefork_003();
+            }
             // Create temp snapshot (state) of current block
             let tmp_snapshot_hash = await this.db.get_tmp_snapshot_hash(cur_hash);
             if (!tmp_snapshot_hash) {
