@@ -2454,6 +2454,7 @@ class DB {
 		let minted = BigInt("797234300000000000");
 		let ts = BigInt(token_info[0].total_supply) + minted;
 		let ms = BigInt(token_info[0].max_supply) + minted;
+		console.info(`fork_pre_003 actions: old ts: ${BigInt(token_info[0].total_supply)} new ts: ${ts.toString()}, old ms: ${BigInt(token_info[0].max_supply)}, new ms: ${ms.toString()}`)
 		let sql = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
 									[ts, ms, Utils.ENQ_TOKEN_NAME]);
 		return this.request(sql);

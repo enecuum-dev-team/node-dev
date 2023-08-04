@@ -1341,12 +1341,6 @@ class Cashier {
                 block = await this.db.peek_tail();
             if (block === undefined)
                 return;
-            if(block.n === this.config.FORKS.fork_block_002){
-                let res = await this.db.prefork_002();
-            }
-            if(block.n === this.config.FORKS.fork_block_003){
-                let res = await this.db.prefork_003();
-            }
             // Create temp snapshot (state) of current block
             let tmp_snapshot_hash = await this.db.get_tmp_snapshot_hash(cur_hash);
             if (!tmp_snapshot_hash) {
@@ -1371,6 +1365,12 @@ class Cashier {
             }
             if (next) {
                 console.trace(`cashier cur_block: ${cur_hash} , next_block: ${next.hash}`);
+                if(block.n === this.config.FORKS.fork_block_002){
+                    let res = await this.db.prefork_002();
+                }
+                if(block.n === this.config.FORKS.fork_block_003){
+                    let res = await this.db.prefork_003();
+                }
                 if(block.n >= this.config.FORKS.fork_block_002){
                     await this.ledger_update_002(block, this.config.cashier_chunk_size);
                 }
