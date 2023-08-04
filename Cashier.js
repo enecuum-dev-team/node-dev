@@ -488,6 +488,12 @@ class Cashier {
 
             console.info(`---------------------------------`);
 
+            if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_002)){
+                let res = await this.db.prefork_002();
+            }
+            if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_003)){
+                let res = await this.db.prefork_003();
+            }
             // console.log(this.mrewards, this.refrewards, this.srewards, this.krewards);
             // console.log(`Total:   ${this.mrewards + this.refrewards + this.srewards + this.krewards}`)
             // console.log(`Formule: ${BigInt(token_enq.block_reward * (kblock.n)) }`)
@@ -1365,12 +1371,6 @@ class Cashier {
             }
             if (next) {
                 console.trace(`cashier cur_block: ${cur_hash} , next_block: ${next.hash}`);
-                if(block.n === this.config.FORKS.fork_block_002){
-                    let res = await this.db.prefork_002();
-                }
-                if(block.n === this.config.FORKS.fork_block_003){
-                    let res = await this.db.prefork_003();
-                }
                 if(block.n >= this.config.FORKS.fork_block_002){
                     await this.ledger_update_002(block, this.config.cashier_chunk_size);
                 }
