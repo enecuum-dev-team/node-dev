@@ -1499,7 +1499,21 @@ class DB {
 			WHERE L.id = ? AND L.token = ?`, [id, token])))[0];
 		return (balance !== undefined) ? balance : ({amount : 0, decimals : 10});
 	}
-
+	async get_full_native_balance(id, token){
+		let data = await this.get_balance(id, token);
+		data.ledger = data.amount;
+		if(token === Utils.ENQ_TOKEN_NAME){
+			let delegated_data = await this.get_delegated_balance(id);
+			let transit = await this.get_transit_balance(id);
+			let undelegated = await this.get_undelegated_balance(id);
+			data.delegated = delegated_data.delegated;
+			data.reward = delegated_data.reward;
+			data.transit = transit;
+			data.undelegated = undelegated;
+			data.amount = BigInt(data.ledger) + BigInt(data.delegated) + BigInt(data.reward) + BigInt(data.transit) + BigInt(data.undelegated);
+		}
+		return data;
+	}
 	async get_balance_all(id){
 		let balance = await this.request(mysql.format(`SELECT L.amount as amount, L.token as token, T.ticker as ticker, T.decimals as decimals, IFNULL(T.minable, 0) as minable, IFNULL(T.reissuable, 0) as reissuable
 			FROM ledger as L 
@@ -2428,6 +2442,22 @@ class DB {
 									SET U.delegator = T.from;`);
 		let sql = [sql1, sql2, sql3];
 		return this.transaction(sql.join(';'));
+	}
+
+	async prefork_003(){
+		/*
+			Функция выполняется перед блоком форка.
+			В результате ошибки в контракте 'transfer' в сети были созданы монеты, не учтённые в total_supply токена.
+			Меняем total_supply и max_supply с учетом этих монет.
+		 */
+		let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
+		let minted = BigInt("797234300000000000");
+		let ts = BigInt(token_info[0].total_supply) + minted;
+		let ms = BigInt(token_info[0].max_supply) + minted;
+		console.info(`fork_pre_003 actions: old ts: ${BigInt(token_info[0].total_supply)} new ts: ${ts.toString()}, old ms: ${BigInt(token_info[0].max_supply)}, new ms: ${ms.toString()}`)
+		let sql = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
+									[ts, ms, Utils.ENQ_TOKEN_NAME]);
+		return this.request(sql);
 	}
 
 	async get_bridge_transactions(id, page_num, page_size){

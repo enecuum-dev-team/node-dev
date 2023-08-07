@@ -65,7 +65,7 @@ class LPOS {
             let msk = this.config.ecc[this.config.ecc.ecc_mode].msk;
             let leader_sign = Utils.leader_sign(this.config.leader_id, msk, tail.hash, m_root, this.ECC, this.config.ecc);
 
-            console.info(`leader_sign ${JSON.stringify(leader_sign)}` );
+            console.debug(`leader_sign ${JSON.stringify(leader_sign)}` );
             this.current_merkle_root = {
                 kblocks_hash: tail.hash,
                 snapshot_hash,

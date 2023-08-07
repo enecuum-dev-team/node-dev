@@ -4,17 +4,16 @@
  *
  * ******************************************
  *
- * contracts_002.js
+ * contracts_003.js
  * Enecuum smart contracts logic
  *
  * Working with actual chain
- * Added DEX contracts
- * Added Farms contracts
- * Added Commander ENEX contracts
+ * Added Bridge contracts
+ * ENX should be bridged and set in config.json
  *
  * ******************************************
  *
- * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ * Authors: I. Velichko, K. Zhidanov, A. Prudanov, M. Vasil'ev
  */
 
 const Utils = require('./Utils');
@@ -2758,6 +2757,8 @@ class BridgeAddNetworkContract extends BridgeOwnerContract {
 
     async bridgeControl(tx, substate, kblock, config) {
         let {id, decimals} = this.data.parameters
+        if (substate.get_known_networks().find(network => network.id === id))
+            throw new ContractError(`Network ${id} already exists`)
         substate.add_network(id, decimals)
     }
 }
@@ -2773,7 +2774,10 @@ class BridgeRemoveNetworkContract extends BridgeOwnerContract {
     }
 
     async bridgeControl(tx, substate, kblock, config) {
-        substate.remove_network(this.data.parameters.id)
+        let id = this.data.parameters.id
+        if (!substate.get_known_networks().find(network => network.id === id))
+            throw new ContractError(`Network ${id} doesn't exist`)
+        substate.remove_network(id)
     }
 }
 

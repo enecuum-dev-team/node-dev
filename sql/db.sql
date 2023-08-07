@@ -566,11 +566,12 @@ CREATE TABLE `bridge_confirmations` (
 DROP TABLE IF EXISTS `bridge_settings`;
 
 CREATE TABLE `bridge_settings` (
+  `id` tinyint DEFAULT 1,
   `owner` varchar(66) NOT NULL,
   `threshold` TINYINT unsigned DEFAULT 1,
   `validators` varchar(1000),
   `known_networks` varchar(1000),
-  PRIMARY KEY (`owner`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dump completed on 2020-04-14 15:09:51

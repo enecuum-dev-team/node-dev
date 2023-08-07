@@ -488,6 +488,12 @@ class Cashier {
 
             console.info(`---------------------------------`);
 
+            if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_002)){
+                let res = await this.db.prefork_002();
+            }
+            if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_003)){
+                let res = await this.db.prefork_003();
+            }
             // console.log(this.mrewards, this.refrewards, this.srewards, this.krewards);
             // console.log(`Total:   ${this.mrewards + this.refrewards + this.srewards + this.krewards}`)
             // console.log(`Formule: ${BigInt(token_enq.block_reward * (kblock.n)) }`)
@@ -555,7 +561,7 @@ class Cashier {
                     // Create contract to get it's params. Without execution
                     contracts[tx.hash] = await CFactory.create(_tx, this.db, kblock);
                     // Pass contract's params to substate to add data
-                    substate.fillByContract(contracts[tx.hash], tx);
+                    substate.fillByContract(contracts[tx.hash], tx, kblock.n);
 
                 } catch (err) {
                     //if(err instanceof ContractError)
@@ -1341,10 +1347,6 @@ class Cashier {
                 block = await this.db.peek_tail();
             if (block === undefined)
                 return;
-            if(block.n === this.config.FORKS.fork_block_002){
-                let res = await this.db.prefork_002();
-            }
-            
             // Create temp snapshot (state) of current block
             let tmp_snapshot_hash = await this.db.get_tmp_snapshot_hash(cur_hash);
             if (!tmp_snapshot_hash) {

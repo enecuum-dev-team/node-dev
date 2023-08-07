@@ -7,23 +7,19 @@
  * contracts_002.js
  * Enecuum smart contracts logic
  *
- * Working with actual chain
  * Added DEX contracts
  * Added Farms contracts
- * Added Commander ENEX contracts
+ * Added Commander ENEX contracts WITHOUT ENX
  *
  * ******************************************
  *
- * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev, I. Velichko
  */
 
 const Utils = require('./Utils');
-const {cTypes, cValidate} = require('./contractValidator')
 const {ContractError} = require('./errors');
 const ContractMachine = require('./SmartContracts');
 const ContractParser = require('./contractParser').ContractParser;
-const crypto = require('crypto');
-const zlib = require('zlib');
 
 let MAX_DECIMALS = BigInt(10);
 let ENQ_INTEGER_COIN = BigInt(10000000000);
