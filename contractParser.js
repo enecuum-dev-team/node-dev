@@ -33,11 +33,22 @@ let schema = {
     "pool_sell_exact_routed" :  "2000",
     "pool_buy_exact" :          "2100",
     "pool_buy_exact_routed" :   "2200",
+    "bridge_lock" :             "2300",
+    "bridge_claim_init" :       "2400",
+    "bridge_claim_confirm" :    "2500",
+    // "claim" :                   "2600",
+    "bridge_set_owner" :        "2700",
+    "bridge_set_threshold" :    "2800",
+    "bridge_add_validator" :    "2900",
+    "bridge_remove_validator" : "2a00",
+    "bridge_add_network" :      "2b00",
+    "bridge_remove_network" :   "2c00"
 };
 const contracts_000 = [
     "0100", "0200", "0300", "0400", "1000",
     "1100", "1200", "1300", "1400"
 ];
+const contracts_001 = contracts_000;
 const contracts_002 = [
     "0100", "0200", "0300", "0400", "1000",
     "1100", "1200", "1300", "1400", "1500",
@@ -45,10 +56,20 @@ const contracts_002 = [
     "1b00", "1c00", "1d00", "1e00", "1f00",
     "2000", "2100", "2200"
 ];
+const contracts_pre_003 = contracts_002;
+const contracts_003 = [
+    "0100", "0200", "0300", "0400", "1000",
+    "1100", "1200", "1300", "1400", "1500",
+    "1600", "1700", "1800", "1900", "1a00",
+    "1b00", "1c00", "1d00", "1e00", "1f00",
+    "2000", "2100", "2200", "2300", "2400",
+    "2500", "2700", "2800", "2900", "2a00", 
+    "2b00", "2c00"
+];
 class ContractParser {
     constructor() {
         this.schema = schema;
-        this.contracts = contracts_002;
+        this.contracts = contracts_003;
     }
     toHex(d) {
         let hex = Number(d).toString(16);
@@ -79,7 +100,7 @@ class ContractParser {
         }
     }
     getContractsId(forks, n){
-        let Contracts = [contracts_000, contracts_000, contracts_002, contracts_002]; // first duplicate contracts_000 but fork_001 didn`t change the contracts list
+        let Contracts = [contracts_000, contracts_001, contracts_002, contracts_pre_003, contracts_003];
         let fork_keys = Object.keys(forks);
         let idx = fork_keys.length - 1;
         for(let i = 0; i < fork_keys.length; i++){
@@ -142,6 +163,8 @@ class ContractParser {
         else {
             for (let key in obj) {
                 let code = this.schema[key];
+                if (code === undefined)
+                    throw new Error(`Serialize_object error: Key '${key}' has no code in the schema`)
                 let res = this.serialize_object(obj[key]);
                 binary += this.sizeMarker(res.length + 8) + code + res;
             }
