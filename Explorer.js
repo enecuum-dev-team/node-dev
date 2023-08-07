@@ -20,6 +20,7 @@ const NodeapiService = require('./nodeapi.service').NodeapiService;
 const Utils = require('./Utils');
 const Transport = require('./Transport').Tip;
 const ContractMachine = require('./SmartContracts');
+let zlib = require("zlib")
 //const swaggerJSDoc = require('swagger-jsdoc');
 let swaggerSpec;
 
@@ -77,9 +78,48 @@ class Explorer {
 
 		this.app.use(express.json());
 
+        this.app.get('/api/v1/bridge_last_transfer', async (req, res) => {
+            console.trace('requested transfers', req.query);
+            if (!req.query.dst_address || !req.query.src_address || !req.query.src_network || !req.query.src_hash)
+                res.send([])
+            else
+                res.send(await this.db.get_bridge_claim_transfers_by_dst_address(req.query.dst_address, req.query.src_address, req.query.src_network, req.query.src_hash))
+        })
+
+        this.app.get('/api/v1/bridge_last_lock_transfer', async (req, res) => {
+            console.trace('requested transfers', req.query);
+            if (!req.query.dst_address || !req.query.src_address || !req.query.dst_network || !req.query.src_hash)
+                res.send("0")
+            else {
+                let channel_id = Utils.get_channel_id(req.query)
+                let lock_transfer = await this.db.get_last_bridge_lock_transfer_by_id(channel_id)
+                if (!lock_transfer.length)
+                    res.send("0")
+                else
+                    res.send(lock_transfer[0].nonce.toString())
+            }
+        })
+
+        this.app.get('/api/v1/bridge_minted_token', async (req, res) => {
+            console.trace('requested minted_token', req.query);
+            try {
+                res.send(await this.db.get_minted_all())
+            } catch (e) {
+                res.send([])
+            }
+        })
+
 		this.app.get('/api/v1/network_info', async (req, res) => {
 			console.trace('requested network_info', req.query);
 			let native_token = (await this.db.get_tokens_info([this.config.native_token_hash]))[0];
+            let bridge = this.config.bridge
+            let bridge_settings = await this.db.get_bridge_settings()
+            if (bridge_settings.length) {
+                bridge.BRIDGE_OWNER = bridge_settings[0].owner
+                bridge.BRIDGE_THRESHOLD = bridge_settings[0].threshold
+                bridge.BRIDGE_VALIDATORS = bridge_settings[0].validators
+                bridge.BRIDGE_KNOWN_NETWORKS = bridge_settings[0].known_networks
+            }
 			let data = {
 				target_speed: this.config.target_speed,
 				reward_ratio: this.config.reward_ratio,
@@ -95,7 +135,8 @@ class Explorer {
 					count:this.config.mblock_slots.count,
 					min_stake:this.config.mblock_slots.min_stake
 				},
-				dex : this.config.dex
+				dex : this.config.dex,
+                bridge : bridge
 			};
 			res.send(data);
 		});
@@ -314,7 +355,7 @@ class Explorer {
 			res.send(data);
 		});
 
-		this.app.get('/api/v1/balance_all', async (req, res) => {
+        this.app.get('/api/v1/balance_all', async (req, res) => {
 			console.trace('requested balances', req.query);
 			let id = req.query.id;
 			let data = await this.db.get_balance_all(id);
@@ -461,7 +502,6 @@ class Explorer {
 
 		this.app.post('/api/v1/tx', async (req, res, next) => {
 			let txs = req.body;
-			console.trace(`post txs`, JSON.stringify(txs));
 
 			if (txs.length !== 1)
 				return res.send({err: 1, message: "Only 1 TX can be sent"});
@@ -645,7 +685,7 @@ class Explorer {
 		*       200:
 		*         description: tickers
 		*/
-		this.app.get('/api/v1/get_tickers_all', async (req, res) => {
+        this.app.get('/api/v1/get_tickers_all', async (req, res) => {
 			console.trace('get_tickers_all', req.query);
 			let ticker_all = await this.db.get_tickers_all();
 			let that = this;
@@ -1056,6 +1096,68 @@ class Explorer {
 		  res.setHeader('Content-Type', 'application/json');
 		  res.send(swaggerSpec);
 		  console.log(swaggerSpec);
+		});
+		this.app.get('/api/v1/ext/account_encode_data_transactions', async (req, res) => {
+            console.trace('test', req.query);
+            let data = await this.db.get_account_transactions(req.query.id, req.query.page, 10);
+            for (let rec of data.records) {
+                if(rec.data !== undefined){
+                    let compressed = rec.data;
+                    let decompressed = zlib.brotliDecompressSync(Buffer.from(compressed, 'base64'))
+                    rec.data_encode = JSON.parse(decompressed.toString())
+                }
+            }
+            res.send(data);
+        });
+		this.app.get('/api/v1/ext/bridge_transactions', async (req, res) => {
+			console.trace('test', req.query);
+			let page_size = req.query.page_size != undefined ? req.query.page_size : 10;
+			let data = await this.db.get_bridge_transactions(req.query.id, req.query.page, page_size);
+			for (let rec of data.records) {
+				if (rec.data !== undefined && rec.data !== "") {
+					console.log(rec.data)
+					let compressed = rec.data.substring(rec.data.indexOf("compressed_data") + 15 + 8);
+					console.log(compressed)
+					let decompressed = zlib.brotliDecompressSync(Buffer.from(compressed, 'base64'))
+					rec.data_encode = JSON.parse(decompressed.toString())
+					switch (rec.rectype) {
+						case "ibrgclaiminit":
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.data_encode.dst_address,
+								dst_network: rec.data_encode.dst_network,
+								nonce: rec.data_encode.nonce,
+								src_address: rec.data_encode.src_address,
+								src_hash: rec.data_encode.src_hash,
+								src_network: rec.data_encode.src_network
+							});
+							break;
+						case "ibrgburn":
+						case "ibrglock":
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.data_encode.dst_address,
+								dst_network: rec.data_encode.dst_network,
+								nonce: rec.data_encode.nonce,
+								src_address: rec.from,
+								src_hash: rec.data_encode.hash,
+								src_network: this.config.bridge.BRIDGE_NETWORK_ID
+							});
+							break;
+						case "ibrgmint":
+						case "ibrgunlock":
+							rec.bridge_claim_transfers = await this.db.get_bridge_claim_transfers_by_hashes([rec.data_encode.ticket_hash]);
+							rec.transfer_id = Utils.get_transfer_id({
+								dst_address: rec.bridge_claim_transfers[0].dst_address,
+								dst_network: rec.bridge_claim_transfers[0].dst_network,
+								nonce: rec.bridge_claim_transfers[0].nonce,
+								src_address: rec.bridge_claim_transfers[0].src_address,
+								src_hash: rec.bridge_claim_transfers[0].src_hash,
+								src_network: rec.bridge_claim_transfers[0].src_network
+							});
+							break;
+					}
+				}
+			}
+			res.send(data);
 		});
 		
 		let routes = [];

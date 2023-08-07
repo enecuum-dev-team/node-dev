@@ -98,7 +98,7 @@ let utils = {
 	DEX_COMMANDER_FEE : BigInt(config.dex.DEX_COMMANDER_FEE),
 	DEX_POOL_FEE : BigInt(config.dex.DEX_POOL_FEE),
 	MINER_INTERVAL : 1000,
-	M_ROOT_RESEND_INTERVAL : 40000,
+	M_ROOT_RESEND_INTERVAL : 3000,
 	POS_MINER_RESEND_INTERVAL : 30000,
 	MINER_CHECK_TARGET_INTERVAL : 100,
 	MAX_COUNT_NOT_COMPLETE_BLOCK : 200,
@@ -107,8 +107,9 @@ let utils = {
 	SYNC_FAILURES_LIMIT : 5,
 	SYNC_IGNORE_TIMEOUT : 7200000, //ms  2 hours
 	MAX_NONCE : 2147483647, //Maximum Value Signed Int
+    ...config.bridge,
 
-	pid_cached : 0,
+    pid_cached : 0,
 	lastTime : Date.now(),
 	lastInput : 0,
 	lastError : 0,
@@ -174,6 +175,17 @@ let utils = {
 			console.error("Signing error: ", err);
 			return null;
 		}
+	},
+	get_channel_id : function(lock_data) {
+        const model = ["dst_address", "dst_network", "src_address", "src_hash"]
+        let valuesFromObject = model.map(lock_param => lock_data[lock_param])
+        return crypto.createHash('sha256').update(valuesFromObject.sort().join("")).digest('hex')
+    },
+	get_transfer_id : function(ticket){
+		let param_names = ["dst_address", "dst_network", "nonce", "src_address", "src_hash", "src_network"];
+		let params_str = param_names.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("");
+		let transfer_id = crypto.createHash('sha256').update(params_str).digest('hex');
+		return transfer_id;
 	},
 	check_valid_percent_params : function(param_obj){
 		let len = Object.keys(param_obj).length;
@@ -241,11 +253,23 @@ let utils = {
 		let dex_pools_hash = "";
 		let farms_hash = "";
 		let farmers_hash = "";
+        let minted = "";
+        let bridge_claim_transfers = "";
+        let bridge_lock_transfers = "";
+        let bridge_confirmations = "";
+        let bridge_settings = "";
 		if (height >= config.FORKS.fork_block_002) {
 			dex_pools_hash = crypto.createHash('sha256').update(snapshot.dex_pools.map(dex_pool => this.hash_dex_pool(dex_pool)).sort().join("")).digest('hex');
 			farms_hash = crypto.createHash('sha256').update(snapshot.farms.map(farm => this.hash_farm(farm)).sort().join("")).digest('hex');
 			farmers_hash = crypto.createHash('sha256').update(snapshot.farmers.map(farmer => this.hash_farmer(farmer)).sort().join("")).digest('hex');
 		}
+        if (height >= config.FORKS.fork_block_003) {
+			minted = crypto.createHash('sha256').update(snapshot.minted.map(m => this.hash_minted(m)).sort().join("")).digest('hex');
+            bridge_claim_transfers = crypto.createHash('sha256').update(snapshot.bridge_claim_transfers.map(transfer => this.hash_bridge_claim_transfers(transfer)).sort().join("")).digest('hex');
+            bridge_lock_transfers = crypto.createHash('sha256').update(snapshot.bridge_lock_transfers.map(transfer => this.hash_bridge_lock_transfers(transfer)).sort().join("")).digest('hex');
+            bridge_confirmations = crypto.createHash('sha256').update(snapshot.bridge_confirmations.map(confirmation => this.hash_confirmations(confirmation)).sort().join("")).digest('hex');
+            bridge_settings = crypto.createHash('sha256').update(snapshot.bridge_settings.map(bs => this.hash_bridge_settings(bs)).sort().join("")).digest('hex');
+        }
 		return crypto.createHash('sha256').update(snapshot.kblocks_hash.toLowerCase() +
 			ledger_accounts_hash.toLowerCase() +
 			tokens_hash.toLowerCase() +
@@ -254,8 +278,74 @@ let utils = {
 			undelegates_hash.toLowerCase() +
 			dex_pools_hash.toLowerCase() +
 			farms_hash.toLowerCase() +
-			farmers_hash.toLowerCase()).digest('hex');
+			farmers_hash.toLowerCase() +
+            minted.toLowerCase() +
+            bridge_claim_transfers.toLowerCase() +
+            bridge_lock_transfers.toLowerCase() +
+            bridge_confirmations.toLowerCase() +
+            bridge_settings.toLowerCase()).digest('hex');
 	},
+    hash_fields : function(row, fields) {
+		if (!row)
+			return undefined;
+		let str = fields.map(v => crypto.createHash('sha256').update(row[v].toString().toLowerCase()).digest('hex')).join("");
+		return crypto.createHash('sha256').update(str).digest('hex');
+    },
+    hash_minted : function(minted) {
+        let str = [
+            'wrapped_hash', 
+            'origin_network', 
+            'origin_hash', 
+            'origin_decimals'
+        ];
+        return this.hash_fields(minted, str);
+    },
+    hash_bridge_claim_transfers : function(transfer) {
+        let str = [
+            'nonce',
+            'src_address',
+            'dst_address',
+            'src_network',
+            'amount',
+            'dst_network',
+            'src_hash',
+            'ticket_hash',
+            'ticker',
+            'origin_network',
+            'origin_hash',
+            'origin_decimals',
+            'name'
+        ];
+        return this.hash_fields(transfer, str);
+    },
+    hash_bridge_lock_transfers: function(transfer) {
+        let str = [
+            'channel_id',
+			`dst_address`,
+			`dst_network`,
+			`src_address`,
+			`src_hash`,
+            'nonce'
+        ];
+        return this.hash_fields(transfer, str);
+    },
+    hash_confirmations : function(confirmation) {
+        let str = [
+            'validator_id',
+            'validator_sign',
+            'ticket_hash'
+        ];
+        return this.hash_fields(confirmation, str);
+    },
+    hash_bridge_settings : function(bridge_settings) {
+        let str = [
+            'owner',
+            'threshold',
+            'validators',
+            'known_networks'
+        ];
+        return this.hash_fields(bridge_settings, str);
+    },
 	hash_farm : function(farm){
 		if (!farm)
 			return undefined;
@@ -526,6 +616,57 @@ let utils = {
 			console.error(e);
 		}
 		return isValid;
+	},
+	valid_full_microblocks_000(mblocks, accounts, tokens, check_txs_sign){
+		let total_tx_count = 0;
+		mblocks = mblocks.filter((mblock)=>{
+			let tok_idx = tokens.findIndex(t => t.hash === mblock.token);
+			if(tok_idx < 0){
+				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : token not found`);
+				return false;
+			}
+			if(tokens[tok_idx].minable !== 1){
+				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : token not minable`);
+				return false;
+			}
+			let pub = accounts.findIndex(a => ((a.id === mblock.publisher) && ((a.token === mblock.token))));
+			if (pub < 0){
+				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : publisher not found`);
+				return false;
+			}
+			if ((accounts[pub].amount < tokens[tok_idx].min_stake)){
+				console.trace(`ignoring mblock ${JSON.stringify(mblock)} due to low stake`);
+				return false;
+			}
+
+			let recalc_hash = this.hash_mblock(mblock);
+			let signed_msg = recalc_hash + (mblock.referrer ? (mblock.referrer) : "") + mblock.token;
+
+			if(this.ecdsa_verify(mblock.publisher, mblock.sign, signed_msg)){
+				console.trace(`mblock sign valid`);
+				if (!check_txs_sign)
+					return true;
+				total_tx_count += mblock.txs.length;
+				mblock.txs = mblock.txs.filter((tx)=>{
+					let hash = this.hash_tx_fields(tx);
+					if(!this.ecdsa_verify(tx.from, tx.sign, hash)){
+						console.warn(`Invalid sign (${tx.sign}) tx ${hash}`);
+						return false;
+					}else
+						return true;
+				});
+				if(mblock.txs.length === 0){
+					console.warn(`Ignore empty mblock ${mblock.hash}`);
+					return false;
+				}
+				return true;
+			} else{
+				console.warn(`Invalid sign mblock ${mblock.hash}`);
+				return false;
+			}
+		});
+		console.trace(`total tx count = ${total_tx_count}`);
+		return mblocks;
 	},
 	locklist:[
 		"03fd7ed9000c1c3bd65fdfed52a1136c59c39f966d3a315ee54c6ea2a93eb930ee"
@@ -850,6 +991,7 @@ let utils = {
 		return newtonIteration(value, BigInt(1));
 	}
 };
+
 
 module.exports = utils;
 module.exports.ECC = ECC;

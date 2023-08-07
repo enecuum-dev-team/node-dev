@@ -71,7 +71,7 @@ let Validator = {
 	hash_regexp : /^[0-9a-fA-F]{64}$/i,
 	digit_regexp : /(^0$)|(^[1-9]\d*$)/,
 	hex_regexp : /^[A-Fa-f0-9]+$/,
-	name_regexp : /^[0-9a-zA-Z _]{0,512}$/,
+	name_regexp : /^[0-9a-zA-Z\/\+= _\-/.]{0,512}$/,
 	whitelist : [
 		"02949a09b4deb8e5c363bff336bc38033eda5b22abdd933c56eb6293ffb38bb2e5",
 		"02bdfcc38d5df4bdb0382e052e06366790ac246fc0c3ee2bce43527514504d4482",
