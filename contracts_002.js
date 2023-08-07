@@ -7,14 +7,13 @@
  * contracts_002.js
  * Enecuum smart contracts logic
  *
- * Working with actual chain
  * Added DEX contracts
  * Added Farms contracts
- * Added Commander ENEX contracts
+ * Added Commander ENEX contracts WITHOUT ENX
  *
  * ******************************************
  *
- * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev
+ * Authors: K. Zhidanov, A. Prudanov, M. Vasil'ev, I. Velichko
  */
 
 const Utils = require('./Utils');
@@ -1070,11 +1069,11 @@ class PoolLiquidityRemoveContract extends Contract {
     }
 }
 class PoolLiquiditySellExactContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1207,11 +1206,11 @@ class PoolLiquiditySellExactContract extends Contract {
     }
 }
 class PoolLiquidityBuyExactContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -1821,11 +1820,11 @@ class FarmsAddEmissionContract extends Contract {
 }
 
 class DexCmdDistributeContract extends Contract {
-    constructor(data, enx_hash) {
+    constructor(data) {
         super();
         this.data = data;
         this.type = this.data.type;
-        this.enx_hash = enx_hash
+        this.enx_hash = "";
         if(!this.validate())
             throw new ContractError("Incorrect contract");
     }
@@ -2312,6 +2311,7 @@ class FarmGetRewardContract extends Contract {
         };
     }
 }
+
 
 module.exports.Contract = Contract;
 

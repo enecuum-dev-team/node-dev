@@ -133,6 +133,11 @@ class DB {
 			DELETE FROM  undelegates;
 			DELETE FROM  tokens_index;
 			DELETE FROM  dex_pools;
+            DELETE FROM  minted;
+            DELETE FROM  bridge_claim_transfers;
+            DELETE FROM  bridge_lock_transfers;
+            DELETE FROM  bridge_confirmations;
+            DELETE FROM  bridge_settings;
 			DELETE FROM  farms;
 			DELETE FROM  farmers`);
 
@@ -198,13 +203,51 @@ class DB {
 				farms_chunks.forEach(chunk => {
 					farms.push(mysql.format("INSERT INTO farms (farm_id, stake_token, reward_token, emission, block_reward, level, total_stake, last_block, accumulator) VALUES ? ", [chunk.map(farm => [farm.farm_id, farm.stake_token, farm.reward_token, farm.emission, farm.block_reward, farm.level , farm.total_stake , farm.last_block, farm.accumulator])]));
 				});
-			}let farmers = [];
+			}
+            let farmers = [];
 			if (snapshot.farmers && snapshot.farmers.length > 0) {
 				let farmers_chunks = snapshot.farmers.chunk(INSERT_CHUNK_SIZE);
 				farmers_chunks.forEach(chunk => {
 					farmers.push(mysql.format("INSERT INTO farmers (farm_id, farmer_id, stake, level) VALUES ? ", [chunk.map(farmer => [farmer.farm_id, farmer.farmer_id, farmer.stake, farmer.level])]));
 				});
 			}
+            let minted = [];
+			if (snapshot.minted && snapshot.minted.length > 0) {
+                let minted_chunks = snapshot.minted.chunk(INSERT_CHUNK_SIZE);
+                minted_chunks.forEach(chunk => {
+					minted.push(mysql.format("INSERT INTO minted (wrapped_hash, origin_network, origin_hash, origin_decimals) VALUES ? ", [chunk.map(minted => [minted.wrapped_hash, minted.origin_network, minted.origin_hash, minted.origin_decimals])]));
+				});
+			}
+            let bridge_claim_transfers = [];
+			if (snapshot.bridge_claim_transfers && snapshot.bridge_claim_transfers.length > 0) {
+                let bridge_claim_transfers_chunks = snapshot.bridge_claim_transfers.chunk(INSERT_CHUNK_SIZE);
+                bridge_claim_transfers_chunks.forEach(chunk => {
+					bridge_claim_transfers.push(mysql.format("INSERT INTO bridge_claim_transfers (src_address, dst_address, dst_network, src_network, src_hash, nonce, ticket_hash, ticker, amount, origin_network, origin_hash, origin_decimals, name) VALUES ? ", [chunk.map(bridge_claim_transfers => [bridge_claim_transfers.src_address, bridge_claim_transfers.dst_address, bridge_claim_transfers.dst_network, bridge_claim_transfers.src_network, bridge_claim_transfers.src_hash, bridge_claim_transfers.nonce, bridge_claim_transfers.ticket_hash, bridge_claim_transfers.ticker, bridge_claim_transfers.amount, bridge_claim_transfers.origin_network, bridge_claim_transfers.origin_hash, bridge_claim_transfers.origin_decimals, bridge_claim_transfers.name])]));
+				});
+			}
+            let bridge_lock_transfers = [];
+			if (snapshot.bridge_lock_transfers && snapshot.bridge_lock_transfers.length > 0) {
+                let bridge_lock_transfers_chunks = snapshot.bridge_lock_transfers.chunk(INSERT_CHUNK_SIZE);
+                bridge_lock_transfers_chunks.forEach(chunk => {
+					bridge_lock_transfers.push(mysql.format("INSERT INTO bridge_lock_transfers (channel_id, dst_address, dst_network, src_address, src_hash, nonce) VALUES ? ", [chunk.map(bridge_lock_transfers => [bridge_lock_transfers.channel_id, bridge_lock_transfers.dst_address, bridge_lock_transfers.dst_network, bridge_lock_transfers.src_address, bridge_lock_transfers.src_hash, bridge_lock_transfers.nonce])]));
+				});
+			}
+            let bridge_confirmations = [];
+            if (snapshot.bridge_confirmations && snapshot.bridge_confirmations.length > 0) {
+                let confirmations_chunks = snapshot.bridge_confirmations.chunk(INSERT_CHUNK_SIZE);
+                confirmations_chunks.forEach(chunk => {
+					bridge_confirmations.push(mysql.format("INSERT INTO bridge_confirmations (validator_id, validator_sign, ticket_hash) VALUES ? ", [chunk.map(bridge_confirmations => [bridge_confirmations.validator_id, bridge_confirmations.validator_sign, bridge_confirmations.ticket_hash])]));
+				});
+			}
+
+            let bridge_settings = [];
+            if (snapshot.bridge_settings && snapshot.bridge_settings.length > 0) {
+                let bridge_settings_chunks = snapshot.bridge_settings.chunk(INSERT_CHUNK_SIZE);
+                bridge_settings_chunks.forEach(chunk => {
+                    bridge_settings.push(mysql.format("INSERT INTO bridge_settings (threshold, owner, validators, known_networks) VALUES ? ", [chunk.map(bridge_settings => [bridge_settings.threshold, bridge_settings.owner, bridge_settings.validators, bridge_settings.known_networks])]));
+                });
+			}
+
 			let cashier_ptr = mysql.format("INSERT INTO stat (`key`, `value`) VALUES ('cashier_ptr', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(value)", snapshot.kblocks_hash);
             //let unlock = mysql.format(`UNLOCK TABLES`);
 			let sql_put_snapshot = "";
@@ -213,7 +256,7 @@ class DB {
 				sql_put_snapshot = mysql.format("INSERT INTO snapshots SET ?", [{hash:snapshot.hash, kblocks_hash:snapshot.kblocks_hash, data:JSON.stringify(snapshot)}]);
 			}
 
-			return this.transaction([truncate, sprouts, kblock, sql_put_snapshot, ledger.join(';'), tokens.join(';'), tokens_index.join(';'), poses.join(';'), delegates.join(';'), undelegates.join(';'), dex_pools.join(';'), farms.join(';'), farmers.join(';'), cashier_ptr].join(';'));
+			return this.transaction([truncate, sprouts, kblock, sql_put_snapshot, ledger.join(';'), tokens.join(';'), tokens_index.join(';'), poses.join(';'), delegates.join(';'), undelegates.join(';'), dex_pools.join(';'), farms.join(';'), farmers.join(';'), minted.join(';'), bridge_claim_transfers.join(';'), bridge_lock_transfers.join(';'), bridge_confirmations.join(';'), bridge_settings.join(';'), cashier_ptr].join(';'));
         }catch (e) {
             console.error(e);
             return false;
@@ -578,12 +621,22 @@ class DB {
 		snapshot.dex_pools = [];
 		snapshot.farms = [];
 		snapshot.farmers = [];
+        snapshot.minted = [];
+        snapshot.bridge_lock_transfers = [];
+        snapshot.bridge_claim_transfers = [];
+        snapshot.bridge_confirmations = [];
+        snapshot.bridge_settings = [];
 		let kblock = await this.get_kblock(hash);
 		if(kblock && kblock.length > 0 && kblock[0].n >= this.app_config.FORKS.fork_block_002){
 			snapshot.dex_pools = await this.request(mysql.format("SELECT pair_id, asset_1, volume_1, asset_2, volume_2, pool_fee, token_hash FROM dex_pools ORDER BY pair_id"));
 			snapshot.farms = await this.request(mysql.format("SELECT farm_id, stake_token, reward_token, emission, block_reward, level, total_stake, last_block, accumulator FROM farms ORDER BY farm_id"));
 			snapshot.farmers = await this.request(mysql.format("SELECT farm_id, farmer_id, stake, level FROM farmers ORDER BY farmer_id"));
             snapshot.undelegates = await this.request(mysql.format("SELECT id, delegator, pos_id, amount, height FROM undelegates WHERE amount > 0 ORDER BY id"));	
+            snapshot.minted = await this.request(mysql.format("SELECT * FROM minted ORDER BY wrapped_hash"));
+            snapshot.bridge_lock_transfers = await this.request(mysql.format("SELECT * FROM bridge_lock_transfers ORDER BY channel_id"));
+            snapshot.bridge_claim_transfers = await this.request(mysql.format("SELECT * FROM bridge_claim_transfers ORDER BY ticket_hash"));
+            snapshot.bridge_confirmations = await this.request(mysql.format("SELECT * FROM bridge_confirmations ORDER BY ticket_hash"));
+            snapshot.bridge_settings = await this.request(mysql.format("SELECT * FROM bridge_settings"));
 		}else{
 			snapshot.undelegates = await this.request(mysql.format("SELECT id, pos_id, amount, height FROM undelegates ORDER BY id"));
 		}
@@ -1000,7 +1053,7 @@ class DB {
 
 	generate_eindex(rewards, time = null, tokens_counts){
 		let ind = [];
-		let idx_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref', 'iv', 'ic', 'ifk', 'ifg', 'ifl', 'idust', 'iswapout', 'ifrew', 'ipcreatelt', 'iliqaddlt', 'iliqrmv1', 'iliqrmv2', 'ifcloserew', 'ifdecrew'];
+		let idx_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref', 'iv', 'ic', 'ifk', 'ifg', 'ifl', 'idust', 'iswapout', 'ifrew', 'ipcreatelt', 'iliqaddlt', 'iliqrmv1', 'iliqrmv2', 'ifcloserew', 'ifdecrew', 'ibrgburn', 'ibrgburndata', 'ibrglock', 'ibrglockdata', 'ibrgmint', 'ibrgmintdata', 'ibrgunlock', 'ibrgunlockdata', 'ibrgclaiminit'];
 		let tx_types = ['iin', 'iout'];
 		let legacy_types = ['iin', 'iout', 'ik', 'im', 'istat', 'iref'];
 		for(let rec of rewards){
@@ -1113,6 +1166,35 @@ class DB {
 		if(substate.tokens.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO tokens (`hash`, `owner`, `fee_type`, `fee_value`, `fee_min`, `ticker`, `caption`, `decimals`, `total_supply`, `reissuable`, `minable`, `max_supply`, `block_reward`, `min_stake`, `referrer_stake`, `ref_share`) VALUES ? ON DUPLICATE KEY UPDATE `total_supply` = VALUES(total_supply)", [substate.tokens.map(a => [a.hash, a.owner, a.fee_type, a.fee_value, a.fee_min, a.ticker, a.caption, a.decimals, a.total_supply, a.reissuable, a.minable, a.max_supply, a.block_reward, a.min_stake, a.referrer_stake, a.ref_share ])]));
 
+        substate.bridge_claim_transfers = substate.bridge_claim_transfers.filter(a => a.changed === true);
+        if(substate.bridge_claim_transfers.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_claim_transfers (`src_address`, `dst_address`, `dst_network`, `src_network`, `src_hash`, `nonce`, `ticket_hash`, `ticker`, `amount`, `origin_network`, `origin_hash`, `origin_decimals`, `name`) VALUES ?", [substate.bridge_claim_transfers.map(a => [a.src_address, a.dst_address, a.dst_network, a.src_network, a.src_hash, a.nonce, a.ticket_hash, a.ticker, a.amount, a.origin_network, a.origin_hash, a.origin_decimals, a.name])]));
+    
+        substate.bridge_lock_transfers = substate.bridge_lock_transfers.filter(a => a.changed === true);
+        if(substate.bridge_lock_transfers.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_lock_transfers (`channel_id`, `dst_address`, `dst_network`, `src_address`, `src_hash`, `nonce`) VALUES ? ON DUPLICATE KEY UPDATE `nonce` = VALUES(nonce)", [substate.bridge_lock_transfers.map(a => [a.channel_id, a.dst_address, a.dst_network, a.src_address, a.src_hash, a.nonce])]));
+        
+        substate.bridge_confirmations = substate.bridge_confirmations.filter(a => a.changed === true);
+        if(substate.bridge_confirmations.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO bridge_confirmations (`validator_id`, `validator_sign`, `ticket_hash`) VALUES ?", [substate.bridge_confirmations.map(a => [a.validator_id, a.validator_sign, a.ticket_hash])]));
+
+        substate.bridge_settings = substate.bridge_settings.filter(a => a.changed === true);
+        if(substate.bridge_settings.length > 0) {
+            let validators = JSON.stringify(substate.bridge_settings[0].validators);
+            let known_networks = JSON.stringify(substate.bridge_settings[0].known_networks);
+            state_sql.push(	mysql.format(
+                "INSERT INTO bridge_settings SET owner = ?, threshold = ?, validators = ?, known_networks = ? ON DUPLICATE KEY UPDATE owner = ?, threshold = ?, validators = ?, known_networks = ?", 
+                [
+                    substate.bridge_settings[0].owner, substate.bridge_settings[0].threshold, validators, known_networks,
+                    substate.bridge_settings[0].owner, substate.bridge_settings[0].threshold, validators, known_networks
+                ]
+            ));
+        }
+
+        substate.minted = substate.minted.filter(a => a.changed === true);
+        if(substate.minted.length > 0)
+            state_sql.push(	mysql.format("INSERT INTO minted (`wrapped_hash`, `origin_network`, `origin_hash`, `origin_decimals`) VALUES ?", [substate.minted.map(a => [a.wrapped_hash, a.origin_network, a.origin_hash, a.origin_decimals])]));
+    
 		substate.poses = substate.poses.filter(a => a.changed === true);
 		if(substate.poses.length > 0)
 			state_sql.push(	mysql.format("INSERT INTO poses (`id`, `owner`, `fee`, `name`) VALUES ? ", [substate.poses.map(a => [a.id, a.owner, a.fee, a.name])]));
@@ -1417,7 +1499,21 @@ class DB {
 			WHERE L.id = ? AND L.token = ?`, [id, token])))[0];
 		return (balance !== undefined) ? balance : ({amount : 0, decimals : 10});
 	}
-
+	async get_full_native_balance(id, token){
+		let data = await this.get_balance(id, token);
+		data.ledger = data.amount;
+		if(token === Utils.ENQ_TOKEN_NAME){
+			let delegated_data = await this.get_delegated_balance(id);
+			let transit = await this.get_transit_balance(id);
+			let undelegated = await this.get_undelegated_balance(id);
+			data.delegated = delegated_data.delegated;
+			data.reward = delegated_data.reward;
+			data.transit = transit;
+			data.undelegated = undelegated;
+			data.amount = BigInt(data.ledger) + BigInt(data.delegated) + BigInt(data.reward) + BigInt(data.transit) + BigInt(data.undelegated);
+		}
+		return data;
+	}
 	async get_balance_all(id){
 		let balance = await this.request(mysql.format(`SELECT L.amount as amount, L.token as token, T.ticker as ticker, T.decimals as decimals, IFNULL(T.minable, 0) as minable, IFNULL(T.reissuable, 0) as reissuable
 			FROM ledger as L 
@@ -1458,6 +1554,78 @@ class DB {
 		let res = await this.request(mysql.format('SELECT * FROM ledger WHERE id in (?)', [ids]));
 		return res;
 	}
+
+    async get_bridge_settings() {
+        let settings = await this.request('SELECT * FROM bridge_settings');
+        if (!settings.length)
+            return [{
+                owner : Utils.BRIDGE_DEFAULT_OWNER,
+                threshold : 1,
+                validators : [],
+                known_networks : Utils.BRIDGE_KNOWN_NETWORKS
+            }]
+        settings[0].validators = JSON.parse(settings[0].validators)
+        settings[0].known_networks = JSON.parse(settings[0].known_networks)
+        return settings
+    }
+
+    async get_minted_all() {
+        return await this.request('SELECT * FROM minted');
+    }
+    async get_minted(wrapped_hash) {
+        if (!wrapped_hash)
+            return [];
+        return (await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash])))[0];
+    }
+    async get_minted_by_origin(origin_hash, origin_network) {
+        if(!origin_hash || !origin_network)
+            return null;
+        let res = await this.request(mysql.format(`SELECT * FROM minted WHERE origin_hash = ? and origin_network = ?`, [origin_hash, origin_network]));
+        if (res)
+            return res[0];
+        return null;
+    }
+    async get_bridge_lock_transfer_by_id(id) {
+        return await this.request(mysql.format('SELECT * FROM bridge_lock_transfers WHERE channel_id = ?', [id]));
+    }
+    async get_last_bridge_lock_transfer_by_id(id) {
+        return await this.request(mysql.format('SELECT * FROM bridge_lock_transfers WHERE channel_id = ? ORDER BY nonce DESC LIMIT 1', [id]));
+    }
+    async get_bridge_lock_transfers_all() {
+        return await this.request('SELECT * FROM bridge_lock_transfers');
+    }
+    async get_bridge_claim_transfers_all() {
+        return await this.request('SELECT * FROM bridge_claim_transfers');
+    }
+    async get_confirmations_all() {
+        return await this.request('SELECT * FROM bridge_confirmations');
+    }
+    async get_bridge_claim_transfers_by_hashes(ticket_hashes){
+		if(!ticket_hashes.length)
+			return [];
+		return await this.request(mysql.format(`SELECT bridge_claim_transfers.* FROM bridge_claim_transfers WHERE bridge_claim_transfers.ticket_hash in (?)`, [ticket_hashes]));
+	}
+    async get_bridge_claim_transfers(src_address, dst_address, src_network) {
+        if (!src_address || !dst_address || !src_network)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM bridge_claim_transfers WHERE src_address = ? AND dst_address = ? AND src_network = ?', [src_address, dst_address, src_network]));
+    }
+    async get_bridge_claim_transfers_by_id(id) {
+        if (!id)
+            return [];
+        return await this.request(mysql.format('SELECT * FROM bridge_claim_transfers WHERE ticket_hash = ?', [id]));
+    }
+    async get_bridge_claim_transfers_by_dst_address(dst_address, src_address, src_network, src_hash) {
+        if (!dst_address || !src_address || !src_network || !src_hash)
+            return [];
+        return await this.request(mysql.format(`SELECT * FROM bridge_claim_transfers WHERE 
+            dst_address = ? AND
+            src_address = ? AND
+            src_network = ? AND
+            src_hash = ?
+            ORDER BY nonce DESC LIMIT 1`, [dst_address, src_address, src_network, src_hash]
+        ));
+    }
 
 	async get_farms(ids){
 		if(!ids.length)
@@ -1540,16 +1708,19 @@ class DB {
     		token_hash = Utils.ENQ_TOKEN_NAME;
         let total = (await this.request(mysql.format('SELECT SUM(amount) as `total` FROM ledger WHERE `token` = ?', token_hash)))[0].total;
         let count = (await this.get_accounts_count(token_hash)).count;
-        let res = await this.request(mysql.format(`SELECT ledger.id,
+		let res = await this.request(mysql.format(`SELECT ledger.id,
 			ledger.amount + IF(token = '${Utils.ENQ_TOKEN_NAME}',
-				(IFNULL(sum(delegates.amount),0) +
-				IFNULL(sum(delegates.reward),0)),
-				0) as amount,
+				(
+                IFNULL((Select sum(amount) from delegates where delegator = id),0) +
+				IFNULL((Select sum(reward) from delegates where delegator = id),0) +
+                IFNULL((Select sum(amount) from undelegates where delegator = id),0)
+                ),
+				0) 
+            as amount,
 			token
 			FROM ledger 
-			LEFT JOIN delegates ON ledger.id = delegates.delegator
 			WHERE token = ? 
-			GROUP BY delegates.delegator, ledger.id
+			GROUP BY ledger.id
 			ORDER BY amount DESC LIMIT ?, ?`, [token_hash, page_num * page_size, page_size]));
         return {total:total, accounts:res, page_count : Math.ceil(Number(count / page_size))};
     }
@@ -2261,6 +2432,7 @@ class DB {
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
 	}
+
 	async prefork_002(){
 		/*
 			Функция выполняется перед блоком форка. Она меняет структуру таблиц для получения единообразного
@@ -2273,6 +2445,39 @@ class DB {
 									SET U.delegator = T.from;`);
 		let sql = [sql1, sql2, sql3];
 		return this.transaction(sql.join(';'));
+	}
+
+	async prefork_003(){
+		/*
+			Функция выполняется перед блоком форка.
+			В результате ошибки в контракте 'transfer' в сети были созданы монеты, не учтённые в total_supply токена.
+			Меняем total_supply и max_supply с учетом этих монет.
+		 */
+		let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
+		let minted = BigInt("797234300000000000");
+		let ts = BigInt(token_info[0].total_supply) + minted;
+		let ms = BigInt(token_info[0].max_supply) + minted;
+		console.info(`fork_pre_003 actions: old ts: ${BigInt(token_info[0].total_supply)} new ts: ${ts.toString()}, old ms: ${BigInt(token_info[0].max_supply)}, new ms: ${ms.toString()}`)
+		let sql = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
+									[ts, ms, Utils.ENQ_TOKEN_NAME]);
+		return this.request(sql);
+	}
+
+	async get_bridge_transactions(id, page_num, page_size){
+		let count = await this.request(mysql.format(`SELECT irew AS cnt FROM eindex WHERE id = ? AND irew IS NOT NULL ORDER BY irew DESC LIMIT 1`, id));
+		count = count[0].cnt;
+		let records = await this.request(mysql.format(`
+			SELECT I.i, I.hash, I.time as time, rectype, T.from, T.amount, T.data,
+				MAX(T.status) AS status, T.ticker as token_hash, TKN.fee_type, TKN.fee_value, TKN.fee_min
+			FROM eindex as I
+			LEFT JOIN transactions as T ON I.hash = T.hash
+			LEFT JOIN tokens as TKN ON T.ticker = TKN.hash
+			WHERE id = ?
+			AND I.irew between ? and ? 
+			GROUP BY I.i ORDER BY I.i DESC`,
+			[id, count - page_size * page_num - page_size + 1, count - page_size * page_num]));
+
+		return {records, page_count : Math.ceil(Number(count) / page_size), id};
 	}
 }
 
