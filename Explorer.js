@@ -1062,10 +1062,9 @@ class Explorer {
 					console.debug(`block_reward_usd - rec.block_reward = ${rec.block_reward}, rec.reward_token_decimals = ${rec.reward_token_decimals}, reward_token_price = ${reward_token_price}`);
 					console.debug(`roi - block_reward_usd = ${block_reward_usd}, total_stake_usd = ${total_stake_usd}`);
 					if(block_reward_usd > 0 && total_stake_usd > 0){
-						let roi = BigInt(Math.round(block_reward_usd / total_stake_usd * 365 * 5760)) * Utils.PERCENT_FORMAT_SIZE;
+						let roi = BigInt(Math.round(block_reward_usd / total_stake_usd * 365 * 5760 * Number(Utils.PERCENT_FORMAT_SIZE)));
 						rec.apy = roi;
 					}
-
 				}
 			}
 			res.send(data);

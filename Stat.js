@@ -14,6 +14,8 @@
 
 const StatService = require('./stat.service').StatService;
 const StakeCalc = require('./stakecalc.js').StakeCalc;
+const ContractParser = require('./contractParser').ContractParser;
+const Utils = require('./Utils');
 
 const day = 24*60*60*1000;
 const check_type_timeout = 10*60*1000;
@@ -32,6 +34,7 @@ class Stat {
         this.db = db;
         this.config = config;
         this.target_speed = config.target_speed;
+        this.parser = new ContractParser(config);
 
         this.db.update_stats({['block_time_target'] : this.target_speed});
 
@@ -78,6 +81,47 @@ class Stat {
 
         this.tokensPrice = setImmediate(async () => { await this.tokensPriceCaching(); }, tokens_ptice_timeout);
         this.tokensHolders = setImmediate(async () => { await this.tokensHoldersCaching(); }, this.target_speed * 1000);
+
+        this.dexPoolsVolumes = setImmediate(async () => { await this.dexPoolsCaching(); },check_type_timeout);
+    }
+
+    async dexPoolsCaching(){
+        let new_stat ={};
+        let dex_pools_stat = await this.db.get_dex_pools_stat();
+        let pools = await this.db.dex_get_pools_all();
+        let tokens_price = await this.db.get_token_price_all();
+        let txs = await this.db.get_dex_pool_txs(1670317434);
+        if(txs !== undefined)
+            for (let i = 0; i < txs.length; i++) {
+                let type = this.parser.isContract(txs[i].data)
+                if(type) {
+                    let res = this.parser.parse(txs[i].data);
+                    let amount_in = 0;
+                    let tkn;
+                    let pair_id;
+                    console.log(type)
+                    if(type === "pool_buy_exact" || type === "pool_sell_exact") {
+                        tkn = tokens_price.find(item => item.tokens_hash === res.parameters.asset_in);
+                        if(tkn!==undefined) {
+                            let assets = Utils.getPairId(res.parameters.asset_in, res.parameters.asset_out);
+                            pair_id = assets.pair_id;
+                            if(new_stat[pair_id] === undefined)
+                                new_stat[pair_id] = 0;
+                            let amount = res.parameters.amount_in === undefined ? res.parameters.amount_in_max: res.parameters.amount_in;
+                            new_stat[pair_id] += Number(amount) / Math.pow(10, tkn.token_decimals) * tkn.price / Math.pow(10, tkn.price_decimals);
+                        }
+                    }
+                    /*                    else if(type === "pool_buy_exact_routed" || type === "pool_sell_exact_routed"){
+                                            tkn = tokens_price.find(item => item.tokens_hash === res.parameters.asset0);
+                                            let assets = Utils.getPairId(res.parameters.asset_in, res.parameters.asset_out);
+                                            pair_id = assets.pair_id
+                                        }
+                                        //let pool_stat = dex_pools_stat.find(item =>    item.pair_id === assets.pair_id)
+                    */
+                }
+
+            }
+        console.info({new_stat});
     }
 
     async tokensHoldersCaching(){

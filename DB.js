@@ -2067,12 +2067,12 @@ class DB {
         return {pos_contracts:res, page_count : Math.ceil(count / page_size)};
     }
 
-    async get_pos_contract_info(pos_id){
+	async get_pos_contract_info(pos_id){
 		let token_enq = (await this.get_tokens([Utils.ENQ_TOKEN_NAME]))[0];
 		let pos_rew = (BigInt(token_enq.block_reward) * BigInt(this.app_config.reward_ratio.pos)) / Utils.PERCENT_FORMAT_SIZE;
 		let statistic_year_blocks_count = await this.get_statistic_year_blocks_count(1000);
 		let {total_stake, active_total_stake, effective_total_stake} = await this.get_poses_stakes_info();
-		let sql = mysql.format(`SELECT @i := @i + 1 AS rank, IFNULL(uptime > 0,0) as active, pos_id, owner, name, fee, stake, 
+		let sql = mysql.format(`select * from (SELECT @i := @i + 1 AS rank, IFNULL(uptime > 0,0) as active, pos_id, owner, name, fee, stake, 
 											stake * (uptime / 5760) effective_stake,
 											stake / ${total_stake} stake_power, 
 											stake * (uptime / 5760) / ${effective_total_stake} effective_stake_power,
@@ -2081,9 +2081,10 @@ class DB {
 											IFNULL(ROUND(((? * ? * (stake * (uptime / 5760) / ${effective_total_stake})) / stake * 1e4)*(1 - fee/${Utils.PERCENT_FORMAT_SIZE}),0),0) as roi, 
 											IFNULL((uptime/5760),0) as uptime FROM (
 											(SELECT id as pos_id, owner, name, fee, uptime, IFNULL((SELECT sum(amount) FROM delegates WHERE poses.id = delegates.pos_id),0) as stake FROM poses ORDER BY stake DESC) as t,										
-											(SELECT @i:= 0) AS iterator) WHERE pos_id = ?`,[pos_rew, statistic_year_blocks_count, pos_id]);
-        return await this.request(sql);
-    }
+											(SELECT @i:= 0) AS iterator) 
+											)as T WHERE pos_id = ?`,[pos_rew, statistic_year_blocks_count, pos_id]);
+		return await this.request(sql);
+	}
 
     async get_pos_contract_info_all(){
 		let token_enq = (await this.get_tokens([Utils.ENQ_TOKEN_NAME]))[0];
@@ -2359,6 +2360,12 @@ class DB {
 		return null;
 	}
 
+	async get_token_price_all() {
+		return await this.request(mysql.format(`SELECT tokens_hash, (select decimals from tokens where hash = tokens_hash) as token_decimals, IFNULL(cg_price, dex_price) as price, decimals as price_decimals
+			FROM trinity.tokens_price 
+			WHERE dex_price > 0 OR cg_price > 0;`));
+	}
+
 	async update_token_price(token_hash, price){
 		let res = this.request(mysql.format("UPDATE tokens_price SET cg_price = ? WHERE tokens_hash = ?", [price, token_hash]));
 		return res;
@@ -2428,6 +2435,21 @@ class DB {
 			return {};
 		let res = (await this.request(mysql.format(`SELECT * FROM dex_pools WHERE token_hash = ?`, [hash])));
 		return res;
+	}
+
+	async get_dex_pools_stat(){
+		return this.request(mysql.format(`SELECT * FROM dex_pools_stat`));
+	}
+
+	async get_dex_pool_txs(lastcalltime){
+		return this.request(mysql.format(`Select (select kblocks.time from kblocks where kblocks.hash = (select kblocks_hash from mblocks where mblocks.hash = mblocks_hash)) as 'time', 
+												transactions.hash, transactions.data
+												from transactions where mblocks_hash in (select hash from mblocks where kblocks_hash in (select hash from kblocks where kblocks.time > ${lastcalltime})) and status = 3 and transactions.to = '${this.ORIGIN.publisher}'
+												and (
+												transactions.data like "____1800%" or
+												transactions.data like "____2000%" or
+												transactions.data like "____2100%" or
+												transactions.data like "____2200%" );`));
 	}
 
 	async prefork_002(){
