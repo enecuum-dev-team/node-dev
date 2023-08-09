@@ -39,7 +39,7 @@ class DB {
 		this.app_config = app_config;
 		this.last_tail = null;
 		this.cached_tail = null;
-
+		this.mysql = mysql;
 		this.config.connectionLimit = 10;
 		this.config.supportBigNumbers = true;
 		this.config.waitForConnections = true;

@@ -25,12 +25,8 @@ let ENQ_INTEGER_COIN = BigInt(10000000000);
 
 class Contract{
     constructor() {
-        this._mysql = require('mysql');
         this.type = null;
         this.pricelist = require('./pricelist').fork_block_000;
-    }
-    get mysql(){
-        return this._mysql;
     }
 }
 class TokenCreateContract extends Contract {

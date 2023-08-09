@@ -20,12 +20,8 @@ const contracts_000 = require('./contracts_000');
 
 class Contract{
     constructor() {
-        this._mysql = require('mysql');
         this.type = null;
         this.pricelist = require('./pricelist').fork_block_001;
-    }
-    get mysql(){
-        return this._mysql;
     }
 }
 

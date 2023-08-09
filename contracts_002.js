@@ -30,13 +30,16 @@ const ContractParser = require('./contractParser').ContractParser;
 let MAX_DECIMALS = BigInt(10);
 
 class Contract{
-    constructor() {
-        this._mysql = require('mysql');
+    constructor(data) {
         this.type = null;
+        this.data = data;
+        this.type = this.data.type;
+        if(!this.validate())
+            throw new ContractError("Incorrect contract");
         this.pricelist = require('./pricelist').fork_block_002;
     }
-    get mysql(){
-        return this._mysql;
+    validate(){
+        throw new Error(`Abstract Contract method not implemented`);
     }
 }
 class TokenCreateContract extends Contract {
@@ -1755,11 +1758,7 @@ class FarmCloseStakeContract extends Contract {
 }
 class FarmGetRewardContract extends Contract {
     constructor(data) {
-        super();
-        this.data = data;
-        this.type = this.data.type;
-        if(!this.validate())
-            throw new ContractError("Incorrect contract");
+        super(data);
     }
     validate() {
         /**

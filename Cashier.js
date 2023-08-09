@@ -121,7 +121,6 @@ class Cashier {
         console.trace(`cashier processing macroblock ${JSON.stringify(kblock)}`);
 
         let chunk = await this.db.get_new_microblocks(hash, limit);
-        let CMachine = ContractMachine.getContractMachine(this.config.FORKS, kblock.n);
         let CFactory = new ContractMachine.ContractFactory(this.config);
 
         console.silly('cashier chunk = ', JSON.stringify(chunk));
@@ -354,7 +353,6 @@ class Cashier {
             });
             //Calc pos rewards
             if((total_pos_stake > 0) && (sblocks.length > 0)){
-                let cont = new CMachine.Contract();
                 for(let s of sblocks) {
                     let pub = accounts.findIndex(a => ((a.id === s.pos_owner) && (a.token === Utils.ENQ_TOKEN_NAME)));
                     let delegate = pos_info.findIndex(a => a.pos_id === s.publisher);
@@ -371,7 +369,7 @@ class Cashier {
                             let del_reward = BigInt(del.amount) * delegates_reward / BigInt(pos_info[delegate].stake);
                             if(del_reward > BigInt(0)) {
                                 total_reward += BigInt(del_reward);
-                                let sql = cont.mysql.format(`(?, ?, ?)`,
+                                let sql = this.db.mysql.format(`(?, ?, ?)`,
                                     [del.pos_id, del.delegator, del_reward]);
                                 post_action = post_action.concat([sql]);
                             }
@@ -424,7 +422,6 @@ class Cashier {
             }
 
             if((total_pos_stake > 0) && (sblocks.length > 0)){
-                let cont = new CMachine.Contract();
                 for(let s of sblocks) {
                     let pub = accounts.findIndex(a => ((a.id === s.pos_owner) && (a.token === Utils.ENQ_TOKEN_NAME)));
                     let delegate = pos_info.findIndex(a => a.pos_id === s.publisher);
@@ -439,7 +436,7 @@ class Cashier {
                             let del_reward = BigInt(del.amount) * delegates_fee_reward / BigInt(pos_info[delegate].stake);
                             if(del_reward > BigInt(0)){
                                 total_fee += BigInt(del_reward);
-                                let sql = cont.mysql.format(`(?, ?, ?)`,
+                                let sql = this.db.mysql.format(`(?, ?, ?)`,
                                     [del.pos_id, del.delegator, del_reward]);
                                 post_action = post_action.concat([sql]);
                             }
