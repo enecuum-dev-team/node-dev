@@ -7,9 +7,10 @@
  * contracts_002.js
  * Enecuum smart contracts logic
  *
- * Added new fee type 2
+ * Added new token fee type 2
  * Non-unique token tickers
- * Remove empty delegator wntries
+ * Remove empty delegation entries
+ * Remove empty undelegation entries
  * Added DEX contracts
  * Added Farms contracts
  * Added Commander ENEX contracts WITHOUT ENX

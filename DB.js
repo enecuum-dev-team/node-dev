@@ -1233,7 +1233,7 @@ class DB {
 
 		for( let und in substate.undelegates){
 			if(substate.undelegates[und].changed === true){
-				if(BigInt(substate.undelegates[und].amount) === BigInt(0)){
+				if(BigInt(substate.undelegates[und].amount) === BigInt(0) && old_del !== true){
 					state_sql.push(	mysql.format(`DELETE FROM undelegates WHERE id = ?;`, [substate.undelegates[und].id]));
 				}
 				else
