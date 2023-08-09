@@ -17,7 +17,7 @@ const StakeCalc = require('./stakecalc.js').StakeCalc;
 
 const day = 24*60*60*1000;
 const check_type_timeout = 10*60*1000;
-const tokens_ptice_timeout = 5000;
+const tokens_ptice_timeout = 15000;
 
 const FULL_NODE = 0;
 const POW = 1;
@@ -104,7 +104,8 @@ class Stat {
             });
 
             let dex_data = await this.db.get_dex_tokens_price(this.config.native_token_hash, cg_data[cg_data.findIndex(item => item.tokens_hash === this.config.native_token_hash)].price);
-            for (let i = 0; i < dex_data.length; i++) {
+            let datalength = dex_data.length;
+            for (let i = 0; i < datalength; i++) {
                 if(this.config.dex.DEX_TRUSTED_TOKENS.includes(dex_data[i].tokens_hash)){
                     let trusted_dex_data = await this.db.get_dex_tokens_price(dex_data[i].tokens_hash, dex_data[i].calc_dex_price);
                     dex_data = dex_data.concat(trusted_dex_data);
