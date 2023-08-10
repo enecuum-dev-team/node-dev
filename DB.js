@@ -264,7 +264,7 @@ class DB {
 	};
 
 	async rollback_calculation(height){
-		let kblocks = await this.request(mysql.format('SELECT hash FROM kblocks WHERE n >= ? AND n <= (SELECT n FROM kblocks WHERE hash = (SELECT `value` FROM stat WHERE `key` = \'cashier_ptr\'))', [height]));
+		let kblocks = await this.request(mysql.format('SELECT hash FROM kblocks WHERE n >= ? ', [height]));
 		let kblock_hashes = kblocks.map(k => k.hash);
 		if (kblock_hashes.length > 0) {
 			/*

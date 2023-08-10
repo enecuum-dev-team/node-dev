@@ -2462,6 +2462,9 @@ class ClaimInitContract extends Contract {
             name : cTypes.str40
         }
         cValidate(this.data.parameters, paramsModel)
+        let amount = BigInt(this.data.parameters.amount)
+        if (amount < 0n || amount > BigInt(Utils.MAX_SUPPLY_LIMIT))
+            throw new ContractError("Incorrect amount")
         if (Number(Utils.BRIDGE_NETWORK_ID) !== Number(this.data.parameters.dst_network))
             throw new ContractError("Wrong network id")
         let modelTmp = {...paramsModel}
