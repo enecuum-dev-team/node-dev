@@ -264,7 +264,7 @@ class DB {
 	};
 
 	async rollback_calculation(height){
-		let kblocks = await this.request(mysql.format('SELECT hash FROM kblocks WHERE n >= ? AND n <= (SELECT n FROM kblocks WHERE hash = (SELECT `value` FROM stat WHERE `key` = \'cashier_ptr\'))', [height]));
+		let kblocks = await this.request(mysql.format('SELECT hash FROM kblocks WHERE n >= ? ', [height]));
 		let kblock_hashes = kblocks.map(k => k.hash);
 		if (kblock_hashes.length > 0) {
 			/*
@@ -1708,16 +1708,19 @@ class DB {
     		token_hash = Utils.ENQ_TOKEN_NAME;
         let total = (await this.request(mysql.format('SELECT SUM(amount) as `total` FROM ledger WHERE `token` = ?', token_hash)))[0].total;
         let count = (await this.get_accounts_count(token_hash)).count;
-        let res = await this.request(mysql.format(`SELECT ledger.id,
+		let res = await this.request(mysql.format(`SELECT ledger.id,
 			ledger.amount + IF(token = '${Utils.ENQ_TOKEN_NAME}',
-				(IFNULL(sum(delegates.amount),0) +
-				IFNULL(sum(delegates.reward),0)),
-				0) as amount,
+				(
+                IFNULL((Select sum(amount) from delegates where delegator = id),0) +
+				IFNULL((Select sum(reward) from delegates where delegator = id),0) +
+                IFNULL((Select sum(amount) from undelegates where delegator = id),0)
+                ),
+				0) 
+            as amount,
 			token
 			FROM ledger 
-			LEFT JOIN delegates ON ledger.id = delegates.delegator
 			WHERE token = ? 
-			GROUP BY delegates.delegator, ledger.id
+			GROUP BY ledger.id
 			ORDER BY amount DESC LIMIT ?, ?`, [token_hash, page_num * page_size, page_size]));
         return {total:total, accounts:res, page_count : Math.ceil(Number(count / page_size))};
     }
