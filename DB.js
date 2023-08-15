@@ -2435,8 +2435,9 @@ class DB {
 
 	async prefork_002(){
 		/*
-			Функция выполняется перед блоком форка. Она меняет структуру таблиц для получения единообразного
-			хеша снепшота и корректной работы fastsync. Также проводит удаление нулевых записей для оптимизации места.
+			The function is executing before the fork block.
+			It changes the structure of tables to obtain a correct snapshot hash and correct operation of fastsync.
+			It also removes null entries to optimize space.
 		 */
 		let sql1 = mysql.format(`DELETE FROM undelegates WHERE amount = 0;`);
 		let sql2 = mysql.format(`DELETE FROM delegates WHERE amount = 0 AND reward = 0;`);
@@ -2449,9 +2450,9 @@ class DB {
 
 	async prefork_003(){
 		/*
-			Функция выполняется перед блоком форка.
-			В результате ошибки в контракте 'transfer' в сети были созданы монеты, не учтённые в total_supply токена.
-			Меняем total_supply и max_supply с учетом этих монет.
+			The function is executed before the fork block.
+			As a result of an error in the 'transfer' contract, coins were minted in the network that were not included in the total_supply of the token.
+			We change total_supply and max_supply according these coins.
 		 */
 		let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
 		let minted = BigInt("797234300000000000");
@@ -2461,6 +2462,22 @@ class DB {
 		let sql = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
 									[ts, ms, Utils.ENQ_TOKEN_NAME]);
 		return this.request(sql);
+	}
+
+	async prefork_004(){
+		/*
+			The function is executed before the fork block.
+			Native coin emission increasing
+		 */
+		// TODO draft
+		// let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
+		// let minted = BigInt("20000000000000000000");
+		// let ts = BigInt(token_info[0].total_supply) + minted;
+		// let ms = BigInt(token_info[0].max_supply) + minted;
+		// console.info(`fork_pre_004 actions: old ts: ${BigInt(token_info[0].total_supply)} new ts: ${ts.toString()}, old ms: ${BigInt(token_info[0].max_supply)}, new ms: ${ms.toString()}`)
+		// let sql1 = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
+		// 	[ts, ms, Utils.ENQ_TOKEN_NAME]);
+		// return this.request(sql);
 	}
 
 	async get_bridge_transactions(id, page_num, page_size){

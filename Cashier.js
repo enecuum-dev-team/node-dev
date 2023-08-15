@@ -494,6 +494,9 @@ class Cashier {
             if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_003)){
                 let res = await this.db.prefork_003();
             }
+            if(BigInt(kblock.n + 1) === BigInt(this.config.FORKS.fork_block_004)){
+                let res = await this.db.prefork_004();
+            }
             // console.log(this.mrewards, this.refrewards, this.srewards, this.krewards);
             // console.log(`Total:   ${this.mrewards + this.refrewards + this.srewards + this.krewards}`)
             // console.log(`Formule: ${BigInt(token_enq.block_reward * (kblock.n)) }`)
