@@ -26,7 +26,7 @@ const cTypes = {
     strBigInt : {
         id : 0x6,
         type : "string",
-        regexp : /^([0-9]{1,20}n{0,1}|\s*)$/i // {1,20} just like in sql/db.sql
+        regexp : /^([0-9]{1,65}n{0,1}|\s*)$/i // {1,20} just like in sql/db.sql
     },
 
     enqHash64 : {
