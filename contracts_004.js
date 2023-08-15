@@ -7,8 +7,9 @@
  * contracts_003.js
  * Enecuum smart contracts logic
  *
- * Added Bridge contracts
- * ENX should be bridged and set in config.json
+ * Working with actual chain
+ * Increase MAX_SUPPLY_LIMIT
+ * Increase ENQ emission (not in this file)
  *
  * ******************************************
  *
@@ -30,8 +31,8 @@ class Contract{
     constructor() {
         this._mysql = require('mysql');
         this.type = null;
-        this.pricelist = require('./pricelist').fork_block_003;
-        this.MAX_SUPPLY_LIMIT = BigInt('18446744073709551615'); // max value MySQL Bigint can storage
+        this.pricelist = require('./pricelist').fork_block_003; // Prices are the same as 003 contracts
+        this.MAX_SUPPLY_LIMIT = Utils.MAX_SUPPLY_LIMIT;
     }
     get mysql(){
         return this._mysql;

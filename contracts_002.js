@@ -29,6 +29,7 @@ class Contract{
         this._mysql = require('mysql');
         this.type = null;
         this.pricelist = require('./pricelist').fork_block_002;
+        this.MAX_SUPPLY_LIMIT = BigInt('18446744073709551615'); // max value MySQL Bigint can storage
     }
     get mysql(){
         return this._mysql;
@@ -73,23 +74,23 @@ class TokenCreateContract extends Contract {
                 if (miningModel.some(key => params[key] === undefined)){
                     throw new ContractError("Incorrect param structure for minable token");
                 }
-                // Check 0 < x < Utils.MAX_SUPPLY_LIMIT
+                // Check 0 < x < MAX_SUPPLY_LIMIT
                 let amountsModel = ["max_supply", "block_reward", "total_supply", "referrer_stake"];
                 for(let key of amountsModel){
-                    if (params[key] < 0 || params[key] > Utils.MAX_SUPPLY_LIMIT){
-                        throw new ContractError(`${key} if out of 0...Utils.MAX_SUPPLY_LIMIT range`);
+                    if (params[key] < 0 || params[key] > this.MAX_SUPPLY_LIMIT){
+                        throw new ContractError(`${key} is out of 0...MAX_SUPPLY_LIMIT range`);
                     }
                 }
                 /**
                  *        max_supply = tsup + block_rew * x years
-                 *  0 [__total_supply___|____to_be_mined__________] Utils.MAX_SUPPLY_LIMIT
+                 *  0 [__total_supply___|____to_be_mined__________] MAX_SUPPLY_LIMIT
                  *
                  *  0 <= tsup <= max_supply
                  *  0 <= to_be_mined <= max_supply
                  */
 
-                // if(params.max_supply > Utils.MAX_SUPPLY_LIMIT){
-                //     throw new ContractError("max_supply can't be bigger than Utils.MAX_SUPPLY_LIMIT");
+                // if(params.max_supply > this.MAX_SUPPLY_LIMIT){
+                //     throw new ContractError("max_supply can't be bigger than MAX_SUPPLY_LIMIT");
                 // }
                 if(params.max_supply <= 0 || params.max_supply < params.total_supply){
                     throw new ContractError("Incorrect supply params");
@@ -113,13 +114,13 @@ class TokenCreateContract extends Contract {
             if(params.reissuable !== 0 && params.reissuable !== 1)
                 throw new ContractError("Incorrect reissuable flag, expect 0 or 1");
         }
-        if(params.total_supply < 0 || params.total_supply > Utils.MAX_SUPPLY_LIMIT){
+        if(params.total_supply < 0 || params.total_supply > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect total_supply value");
         }
 
         switch (params.fee_type) {
             case 0 : {
-                if(params.fee_value < 0 || params.fee_value > Utils.MAX_SUPPLY_LIMIT)
+                if(params.fee_value < 0 || params.fee_value > this.MAX_SUPPLY_LIMIT)
                     throw new ContractError("Incorrect fee params");
                 break;
             }
@@ -129,13 +130,13 @@ class TokenCreateContract extends Contract {
                 if(params.fee_min === undefined){
                     throw new ContractError("Missing fee_min for fee_type = 1");
                 }
-                if(params.fee_min < 0 || params.fee_min > Utils.MAX_SUPPLY_LIMIT){
+                if(params.fee_min < 0 || params.fee_min > this.MAX_SUPPLY_LIMIT){
                     throw new ContractError("Incorrect fee_min value");
                 }
                 break;
             }
             case 2 : {
-                if(params.fee_value < 0 || params.fee_value > Utils.MAX_SUPPLY_LIMIT)
+                if(params.fee_value < 0 || params.fee_value > this.MAX_SUPPLY_LIMIT)
                     throw new ContractError("Incorrect fee params");
                 break;
             }
@@ -276,7 +277,7 @@ class PosDelegateContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount < 0 || params.amount > Utils.MAX_SUPPLY_LIMIT || ((params.amount % ENQ_INTEGER_COIN) !== BigInt(0))){
+        if(params.amount < 0 || params.amount > this.MAX_SUPPLY_LIMIT || ((params.amount % ENQ_INTEGER_COIN) !== BigInt(0))){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -343,7 +344,7 @@ class PosUndelegateContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount < 0 || params.amount > Utils.MAX_SUPPLY_LIMIT || ((params.amount % ENQ_INTEGER_COIN) !== BigInt(0))){
+        if(params.amount < 0 || params.amount > this.MAX_SUPPLY_LIMIT || ((params.amount % ENQ_INTEGER_COIN) !== BigInt(0))){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -549,7 +550,7 @@ class TokenMintContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount < 0 || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount < 0 || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -573,7 +574,7 @@ class TokenMintContract extends Contract {
             throw new ContractError("From account is not a token owner");
         if(token_info.reissuable !== 1)
             throw new ContractError("Token is not reissuable");
-        if((BigInt(token_info.total_supply) + params.amount) > Utils.MAX_SUPPLY_LIMIT)
+        if((BigInt(token_info.total_supply) + params.amount) > this.MAX_SUPPLY_LIMIT)
             throw new ContractError("New total supply is higher than MAX_SUPPLY");
         let data = {
             token_hash : params.token_hash,
@@ -623,7 +624,7 @@ class TokenBurnContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount < 0 || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount < 0 || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -704,10 +705,10 @@ class PoolCreateContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount_1 <= BigInt(0) || params.amount_1 > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_1 <= BigInt(0) || params.amount_1 > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_1");
         }
-        if(params.amount_2 <= BigInt(0) || params.amount_2 > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_2 <= BigInt(0) || params.amount_2 > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_2");
         }
         if(params.asset_1 === params.asset_2){
@@ -843,10 +844,10 @@ class PoolLiquidityAddContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount_1 <= BigInt(0) || params.amount_1 > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_1 <= BigInt(0) || params.amount_1 > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_1");
         }
-        if(params.amount_2 <= BigInt(0) || params.amount_2 > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_2 <= BigInt(0) || params.amount_2 > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_2");
         }
         return true;
@@ -978,7 +979,7 @@ class PoolLiquidityRemoveContract extends Contract {
         /**
          * parameters:
          * lt : hex string 64 chars
-         * amount : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -994,7 +995,7 @@ class PoolLiquidityRemoveContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount <= BigInt(0) || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount <= BigInt(0) || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -1082,8 +1083,8 @@ class PoolLiquiditySellExactContract extends Contract {
          * parameters:
          * asset_in : hex string 64 chars
          * asset_out : hex string 64 chars
-         * amount_in : 1...Utils.MAX_SUPPLY_LIMIT
-         * amount_out_min : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount_in : 1...MAX_SUPPLY_LIMIT
+         * amount_out_min : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1101,10 +1102,10 @@ class PoolLiquiditySellExactContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount_in <= BigInt(0) || params.amount_in > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_in <= BigInt(0) || params.amount_in > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_in");
         }
-        if(params.amount_out_min < BigInt(0) || params.amount_out_min > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_out_min < BigInt(0) || params.amount_out_min > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_out_min");
         }
         return true;
@@ -1219,8 +1220,8 @@ class PoolLiquidityBuyExactContract extends Contract {
          * parameters:
          * asset_in : hex string 64 chars
          * asset_out : hex string 64 chars
-         * amount_out : 1...Utils.MAX_SUPPLY_LIMIT
-         * amount_in_max : 1...Utils.MAX_SUPPLY_LIMIT
+         * amount_out : 1...MAX_SUPPLY_LIMIT
+         * amount_in_max : 1...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1239,10 +1240,10 @@ class PoolLiquidityBuyExactContract extends Contract {
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
 
-        if(params.amount_in_max <= BigInt(0) || params.amount_in_max > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_in_max <= BigInt(0) || params.amount_in_max > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_in_max");
         }
-        if(params.amount_out < BigInt(0) || params.amount_out > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_out < BigInt(0) || params.amount_out > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_out");
         }
         return true;
@@ -1358,8 +1359,8 @@ class PoolLiquiditySellExactRoutedContract extends Contract {
     validate() {
         /**
          * parameters:
-         * amount_in : 1...Utils.MAX_SUPPLY_LIMIT
-         * amount_out_min : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount_in : 1...MAX_SUPPLY_LIMIT
+         * amount_out_min : 0...MAX_SUPPLY_LIMIT
          * plength : 2...4
          * asset0 : hex string 64 chars
          * asset1 : hex string 64 chars
@@ -1376,10 +1377,10 @@ class PoolLiquiditySellExactRoutedContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount_in <= BigInt(0) || params.amount_in > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_in <= BigInt(0) || params.amount_in > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_in");
         }
-        if(params.amount_out_min < BigInt(0) || params.amount_out_min > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_out_min < BigInt(0) || params.amount_out_min > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_out_min");
         }
         if(params.plength < BigInt(2) || params.plength > BigInt(4)){
@@ -1466,8 +1467,8 @@ class PoolLiquidityBuyExactRoutedContract extends Contract {
     validate() {
         /**
          * parameters:
-         * amount_out : 1...Utils.MAX_SUPPLY_LIMIT
-         * amount_in_max : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount_out : 1...MAX_SUPPLY_LIMIT
+         * amount_in_max : 0...MAX_SUPPLY_LIMIT
          * plength : 2...4
          * asset0 : hex string 64 chars
          * asset1 : hex string 64 chars
@@ -1484,10 +1485,10 @@ class PoolLiquidityBuyExactRoutedContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount_out <= BigInt(0) || params.amount_out > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_out <= BigInt(0) || params.amount_out > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_in");
         }
-        if(params.amount_in_max < BigInt(0) || params.amount_in_max > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount_in_max < BigInt(0) || params.amount_in_max > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount_out_min");
         }
         if(params.plength < BigInt(2) || params.plength > BigInt(4)){
@@ -1524,7 +1525,7 @@ class PoolLiquidityBuyExactRoutedContract extends Contract {
             let asset_in = `asset${i.toString(10)}`;
             let asset_out = `asset${(i + BigInt(1)).toString(10)}`;
 
-            let amount_in_max = Utils.MAX_SUPPLY_LIMIT;
+            let amount_in_max = this.MAX_SUPPLY_LIMIT;
             let swap_object = {
                 type : "pool_buy_exact",
                 parameters : {
@@ -1577,8 +1578,8 @@ class FarmCreateContract extends Contract {
          * parameters:
          * stake_token : hex string 64 chars
          * reward_token : hex string 64 chars
-         * block_reward : 0...Utils.MAX_SUPPLY_LIMIT
-         * emission : 0...Utils.MAX_SUPPLY_LIMIT
+         * block_reward : 0...MAX_SUPPLY_LIMIT
+         * emission : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1596,10 +1597,10 @@ class FarmCreateContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.block_reward <= BigInt(0) || params.block_reward > Utils.MAX_SUPPLY_LIMIT){
+        if(params.block_reward <= BigInt(0) || params.block_reward > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect block_reward");
         }
-        if(params.emission <= BigInt(0) || params.emission > Utils.MAX_SUPPLY_LIMIT){
+        if(params.emission <= BigInt(0) || params.emission > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect emission");
         }
         return true;
@@ -1670,7 +1671,7 @@ class FarmsAddFundsContract extends Contract {
         /**
          * parameters:
          * farm_id : hex string 64 chars
-         * amount : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1686,7 +1687,7 @@ class FarmsAddFundsContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount <= BigInt(0) || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount <= BigInt(0) || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -1743,7 +1744,7 @@ class FarmsAddEmissionContract extends Contract {
         /**
          * parameters:
          * farm_id : hex string 64 chars
-         * amount : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1759,7 +1760,7 @@ class FarmsAddEmissionContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount <= BigInt(0) || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount <= BigInt(0) || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -1951,7 +1952,7 @@ class FarmIncreaseStakeContract extends Contract {
         /**
          * parameters:
          * farm_id : hex string 64 chars
-         * amount : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -1967,7 +1968,7 @@ class FarmIncreaseStakeContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount <= BigInt(0) || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount <= BigInt(0) || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;
@@ -2054,7 +2055,7 @@ class FarmDecreaseStakeContract extends Contract {
         /**
          * parameters:
          * farm_id : hex string 64 chars
-         * amount : 0...Utils.MAX_SUPPLY_LIMIT
+         * amount : 0...MAX_SUPPLY_LIMIT
          */
         let params = this.data.parameters;
 
@@ -2070,7 +2071,7 @@ class FarmDecreaseStakeContract extends Contract {
         if (!bigintModel.every(key => (typeof params[key] === 'bigint'))){
             throw new ContractError("Incorrect field format, BigInteger expected");
         }
-        if(params.amount <= BigInt(0) || params.amount > Utils.MAX_SUPPLY_LIMIT){
+        if(params.amount <= BigInt(0) || params.amount > this.MAX_SUPPLY_LIMIT){
             throw new ContractError("Incorrect amount");
         }
         return true;

@@ -25,7 +25,7 @@ class ContractFactory{
         this.parser = new ContractParser(config);
         this.config = config
     }
-    createContract(raw, n = Utils.MAX_SUPPLY_LIMIT){
+    createContract(raw, n = Number.MAX_SAFE_INTEGER){
         let type = this.parser.isContract(raw, this.config.FORKS, n);
         let data = this.parser.parse(raw);
         let Contracts = getContractMachine(this.config.FORKS, n);
