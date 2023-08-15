@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: trinity
 -- ------------------------------------------------------
--- Server version	5.7.24
+-- Server version 5.7.25
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -28,10 +28,85 @@ DROP TABLE IF EXISTS `agents`;
 CREATE TABLE `agents` (
   `id` varchar(66) NOT NULL,
   `ref_count` int(11) DEFAULT NULL,
-  `ref_reward` bigint(20) DEFAULT NULL,
-  `k_reward` bigint(20) DEFAULT NULL,
-  `s_reward` bigint(20) DEFAULT NULL,
+  `ref_reward` decimal(65,0) unsigned DEFAULT NULL,
+  `k_reward` decimal(65,0) unsigned DEFAULT NULL,
+  `s_reward` decimal(65,0) unsigned DEFAULT NULL,
   `lastcalc` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bridge_claim_transfers`
+--
+
+DROP TABLE IF EXISTS `bridge_claim_transfers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bridge_claim_transfers` (
+  `nonce` bigint(20) NOT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `src_network` int(11) NOT NULL,
+  `amount` decimal(65,0) unsigned DEFAULT NULL,
+  `dst_network` int(11) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  `ticket_hash` varchar(64) NOT NULL,
+  `ticker` varchar(10) NOT NULL,
+  `origin_network` int(11) NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` tinyint(3) unsigned NOT NULL,
+  `name` varchar(40) NOT NULL,
+  PRIMARY KEY (`ticket_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bridge_confirmations`
+--
+
+DROP TABLE IF EXISTS `bridge_confirmations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bridge_confirmations` (
+  `validator_id` varchar(66) NOT NULL,
+  `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
+  `ticket_hash` varchar(64) NOT NULL,
+  PRIMARY KEY (`ticket_hash`,`validator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bridge_lock_transfers`
+--
+
+DROP TABLE IF EXISTS `bridge_lock_transfers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bridge_lock_transfers` (
+  `channel_id` varchar(66) NOT NULL,
+  `dst_address` varchar(66) NOT NULL,
+  `dst_network` int(11) DEFAULT NULL,
+  `src_address` varchar(66) NOT NULL,
+  `src_hash` varchar(64) NOT NULL,
+  `nonce` bigint(20) NOT NULL,
+  PRIMARY KEY (`channel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bridge_settings`
+--
+
+DROP TABLE IF EXISTS `bridge_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bridge_settings` (
+  `id` tinyint(4) NOT NULL DEFAULT '1',
+  `owner` varchar(66) NOT NULL,
+  `threshold` tinyint(3) unsigned DEFAULT '1',
+  `validators` varchar(1000) DEFAULT NULL,
+  `known_networks` varchar(1000) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -62,76 +137,29 @@ DROP TABLE IF EXISTS `delegates`;
 CREATE TABLE `delegates` (
   `pos_id` varchar(64) NOT NULL,
   `delegator` varchar(66) NOT NULL,
-  `amount` bigint(20) unsigned DEFAULT NULL,
-  `reward` bigint(20) unsigned DEFAULT '0',
+  `amount` decimal(65,0) unsigned DEFAULT NULL,
+  `reward` decimal(65,0) unsigned DEFAULT '0',
   PRIMARY KEY (`pos_id`,`delegator`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Table structure for table `dex_pools`
+--
+
 DROP TABLE IF EXISTS `dex_pools`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `dex_pools` (
-  `pair_id` VARCHAR(128) NOT NULL,
-  `asset_1` VARCHAR(64) NOT NULL,
-  `volume_1` BIGINT(20) UNSIGNED NULL,
-  `asset_2` VARCHAR(64) NOT NULL,
-  `volume_2` BIGINT(20) UNSIGNED NULL,
-  `pool_fee` BIGINT(20) UNSIGNED NULL,
-  `token_hash` VARCHAR(64) NOT NULL,
+  `pair_id` varchar(128) NOT NULL,
+  `asset_1` varchar(64) NOT NULL,
+  `volume_1` decimal(65,0) unsigned DEFAULT NULL,
+  `asset_2` varchar(64) NOT NULL,
+  `volume_2` decimal(65,0) unsigned DEFAULT NULL,
+  `pool_fee` bigint(20) unsigned DEFAULT NULL,
+  `token_hash` varchar(64) NOT NULL,
   PRIMARY KEY (`pair_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `farms`;
-CREATE TABLE `farms` (
-  `farm_id` VARCHAR(64) NOT NULL,
-  `stake_token` VARCHAR(64) NOT NULL,
-  `reward_token` VARCHAR(64) NOT NULL,
-  `emission` BIGINT(20)  UNSIGNED NULL,
-  `block_reward` BIGINT(20) UNSIGNED NULL,
-  `level` VARCHAR(64) NOT NULL,
-  `total_stake` BIGINT(20) UNSIGNED NULL,
-  `last_block` BIGINT(20) DEFAULT NULL,
-  `accumulator` BIGINT(20) UNSIGNED DEFAULT 0,
-  PRIMARY KEY (`farm_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-DROP TABLE IF EXISTS `farmers`;
-CREATE TABLE `farmers` (
-  `farm_id` VARCHAR(64) NOT NULL,
-  `farmer_id` VARCHAR(66) NOT NULL,
-  `stake` BIGINT(20) NULL,
-  `level` VARCHAR(64) NOT NULL,
-  PRIMARY KEY (`farm_id`, `farmer_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
---
--- Table structure for table `snapshots`
---
-
-DROP TABLE IF EXISTS `snapshots`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `snapshots` (
-  `hash` varchar(64) CHARACTER SET latin1 NOT NULL,
-  `kblocks_hash` varchar(64) NOT NULL,
-  `data` LONGBLOB DEFAULT NULL,
-  PRIMARY KEY (`hash`,`kblocks_hash`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='  ';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `tmp_snapshots`
---
-
-DROP TABLE IF EXISTS `tmp_snapshots`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `tmp_snapshots` (
-  `hash` varchar(64) CHARACTER SET latin1 NOT NULL,
-  `kblocks_hash` varchar(64) NOT NULL,
-  `data` LONGBLOB DEFAULT NULL,
-  PRIMARY KEY (`hash`,`kblocks_hash`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='  ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -155,7 +183,7 @@ CREATE TABLE `eindex` (
   `irew` bigint(20) DEFAULT NULL,
   `itx` bigint(20) DEFAULT NULL,
   `rectype` varchar(30) DEFAULT NULL,
-  `value` bigint(20) unsigned DEFAULT NULL,
+  `value` decimal(65,0) unsigned DEFAULT NULL,
   KEY `i_id` (`id`),
   KEY `i_i` (`id`,`i`),
   KEY `i_in` (`id`,`iin`),
@@ -167,6 +195,43 @@ CREATE TABLE `eindex` (
   KEY `i_rew` (`id`,`irew`),
   KEY `i_tx` (`id`,`itx`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='  ';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `farmers`
+--
+
+DROP TABLE IF EXISTS `farmers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `farmers` (
+  `farm_id` varchar(64) NOT NULL,
+  `farmer_id` varchar(66) NOT NULL,
+  `stake` decimal(65,0) DEFAULT NULL,
+  `level` varchar(64) NOT NULL,
+  PRIMARY KEY (`farm_id`,`farmer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `farms`
+--
+
+DROP TABLE IF EXISTS `farms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `farms` (
+  `farm_id` varchar(64) NOT NULL,
+  `stake_token` varchar(64) NOT NULL,
+  `reward_token` varchar(64) NOT NULL,
+  `emission` decimal(65,0) unsigned DEFAULT NULL,
+  `block_reward` decimal(65,0) unsigned DEFAULT NULL,
+  `level` varchar(64) NOT NULL,
+  `total_stake` decimal(65,0) unsigned DEFAULT NULL,
+  `last_block` bigint(20) DEFAULT NULL,
+  `accumulator` decimal(65,0) unsigned DEFAULT '0',
+  PRIMARY KEY (`farm_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,8 +268,8 @@ CREATE TABLE `kblocks` (
   `link` varchar(64) NOT NULL,
   `sprout` varchar(64) NOT NULL,
   `m_root` varchar(64) NOT NULL,
-  `leader_sign` BLOB NULL,
-  `reward` bigint(20) DEFAULT NULL,
+  `leader_sign` blob,
+  `reward` decimal(65,0) unsigned DEFAULT NULL,
   `target_diff` int(16) DEFAULT '10',
   PRIMARY KEY (`hash`),
   UNIQUE KEY `sprout` (`n`,`sprout`),
@@ -224,7 +289,7 @@ DROP TABLE IF EXISTS `ledger`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ledger` (
   `id` varchar(130) CHARACTER SET latin1 NOT NULL,
-  `amount` bigint(20) unsigned DEFAULT NULL,
+  `amount` decimal(65,0) unsigned DEFAULT NULL,
   `token` varchar(64) NOT NULL,
   PRIMARY KEY (`id`,`token`),
   KEY `i_amount` (`amount`)
@@ -242,10 +307,10 @@ CREATE TABLE `mblocks` (
   `hash` varchar(64) NOT NULL,
   `kblocks_hash` varchar(64) NOT NULL,
   `publisher` varchar(66) NOT NULL,
-  `reward` bigint(20) DEFAULT NULL,
+  `reward` decimal(65,0) unsigned DEFAULT NULL,
   `nonce` bigint(20) NOT NULL,
   `sign` varchar(150) NOT NULL,
-  `leader_sign` BLOB NULL,
+  `leader_sign` blob,
   `token` varchar(64) NOT NULL,
   `included` tinyint(4) DEFAULT '0',
   `calculated` tinyint(4) DEFAULT '0',
@@ -255,6 +320,22 @@ CREATE TABLE `mblocks` (
   KEY `fk_mblocks_kblocks_idx` (`kblocks_hash`),
   KEY `i_publisher` (`publisher`),
   CONSTRAINT `fk_mblocks_kblocks` FOREIGN KEY (`kblocks_hash`) REFERENCES `kblocks` (`hash`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `minted`
+--
+
+DROP TABLE IF EXISTS `minted`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `minted` (
+  `wrapped_hash` varchar(64) NOT NULL,
+  `origin_network` int(11) NOT NULL,
+  `origin_hash` varchar(64) NOT NULL,
+  `origin_decimals` tinyint(3) unsigned NOT NULL,
+  PRIMARY KEY (`wrapped_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -269,7 +350,7 @@ CREATE TABLE `pending` (
   `hash` varchar(64) CHARACTER SET latin1 NOT NULL,
   `from` varchar(66) CHARACTER SET latin1 NOT NULL,
   `to` varchar(66) CHARACTER SET latin1 NOT NULL,
-  `amount` bigint(20) unsigned NOT NULL,
+  `amount` decimal(65,0) unsigned NOT NULL,
   `nonce` bigint(20) NOT NULL,
   `sign` varchar(150) CHARACTER SET latin1 NOT NULL,
   `timeadded` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -310,7 +391,7 @@ CREATE TABLE `poses` (
   `id` varchar(64) NOT NULL,
   `owner` varchar(66) DEFAULT NULL,
   `fee` int(11) DEFAULT NULL,
-  `name` varchar(40) CHARACTER SET utf8 DEFAULT NULL,
+  `name` varchar(40) DEFAULT NULL,
   `uptime` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -321,6 +402,8 @@ CREATE TABLE `poses` (
 --
 
 DROP TABLE IF EXISTS `rois`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `rois` (
   `token` varchar(64) NOT NULL,
   `calc_stakes` varchar(512) DEFAULT NULL,
@@ -328,6 +411,7 @@ CREATE TABLE `rois` (
   `calc_rois_sim` varchar(512) DEFAULT NULL,
   PRIMARY KEY (`token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `sblocks`
@@ -340,7 +424,7 @@ CREATE TABLE `sblocks` (
   `hash` varchar(64) NOT NULL,
   `kblocks_hash` varchar(64) NOT NULL,
   `publisher` varchar(66) NOT NULL,
-  `reward` bigint(20) DEFAULT NULL,
+  `reward` decimal(65,0) unsigned DEFAULT NULL,
   `sign` varchar(150) NOT NULL,
   `included` tinyint(4) DEFAULT '0',
   `calculated` tinyint(4) DEFAULT '0',
@@ -350,6 +434,21 @@ CREATE TABLE `sblocks` (
   KEY `fk_sblocks_kblocks_idx` (`kblocks_hash`),
   CONSTRAINT `fk_sblocks_kblocks` FOREIGN KEY (`kblocks_hash`) REFERENCES `kblocks` (`hash`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `snapshots`
+--
+
+DROP TABLE IF EXISTS `snapshots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `snapshots` (
+  `hash` varchar(64) CHARACTER SET latin1 NOT NULL,
+  `kblocks_hash` varchar(64) NOT NULL,
+  `data` longblob,
+  PRIMARY KEY (`hash`,`kblocks_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='  ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -385,6 +484,21 @@ CREATE TABLE `stat` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `tmp_snapshots`
+--
+
+DROP TABLE IF EXISTS `tmp_snapshots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tmp_snapshots` (
+  `hash` varchar(64) CHARACTER SET latin1 NOT NULL,
+  `kblocks_hash` varchar(64) NOT NULL,
+  `data` longblob,
+  PRIMARY KEY (`hash`,`kblocks_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='  ';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `tokens`
 --
 
@@ -395,19 +509,19 @@ CREATE TABLE `tokens` (
   `hash` varchar(64) NOT NULL,
   `owner` varchar(66) NOT NULL,
   `fee_type` int(11) unsigned NOT NULL DEFAULT '0',
-  `fee_value` bigint(20) unsigned NOT NULL DEFAULT '0',
-  `fee_min` bigint(20) unsigned DEFAULT NULL,
+  `fee_value` decimal(65,0) unsigned NOT NULL DEFAULT '0',
+  `fee_min` decimal(65,0) unsigned DEFAULT NULL,
   `ticker` varchar(10) DEFAULT NULL,
   `decimals` int(11) unsigned DEFAULT '10',
-  `total_supply` bigint(20) unsigned DEFAULT NULL,
+  `total_supply` decimal(65,0) unsigned DEFAULT NULL,
   `caption` varchar(150) CHARACTER SET utf8 DEFAULT NULL,
   `active` int(11) DEFAULT '0',
   `reissuable` tinyint(1) unsigned DEFAULT '0',
   `minable` tinyint(1) unsigned DEFAULT '0',
-  `max_supply` bigint(20) unsigned DEFAULT NULL,
-  `block_reward` bigint(20) unsigned DEFAULT NULL,
-  `min_stake` bigint(20) unsigned DEFAULT NULL,
-  `referrer_stake` bigint(20) unsigned DEFAULT NULL,
+  `max_supply` decimal(65,0) unsigned DEFAULT NULL,
+  `block_reward` decimal(65,0) unsigned DEFAULT NULL,
+  `min_stake` decimal(65,0) unsigned DEFAULT NULL,
+  `referrer_stake` decimal(65,0) unsigned DEFAULT NULL,
   `ref_share` int(11) unsigned DEFAULT NULL,
   PRIMARY KEY (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -419,7 +533,7 @@ CREATE TABLE `tokens` (
 
 DROP TABLE IF EXISTS `tokens_index`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tokens_index` (
   `hash` varchar(64) NOT NULL,
   `txs_count` bigint(20) DEFAULT '1',
@@ -434,12 +548,12 @@ CREATE TABLE `tokens_index` (
 
 DROP TABLE IF EXISTS `tokens_price`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tokens_price` (
   `tokens_hash` varchar(64) NOT NULL,
-  `cg_id` varchar(64),
-  `cg_price` bigint(20),
-  `dex_price` bigint(20),
+  `cg_id` varchar(64) DEFAULT NULL,
+  `cg_price` bigint(20) DEFAULT NULL,
+  `dex_price` decimal(65,0) unsigned DEFAULT NULL,
   `decimals` int(11) unsigned DEFAULT '10',
   PRIMARY KEY (`tokens_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -456,7 +570,7 @@ CREATE TABLE `transactions` (
   `hash` varchar(64) NOT NULL,
   `from` varchar(66) NOT NULL,
   `to` varchar(66) NOT NULL,
-  `amount` bigint(20) unsigned NOT NULL,
+  `amount` decimal(65,0) unsigned NOT NULL,
   `mblocks_hash` varchar(64) NOT NULL,
   `nonce` bigint(20) NOT NULL,
   `status` int(11) DEFAULT NULL,
@@ -498,7 +612,7 @@ CREATE TABLE `undelegates` (
   `id` varchar(64) NOT NULL,
   `delegator` varchar(66) DEFAULT NULL,
   `pos_id` varchar(64) DEFAULT NULL,
-  `amount` bigint(20) unsigned DEFAULT NULL,
+  `amount` decimal(65,0) unsigned DEFAULT NULL,
   `height` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -513,65 +627,4 @@ CREATE TABLE `undelegates` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
-DROP TABLE IF EXISTS `minted`;
-
-CREATE TABLE `minted` (
-  `wrapped_hash` varchar(64) NOT NULL,
-  `origin_network` int NOT NULL,
-  `origin_hash` varchar(64) NOT NULL,
-  `origin_decimals` TINYINT unsigned NOT NULL,
-  PRIMARY KEY (`wrapped_hash`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `bridge_claim_transfers`;
-
-CREATE TABLE `bridge_claim_transfers` (
-  `nonce` bigint(20) NOT NULL,
-  `src_address` varchar(66) NOT NULL,
-  `dst_address` varchar(66) NOT NULL,
-  `src_network` int NOT NULL,
-  `amount` bigint(20) unsigned DEFAULT NULL,
-  `dst_network` int NOT NULL,
-  `src_hash` varchar(64) NOT NULL,
-  `ticket_hash` varchar(64) NOT NULL,
-  `ticker` varchar(10) NOT NULL,
-  `origin_network` int NOT NULL,
-  `origin_hash` varchar(64) NOT NULL,
-  `origin_decimals` TINYINT unsigned NOT NULL,
-  `name` varchar(40) NOT NULL,
-  PRIMARY KEY (`ticket_hash`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `bridge_lock_transfers`;
-
-CREATE TABLE `bridge_lock_transfers` (
-  `channel_id` varchar(66) NOT NULL,
-  `dst_address` varchar(66) NOT NULL,
-  `dst_network` int(11) DEFAULT NULL,
-  `src_address` varchar(66) NOT NULL,
-  `src_hash` varchar(64) NOT NULL,
-  `nonce` bigint(20) NOT NULL,
-  PRIMARY KEY (`channel_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `bridge_confirmations`;
-
-CREATE TABLE `bridge_confirmations` (
-  `validator_id` varchar(66) NOT NULL,
-  `validator_sign` varchar(150) CHARACTER SET latin1 NOT NULL,
-  `ticket_hash` varchar(64) NOT NULL,
-  PRIMARY KEY (`ticket_hash`, `validator_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `bridge_settings`;
-
-CREATE TABLE `bridge_settings` (
-  `id` tinyint DEFAULT 1,
-  `owner` varchar(66) NOT NULL,
-  `threshold` TINYINT unsigned DEFAULT 1,
-  `validators` varchar(1000),
-  `known_networks` varchar(1000),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- Dump completed on 2020-04-14 15:09:51
+-- Dump completed on 2023-08-15 12:17:17
