@@ -101,7 +101,7 @@ class ContractParser {
         }
     }
     getContractsId(forks, n){
-        let Contracts = [contracts_000, contracts_001, contracts_002, contracts_pre_003, contracts_003];
+        let Contracts = [contracts_000, contracts_001, contracts_002, contracts_pre_003, contracts_003, contracts_004];
         let fork_keys = Object.keys(forks);
         let idx = fork_keys.length - 1;
         for(let i = 0; i < fork_keys.length; i++){
