@@ -66,10 +66,11 @@ const contracts_003 = [
     "2500", "2700", "2800", "2900", "2a00", 
     "2b00", "2c00"
 ];
+const contracts_004 = contracts_003;
 class ContractParser {
     constructor() {
         this.schema = schema;
-        this.contracts = contracts_003;
+        this.contracts = contracts_004;
     }
     toHex(d) {
         let hex = Number(d).toString(16);

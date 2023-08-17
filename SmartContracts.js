@@ -16,6 +16,8 @@ const c0 = require('./contracts_000');
 const c1 = require('./contracts_001');
 const c2 = require('./contracts_002');
 const c3 = require('./contracts_003');
+const cpre3 = c3;
+const c4 = require('./contracts_004');
 const Utils = require('./Utils');
 const {ContractError} = require('./errors');
 const ContractParser = require('./contractParser').ContractParser;
@@ -100,7 +102,7 @@ class ContractFactory{
     }
 }
 function getContractMachine(forks, n){
-    let Contracts = [c0, c1, c2, c2, c3];
+    let Contracts = [c0, c1, c2, cpre3, c3, c4];
     let fork_keys = Object.keys(forks);
     let idx = fork_keys.length - 1;
     for(let i = 0; i < fork_keys.length; i++){
