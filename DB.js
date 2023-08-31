@@ -2464,26 +2464,6 @@ class DB {
 		return this.request(sql);
 	}
 
-	async prefork_004(){
-		/*
-			The function is executed before the fork block.
-			Native coin emission increasing
-		 */
-		// TODO draft
-		let token_info = await this.request(mysql.format("SELECT total_supply, max_supply FROM tokens WHERE hash = ?", [Utils.ENQ_TOKEN_NAME]));
-		let minted = BigInt("30000000000000000000");
-		let ts = BigInt(token_info[0].total_supply) + minted;
-		let ms = BigInt(token_info[0].max_supply) + minted;
-		let to = "02137fc60c2fcf704c4534420c165de6007ca6995ec230b8f93a73c7f04cd4fc64"
-		console.info(`fork_pre_004 actions: old ts: ${BigInt(token_info[0].total_supply)} new ts: ${ts.toString()}, old ms: ${BigInt(token_info[0].max_supply)}, new ms: ${ms.toString()}`)
-		let sql1 = mysql.format(`UPDATE tokens SET total_supply = ?, max_supply = ?  WHERE (hash = ?);`,
-		[ts, ms, Utils.ENQ_TOKEN_NAME]);
-		await this.request(sql1);
-		let sql2 = mysql.format("INSERT INTO ledger (`id`, `amount`, `token`) VALUES ? ON DUPLICATE KEY UPDATE `amount` = VALUES(amount)", [[[to, minted, Utils.ENQ_TOKEN_NAME]]]);
-		await this.request(sql2);
-		return
-	}
-
 	async get_bridge_transactions(id, page_num, page_size){
 		let count = await this.request(mysql.format(`SELECT irew AS cnt FROM eindex WHERE id = ? AND irew IS NOT NULL ORDER BY irew DESC LIMIT 1`, id));
 		count = count[0].cnt;
