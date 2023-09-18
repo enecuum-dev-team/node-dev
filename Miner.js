@@ -46,18 +46,20 @@ class Miner {
 	}
 
 	async on_merkle_root(msg) {
-		let {kblocks_hash, snapshot_hash, m_root, leader_sign, mblocks, sblocks} = msg.data;
+		let {kblocks_hash, snapshot_hash, m_root, publisher, leader_sign, mblocks, sblocks} = msg.data;
 		let tail = await this.db.peek_tail();
 		if(tail.hash === kblocks_hash) {
 			if(this.current_m_root === undefined || m_root !== this.current_m_root.m_root) {
 				console.debug(`on_merkle_root kblock_hash = ${kblocks_hash}`);
 				console.silly(`on_merkle_root msg ${JSON.stringify(msg.data)}`);
+				//TODO: get snapshot hash
 				let recalc_m_root = Utils.merkle_root_002(mblocks, sblocks, snapshot_hash);
 				console.debug(`recalc_m_root`, {recalc_m_root});
 				let isValid_leader_sign;
 				try {
-					isValid_leader_sign = Utils.valid_leader_sign_002(kblocks_hash, recalc_m_root, leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
-				} catch(e){
+					//isValid_leader_sign = Utils.valid_leader_sign_002(kblocks_hash, recalc_m_root, leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
+					isValid_leader_sign = Utils.ecdsa_verify(publisher, leader_sign, recalc_m_root);
+				}catch(e){
 					console.error(e.toString());
 				}
 				console.debug(`isValid_leader_sign`, {isValid_leader_sign});

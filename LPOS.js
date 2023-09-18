@@ -62,14 +62,17 @@ class LPOS {
                 return;
             }
             let m_root = Utils.merkle_root_002(mblocks, sblocks, snapshot_hash);
-            let msk = this.config.ecc[this.config.ecc.ecc_mode].msk;
-            let leader_sign = Utils.leader_sign(this.config.leader_id, msk, tail.hash, m_root, this.ECC, this.config.ecc);
+            //let msk = this.config.ecc[this.config.ecc.ecc_mode].msk;
+            //let leader_sign = Utils.leader_sign(this.config.leader_id, msk, tail.hash, m_root, this.ECC, this.config.ecc);
+            let publisher = this.config.publisher;
+            let leader_sign = Utils.ecdsa_sign_crypto(this.config.prv, m_root);
 
             console.debug(`leader_sign ${JSON.stringify(leader_sign)}` );
             this.current_merkle_root = {
                 kblocks_hash: tail.hash,
                 snapshot_hash,
                 m_root,
+                publisher,
                 leader_sign,
                 mblocks,
                 sblocks
