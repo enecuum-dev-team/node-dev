@@ -64,6 +64,8 @@ class Miner {
 		for (let i = 0; i < 6; i++){
 			let block_data = await db.get_kblock(succ_hash);
 
+			succ_hash = block_data.link;
+
 			if (i == 0)
 				curr_time = block_data.time;
 			
