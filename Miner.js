@@ -47,12 +47,12 @@ class Miner {
 
 
 	async on_merkle_root(msg) {
-		let {kblocks_hash, snapshot_hash, m_root, publisher, leader_sign, mblocks, sblocks} = msg.data;
+		let {kblocks_hash, snapshot_hash, m_root, leader, leader_sign, mblocks, sblocks} = msg.data;
 		let tail = await this.db.peek_tail();
 
-        let is_pos_valid = await Utils.is_pos_publisher_valid(this.db, kblocks_hash, publisher);
+        let is_pos_valid = await Utils.is_pos_publisher_valid(this.db, kblocks_hash, leader);
         if(!is_pos_valid){
-            console.warn(`publisher ${publisher} send incorrect m_root`);
+            console.debug(`leader ${leader} is not valid now`);
         }else if(tail.hash === kblocks_hash) {
 			if(this.current_m_root === undefined || m_root !== this.current_m_root.m_root) {
 				console.debug(`on_merkle_root kblock_hash = ${kblocks_hash}`);
@@ -63,13 +63,13 @@ class Miner {
 				let isValid_leader_sign;
 				try {
 					//isValid_leader_sign = Utils.valid_leader_sign_002(kblocks_hash, recalc_m_root, leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
-					isValid_leader_sign = Utils.ecdsa_verify(publisher, leader_sign, recalc_m_root);
+					isValid_leader_sign = Utils.ecdsa_verify(leader, leader_sign, recalc_m_root);
 				}catch(e){
 					console.error(e.toString());
 				}
 				console.debug(`isValid_leader_sign`, {isValid_leader_sign});
 				if (isValid_leader_sign){
-					this.current_m_root = {hash:m_root, kblocks_hash, mblocks, sblocks, snapshot_hash, leader_sign};
+					this.current_m_root = {hash:m_root, kblocks_hash, mblocks, sblocks, snapshot_hash, leader, leader_sign};
 				}
 				else
 					console.warn(`invalid leader sign`);
@@ -269,6 +269,7 @@ class Miner {
 
 			let m_root = JSON.parse(JSON.stringify(this.current_m_root)); //copy JSON object
 			let leader_sign = m_root.leader_sign;
+			let leader = m_root.leader;
 
 			mblocks = mblocks.filter(m => m_root.mblocks.find(mm => mm.hash === m.hash));
 			sblocks = sblocks.filter(s => m_root.sblocks.find(ss => ss.hash === s.hash));
@@ -287,6 +288,7 @@ class Miner {
 					nonce: 0,
 					link: tail.hash,
 					m_root: m_root.hash,
+                    leader,
 					leader_sign
 				};
 

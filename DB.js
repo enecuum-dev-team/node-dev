@@ -597,7 +597,7 @@ class DB {
 			});
 		}
 
-		let sql_k = mysql.format(`INSERT INTO kblocks (hash, link, n, sprout, time, publisher, reward, nonce, m_root, leader_sign, target_diff) SELECT ?, ?, n + 1, sprout, ?, ?, ?, ?, ?, ?, ? FROM kblocks WHERE hash = ?`, [kblock.hash, kblock.link, kblock.time, kblock.publisher, kblock.reward, kblock.nonce, kblock.m_root, JSON.stringify(kblock.leader_sign), kblock.target_diff, kblock.link]);
+		let sql_k = mysql.format(`INSERT INTO kblocks (hash, link, n, sprout, time, publisher, reward, nonce, m_root, leader, leader_sign, target_diff) SELECT ?, ?, n + 1, sprout, ?, ?, ?, ?, ?, ?, ?, ? FROM kblocks WHERE hash = ?`, [kblock.hash, kblock.link, kblock.time, kblock.publisher, kblock.reward, kblock.nonce, kblock.m_root, kblock.leader, JSON.stringify(kblock.leader_sign), kblock.target_diff, kblock.link]);
 		console.debug(`try insert new kblock ${sql_k}`);
 		return this.transaction([sql_s.join(";"), sql_m.join(";"), sql_k].join(";"));
 	}
