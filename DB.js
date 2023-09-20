@@ -1998,6 +1998,11 @@ class DB {
 		return res;
 	}
 
+	async get_pos_contrac(id){
+		let res = this.request(mysql.format("SELECT * FROM poses WHERE id = ?", id));
+		return res;
+	}
+
 	async get_pos_info(pos_ids){
 		if(pos_ids.length === 0)
 			return [];
@@ -2312,6 +2317,8 @@ class DB {
 		let res = this.request(mysql.format("SELECT id as pos_id, name FROM poses"));
 		return res;
 	}
+
+
 
 	async put_tx_data(chunks){
 		let next_chunk = null;

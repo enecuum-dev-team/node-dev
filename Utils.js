@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const enq = require('./Enq');
 const config = require('./config.json');
 const rsasign = require('jsrsasign');
+const seedrandom = require('seedrandom');
 let rx = require('./node_modules/node-randomx/addon');
 const fs = require('fs');
 
@@ -977,7 +978,7 @@ let utils = {
 	},
 	deterministic_shuffle : function(array, seed) {
 		const shuffledArray = [...array];
-		const random = new Math.seedrandom(seed);
+		const random = seedrandom(seed);
 
 		for (let i = shuffledArray.length - 1; i > 0; i--) {
 			const j = Math.floor(random() * (i + 1));
@@ -986,20 +987,20 @@ let utils = {
 
 		return shuffledArray;
 	},
-    is_pos_publisher_valid : async function(kblock_hash, publisher) {
+    is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
 		let succ_hash = kblock_hash;
 		let prev_time, curr_time;
 
 		for (let i = 0; i < 6; i++) {
 			let block_data = await db.get_kblock(succ_hash);
 
-			succ_hash = block_data.link;
+			succ_hash = block_data[0].link;
 
-			if (i == 0)
-				curr_time = block_data.time;
+			if (i === 0)
+				curr_time = block_data[0].time;
 
-			if (i == 1)
-				prev_time = block_data.time;
+			if (i === 1)
+				prev_time = block_data[0].time;
 		}
 
 		let time_delta = curr_time - prev_time;
@@ -1014,11 +1015,16 @@ let utils = {
 
 		let shuffled = this.deterministic_shuffle(statblocks, seed);
 
-		let publisher_index = shuffled.findIndex(publisher);
+		let publisher_index = await shuffled.findIndex(async function(item){
+			let info = (await db.get_pos_contrac(item.publisher))
+			if(info !== undefined && info.length > 0)
+				if(info.owner === pos_owner)
+					return true;
+		});
 		console.debug(`publisher_index = ${publisher_index}`);
 
 		if (publisher_index < 0) {
-			console.warn(`publisher ${publisher} not found in shuffled list`);
+			console.warn(`pos owner publisher ${pos_owner} not found in shuffled list`);
 			return false;
 		}
 		return publisher_index * 30000 < time_delta;

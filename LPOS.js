@@ -66,7 +66,7 @@ class LPOS {
             //let leader_sign = Utils.leader_sign(this.config.leader_id, msk, tail.hash, m_root, this.ECC, this.config.ecc);
 
             let publisher = this.config.pos_owner;
-            let is_pos_valid = await Utils.is_pos_publisher_valid(tail.hash, publisher);
+            let is_pos_valid = await Utils.is_pos_publisher_valid(this.db, tail.hash, publisher);
             if(!is_pos_valid){
                 console.debug(`This POS cannot currently publish m_root`);
                 return;

@@ -50,7 +50,7 @@ class Miner {
 		let {kblocks_hash, snapshot_hash, m_root, publisher, leader_sign, mblocks, sblocks} = msg.data;
 		let tail = await this.db.peek_tail();
 
-        let is_pos_valid = await Utils.is_pos_publisher_valid(kblocks_hash, publisher);
+        let is_pos_valid = await Utils.is_pos_publisher_valid(this.db, kblocks_hash, publisher);
         if(!is_pos_valid){
             console.warn(`publisher ${publisher} send incorrect m_root`);
         }else if(tail.hash === kblocks_hash) {
