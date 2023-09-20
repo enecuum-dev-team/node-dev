@@ -974,9 +974,56 @@ let utils = {
 			return newtonIteration(n, x1);
 		}
 		return newtonIteration(value, BigInt(1));
+	},
+	deterministic_shuffle : function(array, seed) {
+		const shuffledArray = [...array];
+		const random = new Math.seedrandom(seed);
+
+		for (let i = shuffledArray.length - 1; i > 0; i--) {
+			const j = Math.floor(random() * (i + 1));
+			[shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
+		}
+
+		return shuffledArray;
+	},
+    is_pos_publisher_valid : async function(kblock_hash, publisher) {
+		let succ_hash = kblock_hash;
+		let prev_time, curr_time;
+
+		for (let i = 0; i < 6; i++) {
+			let block_data = await db.get_kblock(succ_hash);
+
+			succ_hash = block_data.link;
+
+			if (i == 0)
+				curr_time = block_data.time;
+
+			if (i == 1)
+				prev_time = block_data.time;
+		}
+
+		let time_delta = curr_time - prev_time;
+
+		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
+
+		let statblocks = await db.get_statblocks(succ_hash);
+
+		let seed = Number('0x' + succ_hash) % 65536;
+
+		console.debug(`Shuffle seed = ${seed}`);
+
+		let shuffled = this.deterministic_shuffle(statblocks, seed);
+
+		let publisher_index = shuffled.findIndex(publisher);
+		console.debug(`publisher_index = ${publisher_index}`);
+
+		if (publisher_index < 0) {
+			console.warn(`publisher ${publisher} not found in shuffled list`);
+			return false;
+		}
+		return publisher_index * 30000 < time_delta;
 	}
 };
-
 
 module.exports = utils;
 module.exports.ECC = ECC;

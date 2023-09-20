@@ -45,61 +45,15 @@ class Miner {
 		await this.miner();
 	}
 
-	function deterministic_shuffle(array, seed) {
- 		const shuffledArray = [...array];
-		const random = new Math.seedrandom(seed);
-
-		for (let i = shuffledArray.length - 1; i > 0; i--) {
-			const j = Math.floor(random() * (i + 1));
-		    [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
-  		}
-
-		return shuffledArray;
-	}
-
-	async is_pos_publisher_valid(kblock_hash, publisher){
-		let succ_hash = kblock_hash;
-		let prev_time, curr_time;
-
-		for (let i = 0; i < 6; i++){
-			let block_data = await db.get_kblock(succ_hash);
-
-			succ_hash = block_data.link;
-
-			if (i == 0)
-				curr_time = block_data.time;
-			
-			if (i == 1)
-				prev_time = block_data.time;
-		}
-
-		let time_delta = curr_time - prev_time;		
-
-		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
-
-		let statblocks = await db.get_statblocks(hash);
-
-		let seed = Number('0x' + succ_hash) % 65536;
-
-		console.debug(`Shuffle seed = ${seed}`);
-
-		let shuffled = deterministic_shuffle(statblocks, seed);
-
-		let publisher_index = shuffled.findIndex(publisher);
-		console.debug(`publisher_index = ${publisher_index}`);
-
-		if (publisher_index < 0){
-			console.warn(`publisher ${publisher} not found in shuffled list`);
-			return false;
-		}
-
-		return publisher_index * 30000 < time_delta;
-	}
 
 	async on_merkle_root(msg) {
 		let {kblocks_hash, snapshot_hash, m_root, publisher, leader_sign, mblocks, sblocks} = msg.data;
 		let tail = await this.db.peek_tail();
-		if(tail.hash === kblocks_hash) {
+
+        let is_pos_valid = await Utils.is_pos_publisher_valid(kblocks_hash, publisher);
+        if(!is_pos_valid){
+            console.warn(`publisher ${publisher} send incorrect m_root`);
+        }else if(tail.hash === kblocks_hash) {
 			if(this.current_m_root === undefined || m_root !== this.current_m_root.m_root) {
 				console.debug(`on_merkle_root kblock_hash = ${kblocks_hash}`);
 				console.silly(`on_merkle_root msg ${JSON.stringify(msg.data)}`);

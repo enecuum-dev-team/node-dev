@@ -12,7 +12,7 @@ class LPOS {
         this.current_merkle_root = undefined;
         //init transport
         this.transport = new Transport(this.config.id, 'pos');
-        if (this.config.ecc[this.config.ecc.ecc_mode].msk) {
+        if (this.config.pos_owner && this.config.pos_owner_prv) {
             this.transport.on('emit_m_root', this.on_emit_m_root.bind(this));
             this.timer_merkle_root = setTimeout(this.resend_m_root.bind(this), Utils.M_ROOT_RESEND_INTERVAL);
         }
@@ -64,8 +64,14 @@ class LPOS {
             let m_root = Utils.merkle_root_002(mblocks, sblocks, snapshot_hash);
             //let msk = this.config.ecc[this.config.ecc.ecc_mode].msk;
             //let leader_sign = Utils.leader_sign(this.config.leader_id, msk, tail.hash, m_root, this.ECC, this.config.ecc);
-            let publisher = this.config.publisher;
-            let leader_sign = Utils.ecdsa_sign_crypto(this.config.prv, m_root);
+
+            let publisher = this.config.pos_owner;
+            let is_pos_valid = await Utils.is_pos_publisher_valid(tail.hash, publisher);
+            if(!is_pos_valid){
+                console.debug(`This POS cannot currently publish m_root`);
+                return;
+            }
+            let leader_sign = Utils.ecdsa_sign_crypto(this.config.pos_owner_prv, m_root);
 
             console.debug(`leader_sign ${JSON.stringify(leader_sign)}` );
             this.current_merkle_root = {
