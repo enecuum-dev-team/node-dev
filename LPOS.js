@@ -78,7 +78,7 @@ class LPOS {
                 kblocks_hash: tail.hash,
                 snapshot_hash,
                 m_root,
-                publisher,
+                leader: publisher,
                 leader_sign,
                 mblocks,
                 sblocks

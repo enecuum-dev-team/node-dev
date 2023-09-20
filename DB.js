@@ -656,7 +656,7 @@ class DB {
 		let now = new Date();
 		let span = now - this.last_tail;
 		if ((span > timeout) || (this.cached_tail === null) || (timeout === undefined)) {
-			let tail = await this.request(mysql.format("SELECT sprout, n, hash, time, publisher, nonce, link, m_root, leader_sign, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
+			let tail = await this.request(mysql.format("SELECT sprout, n, hash, time, publisher, nonce, link, m_root, leader, leader_sign, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
 			if (tail.length === 1)
 				tail = tail[0];
 			else
@@ -834,7 +834,7 @@ class DB {
 	async get_macroblock(hash){
 		console.trace(`get_macroblock ${hash}`);
 		//TODO разнести функции получения макроблока для эксплорера и для синка. В версии синка не получать реварды и хеши
-		let kblock = (await this.request(mysql.format("SELECT `publisher`, `time`, `nonce`, `link`, `n`, `m_root`, `leader_sign` FROM kblocks WHERE `hash`=?", hash)))[0];
+		let kblock = (await this.request(mysql.format("SELECT `publisher`, `time`, `nonce`, `link`, `n`, `m_root`, `leader`, `leader_sign` FROM kblocks WHERE `hash`=?", hash)))[0];
 		let mblocks = await this.request(mysql.format("SELECT `publisher`, `referrer`, `sign`, `leader_sign`, `hash`, `kblocks_hash`, `nonce`, `token` FROM mblocks WHERE `included` = 1 AND `kblocks_hash`=?", hash));
 		let sblocks = await this.request(mysql.format("SELECT `publisher`, `sign`, `hash`, `kblocks_hash`, `bulletin` FROM sblocks WHERE `included` = 1 AND `kblocks_hash`=?", hash));
         if(kblock !== undefined)
