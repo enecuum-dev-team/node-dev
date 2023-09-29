@@ -19,6 +19,7 @@ const rsasign = require('jsrsasign');
 const seedrandom = require('seedrandom');
 let rx = require('./node_modules/node-randomx/addon');
 const fs = require('fs');
+const BigNumber = require('bignumber.js');
 
 let KeyEncoder = require('key-encoder').default;
 let keyEncoder = new KeyEncoder('secp256k1');

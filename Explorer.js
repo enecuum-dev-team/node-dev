@@ -475,7 +475,7 @@ class Explorer {
 		 	}
 
 		 	let pos = await this.db.get_pos_contract_info(req.query.value);
-		 	if (pos.length > 0 && pos[0].pos_id !== undefined) {
+			if (pos != undefined && pos.length > 0 && pos[0].pos_id !== undefined) {
 		 		resp.push({type:'pos', info:pos});
 		 	}
 
