@@ -987,14 +987,15 @@ let utils = {
 
 		return shuffledArray;
 	},
-    is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
+	is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
 		let succ_hash = kblock_hash;
 		let prev_time, curr_time;
-
+		let statblocks = await db.get_statblocks(succ_hash);
 		for (let i = 0; i < 6; i++) {
 			let block_data = await db.get_kblock(succ_hash);
 
 			succ_hash = block_data[0].link;
+			statblocks.concat(await db.get_statblocks(succ_hash));
 
 			if (i === 0)
 				curr_time = block_data[0].time;
@@ -1006,21 +1007,22 @@ let utils = {
 		let time_delta = curr_time - prev_time;
 
 		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
-
-		let statblocks = await db.get_statblocks(succ_hash);
-
-		let seed = Number('0x' + succ_hash) % 65536;
+		let x = new BigNumber('0x' + succ_hash, 16);
+		let seed = x.mod(65536).toNumber();
 
 		console.debug(`Shuffle seed = ${seed}`);
 
 		let shuffled = this.deterministic_shuffle(statblocks, seed);
 
-		let publisher_index = await shuffled.findIndex(async function(item){
+		let publisher_index = await this.findAsyncIndex(shuffled, async (item) => {
 			let info = (await db.get_pos_contrac(item.publisher))
-			if(info !== undefined && info.length > 0)
-				if(info.owner === pos_owner)
+			if(info !== undefined && info.length > 0){
+				if(info[0].owner === pos_owner)
 					return true;
-		});
+			}
+			return false;
+		})
+
 		console.debug(`publisher_index = ${publisher_index}`);
 
 		if (publisher_index < 0) {
@@ -1028,6 +1030,12 @@ let utils = {
 			return false;
 		}
 		return publisher_index * 30000 < time_delta;
+	},
+	findAsyncIndex : async function (arr, asyncCallback) {
+		const promises = arr.map(asyncCallback);
+		const results = await Promise.all(promises);
+		const index = results.findIndex(result => result);
+		return index;
 	}
 };
 
