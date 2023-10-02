@@ -203,6 +203,7 @@ CREATE TABLE `kblocks` (
   `link` varchar(64) NOT NULL,
   `sprout` varchar(64) NOT NULL,
   `m_root` varchar(64) NOT NULL,
+  `leader` varchar(66) NULL,
   `leader_sign` BLOB NULL,
   `reward` bigint(20) DEFAULT NULL,
   `target_diff` int(16) DEFAULT '10',

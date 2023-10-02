@@ -16,8 +16,10 @@ const crypto = require('crypto');
 const enq = require('./Enq');
 const config = require('./config.json');
 const rsasign = require('jsrsasign');
+const seedrandom = require('seedrandom');
 let rx = require('./node_modules/node-randomx/addon');
 const fs = require('fs');
+const BigNumber = require('bignumber.js');
 
 let KeyEncoder = require('key-encoder').default;
 let keyEncoder = new KeyEncoder('secp256k1');
@@ -974,9 +976,69 @@ let utils = {
 			return newtonIteration(n, x1);
 		}
 		return newtonIteration(value, BigInt(1));
+	},
+	deterministic_shuffle : function(array, seed) {
+		const shuffledArray = [...array];
+		const random = seedrandom(seed);
+
+		for (let i = shuffledArray.length - 1; i > 0; i--) {
+			const j = Math.floor(random() * (i + 1));
+			[shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
+		}
+
+		return shuffledArray;
+	},
+	is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
+		let succ_hash = kblock_hash;
+		let prev_time, curr_time;
+		let statblocks = await db.get_statblocks(succ_hash);
+		for (let i = 0; i < 6; i++) {
+			let block_data = await db.get_kblock(succ_hash);
+
+			succ_hash = block_data[0].link;
+			statblocks.concat(await db.get_statblocks(succ_hash));
+
+			if (i === 0)
+				curr_time = block_data[0].time;
+
+			if (i === 1)
+				prev_time = block_data[0].time;
+		}
+
+		let time_delta = curr_time - prev_time;
+
+		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
+		let x = new BigNumber('0x' + succ_hash, 16);
+		let seed = x.mod(65536).toNumber();
+
+		console.debug(`Shuffle seed = ${seed}`);
+
+		let shuffled = this.deterministic_shuffle(statblocks, seed);
+
+		let publisher_index = await this.findAsyncIndex(shuffled, async (item) => {
+			let info = (await db.get_pos_contract(item.publisher))
+			if(info !== undefined && info.length > 0){
+				if(info[0].owner === pos_owner)
+					return true;
+			}
+			return false;
+		})
+
+		console.debug(`publisher_index = ${publisher_index}`);
+
+		if (publisher_index < 0) {
+			console.warn(`pos owner publisher ${pos_owner} not found in shuffled list`);
+			return false;
+		}
+		return publisher_index * 30000 < time_delta;
+	},
+	findAsyncIndex : async function (arr, asyncCallback) {
+		const promises = arr.map(asyncCallback);
+		const results = await Promise.all(promises);
+		const index = results.findIndex(result => result);
+		return index;
 	}
 };
-
 
 module.exports = utils;
 module.exports.ECC = ECC;

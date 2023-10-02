@@ -597,7 +597,7 @@ class DB {
 			});
 		}
 
-		let sql_k = mysql.format(`INSERT INTO kblocks (hash, link, n, sprout, time, publisher, reward, nonce, m_root, leader_sign, target_diff) SELECT ?, ?, n + 1, sprout, ?, ?, ?, ?, ?, ?, ? FROM kblocks WHERE hash = ?`, [kblock.hash, kblock.link, kblock.time, kblock.publisher, kblock.reward, kblock.nonce, kblock.m_root, JSON.stringify(kblock.leader_sign), kblock.target_diff, kblock.link]);
+		let sql_k = mysql.format(`INSERT INTO kblocks (hash, link, n, sprout, time, publisher, reward, nonce, m_root, leader, leader_sign, target_diff) SELECT ?, ?, n + 1, sprout, ?, ?, ?, ?, ?, ?, ?, ? FROM kblocks WHERE hash = ?`, [kblock.hash, kblock.link, kblock.time, kblock.publisher, kblock.reward, kblock.nonce, kblock.m_root, kblock.leader, JSON.stringify(kblock.leader_sign), kblock.target_diff, kblock.link]);
 		console.debug(`try insert new kblock ${sql_k}`);
 		return this.transaction([sql_s.join(";"), sql_m.join(";"), sql_k].join(";"));
 	}
@@ -656,7 +656,7 @@ class DB {
 		let now = new Date();
 		let span = now - this.last_tail;
 		if ((span > timeout) || (this.cached_tail === null) || (timeout === undefined)) {
-			let tail = await this.request(mysql.format("SELECT sprout, n, hash, time, publisher, nonce, link, m_root, leader_sign, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
+			let tail = await this.request(mysql.format("SELECT sprout, n, hash, time, publisher, nonce, link, m_root, leader, leader_sign, reward FROM kblocks WHERE hash != link or n = 0 ORDER BY n DESC LIMIT 1"));
 			if (tail.length === 1)
 				tail = tail[0];
 			else
@@ -834,7 +834,7 @@ class DB {
 	async get_macroblock(hash){
 		console.trace(`get_macroblock ${hash}`);
 		//TODO разнести функции получения макроблока для эксплорера и для синка. В версии синка не получать реварды и хеши
-		let kblock = (await this.request(mysql.format("SELECT `publisher`, `time`, `nonce`, `link`, `n`, `m_root`, `leader_sign` FROM kblocks WHERE `hash`=?", hash)))[0];
+		let kblock = (await this.request(mysql.format("SELECT `publisher`, `time`, `nonce`, `link`, `n`, `m_root`, `leader`, `leader_sign` FROM kblocks WHERE `hash`=?", hash)))[0];
 		let mblocks = await this.request(mysql.format("SELECT `publisher`, `referrer`, `sign`, `leader_sign`, `hash`, `kblocks_hash`, `nonce`, `token` FROM mblocks WHERE `included` = 1 AND `kblocks_hash`=?", hash));
 		let sblocks = await this.request(mysql.format("SELECT `publisher`, `sign`, `hash`, `kblocks_hash`, `bulletin` FROM sblocks WHERE `included` = 1 AND `kblocks_hash`=?", hash));
         if(kblock !== undefined)
@@ -1998,6 +1998,11 @@ class DB {
 		return res;
 	}
 
+	async get_pos_contract(id){
+		let res = this.request(mysql.format("SELECT * FROM poses WHERE id = ?", id));
+		return res;
+	}
+
 	async get_pos_info(pos_ids){
 		if(pos_ids.length === 0)
 			return [];
@@ -2312,6 +2317,8 @@ class DB {
 		let res = this.request(mysql.format("SELECT id as pos_id, name FROM poses"));
 		return res;
 	}
+
+
 
 	async put_tx_data(chunks){
 		let next_chunk = null;

@@ -186,7 +186,9 @@ class Syncer {
         }
         let {candidate, macroblock} = await this.transport.unicast(socket, "get_macroblock", {hash: kblock_hash});
         let isValid_leader_sign = false;
-        if (n >= this.config.FORKS.fork_block_002)
+        if (n >= this.config.FORKS.fork_block_004)
+            isValid_leader_sign = Utils.ecdsa_verify(candidate.leader, candidate.leader_sign, candidate.m_root);
+        else if (n >= this.config.FORKS.fork_block_002)
             isValid_leader_sign = Utils.valid_leader_sign_002(candidate.link, candidate.m_root, candidate.leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
         else
             isValid_leader_sign = Utils.valid_leader_sign_000(macroblock.mblocks, this.config.leader_id, this.ECC, this.config.ecc);
@@ -468,7 +470,9 @@ class Syncer {
 					return;
 				}
 				let isValid_leader_sign = false;
-				if (fork >= this.config.FORKS.fork_block_002)
+				if (fork >= this.config.FORKS.fork_block_004)
+					isValid_leader_sign = Utils.ecdsa_verify(kblock.leader, kblock.leader_sign, kblock.m_root);
+				else if (fork >= this.config.FORKS.fork_block_002)
 					isValid_leader_sign = Utils.valid_leader_sign_002(kblock.link, kblock.m_root, kblock.leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
 				else
 					isValid_leader_sign = Utils.valid_leader_sign_000(mblocks, this.config.leader_id, this.ECC, this.config.ecc);
@@ -784,7 +788,9 @@ class Syncer {
 				break;
 		}
 		let isValid_leader_sign = false;
-		if(n >= this.config.FORKS.fork_block_002) {
+		if(n >=  this.config.FORKS.fork_block_004) {
+			isValid_leader_sign = Utils.ecdsa_verify(candidate.leader, candidate.leader_sign, candidate.m_root);
+		}else if(n >= this.config.FORKS.fork_block_002) {
 			isValid_leader_sign = Utils.valid_leader_sign_002(candidate.link, candidate.m_root, candidate.leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
 		} else {
 			isValid_leader_sign = Utils.valid_leader_sign_000(valid_mblocks, this.config.leader_id, this.ECC, this.config.ecc);
