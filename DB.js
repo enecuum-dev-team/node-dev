@@ -1998,7 +1998,7 @@ class DB {
 		return res;
 	}
 
-	async get_pos_contrac(id){
+	async get_pos_contract(id){
 		let res = this.request(mysql.format("SELECT * FROM poses WHERE id = ?", id));
 		return res;
 	}

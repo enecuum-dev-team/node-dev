@@ -1016,7 +1016,7 @@ let utils = {
 		let shuffled = this.deterministic_shuffle(statblocks, seed);
 
 		let publisher_index = await this.findAsyncIndex(shuffled, async (item) => {
-			let info = (await db.get_pos_contrac(item.publisher))
+			let info = (await db.get_pos_contract(item.publisher))
 			if(info !== undefined && info.length > 0){
 				if(info[0].owner === pos_owner)
 					return true;
