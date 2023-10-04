@@ -990,7 +990,8 @@ let utils = {
 	},
 	is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
 		let succ_hash = kblock_hash;
-		let prev_time, curr_time;
+		let prev_time;
+		let curr_time = Math.floor(new Date() / 1000);
 		let statblocks = await db.get_statblocks(succ_hash);
 		for (let i = 0; i < 6; i++) {
 			let block_data = await db.get_kblock(succ_hash);
@@ -999,9 +1000,6 @@ let utils = {
 			statblocks.concat(await db.get_statblocks(succ_hash));
 
 			if (i === 0)
-				curr_time = block_data[0].time;
-
-			if (i === 1)
 				prev_time = block_data[0].time;
 		}
 
@@ -1030,7 +1028,7 @@ let utils = {
 			console.warn(`pos owner publisher ${pos_owner} not found in shuffled list`);
 			return false;
 		}
-		return publisher_index * 30000 < time_delta;
+		return publisher_index * 30 <= time_delta;
 	},
 	findAsyncIndex : async function (arr, asyncCallback) {
 		const promises = arr.map(asyncCallback);
