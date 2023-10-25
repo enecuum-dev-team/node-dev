@@ -1030,6 +1030,34 @@ let utils = {
 		}
 		return publisher_index * 30 <= time_delta;
 	},
+	get_different_bits_count : function(hex1, hex2) {
+		const buf1 = Buffer.from(hex1, 'hex');
+		const buf2 = Buffer.from(hex2, 'hex');
+		let count = 0;
+
+		const bufResult = buf1.map((b, i) => b ^ buf2[i]);
+		bufResult.map((b, i) => {
+			for (let j = 7; j >= 0; j--) {
+				count += b & (1 << j) ? 1 : 0;
+			}
+		});
+		return count;//bufResult.toString('hex');
+	},
+	is_poa_publisher_valid : async function(db, kblock_hash, publisher) {
+		let curr_time = Math.floor(new Date() / 1000);
+		let block_data = await db.get_kblock(kblock_hash);
+		let condidate = crypto.createHash('sha256').update(publisher).update(kblock_hash).digest('hex');
+		let target = crypto.createHash('sha256').update(kblock_hash).digest('hex');
+
+		let diff_bit_count = this.get_different_bits_count(condidate, target);
+		console.log({diff_bit_count})
+		let t = curr_time - block_data[0].time;
+
+		if(diff_bit_count <= 256 - t*4)
+			return true;
+		else
+			return false;
+	},
 	findAsyncIndex : async function (arr, asyncCallback) {
 		const promises = arr.map(asyncCallback);
 		const results = await Promise.all(promises);

@@ -102,7 +102,7 @@ class PoAServer {
 		return msg;
 	}
 
-	choice_client(token) {
+	choice_client_old(token) {
 		//let clients = this.clients.slice();
 		let clients = this.clients.map(function(c) {
 				return {token:c.token, stake:c.stake, key:c.key};
@@ -127,6 +127,23 @@ class PoAServer {
 		}
 		return clients[0];
 	}
+
+    choice_client(kblock_hash) {
+        //let clients = this.clients.slice();
+        let clients = this.clients.map(function(c) {
+            return {token:c.token, stake:c.stake, key:c.key};
+        });
+        clients.sort((a, b) => a.stake - b.stake);
+
+        let client;
+
+        do {
+            client = clients.splice(0, 1)[0];
+            clients.push(client);
+        } while (Utils.is_poa_publisher_valid(this.db, kblock_hash, client.key));
+
+        return client;
+    }
 
 	choice_token(clients, owner_tokens) {
 		let token_list = clients.reduce(function (acc, el) {
@@ -176,7 +193,7 @@ class PoAServer {
 			console.debug({token});
 
 			let time = process.hrtime();
-			let client = this.choice_client(token);
+			let client = this.choice_client(mblock.kblocks_hash);
 			let choice_time = process.hrtime(time);
 
 			console.silly('choice_time ', Utils.format_time(choice_time));
