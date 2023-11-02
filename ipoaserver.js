@@ -121,7 +121,7 @@ feeder = async function (poa_server) {
         let mblocks = await db.get_microblocks(kblocks_hash);
 
         let owner_slots = await init_slots(config.mblock_slots.count, kblocks_hash);
-        console.info(`owner_slots = ${JSON.stringify(owner_slots)}`);
+        //console.info(`owner_slots = ${JSON.stringify(owner_slots)}`);
         let txs_awaiting = 0;
         if (mblocks.length !== 0)
             txs_awaiting = (await db.get_txs_awaiting(mblocks.map(m => m.hash))).txs_awaiting;

@@ -1052,8 +1052,8 @@ let utils = {
 		let diff_bit_count = this.get_different_bits_count(condidate, target);
 		console.log({diff_bit_count})
 		let t = curr_time - block_data[0].time;
-
-		if(diff_bit_count <= 256 - t*4)
+		console.info({t})
+		if(diff_bit_count <= (100 + t*8))
 			return true;
 		else
 			return false;

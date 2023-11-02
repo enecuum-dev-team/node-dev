@@ -128,19 +128,20 @@ class PoAServer {
 		return clients[0];
 	}
 
-    choice_client(kblock_hash) {
+    async choice_client(kblock_hash) {
         //let clients = this.clients.slice();
         let clients = this.clients.map(function(c) {
             return {token:c.token, stake:c.stake, key:c.key};
         });
-        clients.sort((a, b) => a.stake - b.stake);
+        //clients.sort((a, b) => a.stake - b.stake);
 
         let client;
 
         do {
+        	console.info()
             client = clients.splice(0, 1)[0];
             clients.push(client);
-        } while (Utils.is_poa_publisher_valid(this.db, kblock_hash, client.key));
+        } while (!(await Utils.is_poa_publisher_valid(this.db, kblock_hash, client.key)));
 
         return client;
     }
@@ -175,12 +176,13 @@ class PoAServer {
 	}
 
 	async send_mblock(mblock, owner, height) {
+		console.log("send_mblock")
 		let tries = 0;
 		let sent = false;
 		let sent_hash = null;
 
 		if (this.clients.length === 0) {
-			console.debug(`no connected clients`);
+			console.warn(`no connected clients`);
 			return false;
 		}
 
@@ -193,12 +195,13 @@ class PoAServer {
 			console.debug({token});
 
 			let time = process.hrtime();
-			let client = this.choice_client(mblock.kblocks_hash);
+			let client = await this.choice_client(mblock.kblocks_hash);
 			let choice_time = process.hrtime(time);
+			console.warn({client});
 
-			console.silly('choice_time ', Utils.format_time(choice_time));
+			console.info('choice_time ', Utils.format_time(choice_time));
 			let index = this.clients.findIndex(c => c.key === client.key);
-			console.debug(`index : ${index}`);
+			console.info(`index : ${index}`);
 			client = this.clients.splice(index, 1)[0];
 			console.silly(`choice client stake = ${client.stake}`);
 			if (client.ws.readyState === 1) {
