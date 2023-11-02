@@ -1572,7 +1572,11 @@ class DB {
     async get_minted_all() {
         return await this.request('SELECT * FROM minted');
     }
-    async get_minted(wrapped_hash) {
+    async get_minted_by_origin_hash(hash) {
+		return await this.request(mysql.format('SELECT * FROM minted where origin_hash = ? ', [hash]));
+	}
+
+	async get_minted(wrapped_hash) {
         if (!wrapped_hash)
             return [];
         return (await this.request(mysql.format('SELECT * FROM minted WHERE wrapped_hash = ?', [wrapped_hash])))[0];
