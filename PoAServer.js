@@ -129,19 +129,16 @@ class PoAServer {
 	}
 
     async choice_client(kblock_hash) {
-        //let clients = this.clients.slice();
+        let kblock_data = (await db.get_kblock(kblock_hash))[0];
         let clients = this.clients.map(function(c) {
             return {token:c.token, stake:c.stake, key:c.key};
         });
-        //clients.sort((a, b) => a.stake - b.stake);
-
         let client;
-
         do {
         	console.info()
             client = clients.splice(0, 1)[0];
             clients.push(client);
-        } while (!(await Utils.is_poa_publisher_valid(this.db, kblock_hash, client.key)));
+        } while (!(await Utils.is_poa_publisher_valid(kblock_data, client.key)));
 
         return client;
     }
@@ -330,7 +327,8 @@ class PoAServer {
 									if (exist.length === 0) {
 										let accounts = await this.db.get_accounts_all([client.mblock.publisher]);
 										let tokens = await this.db.get_tokens([client.mblock.token]);
-										let valid_mblocks = Utils.valid_full_microblocks([client.mblock], accounts, tokens, true);
+                                        let kblock_data = await db.get_kblock(client.mblock.kblocks_hash);
+										let valid_mblocks = Utils.valid_full_microblocks([client.mblock], kblock_data, accounts, tokens, true);
 										if (valid_mblocks.length === 1) {
 											await this.db.put_microblocks(valid_mblocks);
 											if (client.token !== Utils.ENQ_TOKEN_NAME)

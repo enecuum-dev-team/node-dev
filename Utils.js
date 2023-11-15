@@ -670,9 +670,14 @@ let utils = {
 		console.trace(`total tx count = ${total_tx_count}`);
 		return mblocks;
 	},
-	valid_full_microblocks(mblocks, accounts, tokens, check_txs_sign){
+	valid_full_microblocks(mblocks, kblock_data, accounts, tokens, check_txs_sign){
 		let total_tx_count = 0;
+		if(kblock_data.length === 0)
+			return [];
 		mblocks = mblocks.filter((mblock)=>{
+			if(!this.is_poa_publisher_valid(kblock_data[0], mblock.publisher)){
+				return false;
+			}
 			let tok_idx = tokens.findIndex(t => t.hash === mblock.token);
 			if(tok_idx < 0){
 				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : token not found`);
@@ -1043,16 +1048,13 @@ let utils = {
 		});
 		return count;//bufResult.toString('hex');
 	},
-	is_poa_publisher_valid : async function(db, kblock_hash, publisher) {
+	is_poa_publisher_valid : async function(kblock_data, publisher) {
 		let curr_time = Math.floor(new Date() / 1000);
-		let block_data = await db.get_kblock(kblock_hash);
-		let condidate = crypto.createHash('sha256').update(publisher).update(kblock_hash).digest('hex');
-		let target = crypto.createHash('sha256').update(kblock_hash).digest('hex');
+		let condidate = crypto.createHash('sha256').update(publisher).update(kblock_data.hash).digest('hex');
+		let target = crypto.createHash('sha256').update(kblock_data.hash).digest('hex');
 
 		let diff_bit_count = this.get_different_bits_count(condidate, target);
-		console.log({diff_bit_count})
-		let t = curr_time - block_data[0].time;
-		console.info({t})
+		let t = curr_time - kblock_data.time;
 		if(diff_bit_count <= (100 + t*8))
 			return true;
 		else
