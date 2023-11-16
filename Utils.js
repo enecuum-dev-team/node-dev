@@ -670,9 +670,14 @@ let utils = {
 		console.trace(`total tx count = ${total_tx_count}`);
 		return mblocks;
 	},
-	valid_full_microblocks(mblocks, accounts, tokens, check_txs_sign){
+	valid_full_microblocks(mblocks, kblock_data, accounts, tokens, check_txs_sign){
 		let total_tx_count = 0;
+		if(kblock_data.length === 0)
+			return [];
 		mblocks = mblocks.filter((mblock)=>{
+			if(!this.is_poa_publisher_valid(kblock_data[0], mblock.publisher)){
+				return false;
+			}
 			let tok_idx = tokens.findIndex(t => t.hash === mblock.token);
 			if(tok_idx < 0){
 				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : token not found`);
@@ -1029,6 +1034,31 @@ let utils = {
 			return false;
 		}
 		return publisher_index * 30 <= time_delta;
+	},
+	get_different_bits_count : function(hex1, hex2) {
+		const buf1 = Buffer.from(hex1, 'hex');
+		const buf2 = Buffer.from(hex2, 'hex');
+		let count = 0;
+
+		const bufResult = buf1.map((b, i) => b ^ buf2[i]);
+		bufResult.map((b, i) => {
+			for (let j = 7; j >= 0; j--) {
+				count += b & (1 << j) ? 1 : 0;
+			}
+		});
+		return count;//bufResult.toString('hex');
+	},
+	is_poa_publisher_valid : async function(kblock_data, publisher) {
+		let curr_time = Math.floor(new Date() / 1000);
+		let condidate = crypto.createHash('sha256').update(publisher).update(kblock_data.hash).digest('hex');
+		let target = crypto.createHash('sha256').update(kblock_data.hash).digest('hex');
+
+		let diff_bit_count = this.get_different_bits_count(condidate, target);
+		let t = curr_time - kblock_data.time;
+		if(diff_bit_count <= (100 + t*8))
+			return true;
+		else
+			return false;
 	},
 	findAsyncIndex : async function (arr, asyncCallback) {
 		const promises = arr.map(asyncCallback);
