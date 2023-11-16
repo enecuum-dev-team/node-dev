@@ -625,7 +625,8 @@ class Syncer {
             }
             let accounts = await this.db.get_accounts_all(mblocks.map(m => m.publisher));
             let tokens = await this.db.get_tokens(mblocks.map(m => m.token));
-            mblocks = Utils.valid_full_microblocks(mblocks, accounts, tokens, true);
+			let kblock_data = await this.db.get_kblock(mblocks[0].kblocks_hash);
+            mblocks = Utils.valid_full_microblocks(mblocks, kblock_data, accounts, tokens, true);
             if (mblocks.length === 0) {
                 console.warn(`on_microblocks: no valid microblocks found`);
                 return;
@@ -754,9 +755,10 @@ class Syncer {
 		let accounts = await this.db.get_accounts_all(mblocks.map(m => m.publisher));
 		let tokens = await this.db.get_tokens(mblocks.map(m => m.token));
 		let valid_mblocks = 0;
-		if(n >= this.config.FORKS.fork_block_002)
-			valid_mblocks = Utils.valid_full_microblocks(mblocks, accounts, tokens, true);
-		else
+		if(n >= this.config.FORKS.fork_block_002) {
+			let kblock_data = await this.db.get_kblock(mblocks[0].kblocks_hash);
+			valid_mblocks = Utils.valid_full_microblocks(mblocks, kblock_data, accounts, tokens, true);
+		}else
 			valid_mblocks = Utils.valid_full_microblocks_000(mblocks, accounts, tokens, true);
 		if (valid_mblocks.length !== mblocks.length) {
 			console.warn(`Valid mblock count change: before ${mblocks.length}, after ${valid_mblocks.length}`);

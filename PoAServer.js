@@ -129,7 +129,7 @@ class PoAServer {
 	}
 
     async choice_client(kblock_hash) {
-        let kblock_data = (await db.get_kblock(kblock_hash))[0];
+        let kblock_data = (await this.db.get_kblock(kblock_hash))[0];
         let clients = this.clients.map(function(c) {
             return {token:c.token, stake:c.stake, key:c.key};
         });
@@ -194,7 +194,7 @@ class PoAServer {
 			let time = process.hrtime();
 			let client = await this.choice_client(mblock.kblocks_hash);
 			let choice_time = process.hrtime(time);
-			console.warn({client});
+			console.debug({client});
 
 			console.info('choice_time ', Utils.format_time(choice_time));
 			let index = this.clients.findIndex(c => c.key === client.key);
@@ -327,7 +327,7 @@ class PoAServer {
 									if (exist.length === 0) {
 										let accounts = await this.db.get_accounts_all([client.mblock.publisher]);
 										let tokens = await this.db.get_tokens([client.mblock.token]);
-                                        let kblock_data = await db.get_kblock(client.mblock.kblocks_hash);
+                                        let kblock_data = await this.db.get_kblock(client.mblock.kblocks_hash);
 										let valid_mblocks = Utils.valid_full_microblocks([client.mblock], kblock_data, accounts, tokens, true);
 										if (valid_mblocks.length === 1) {
 											await this.db.put_microblocks(valid_mblocks);
