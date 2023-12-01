@@ -9,20 +9,6 @@ ADD /build /app
 
 ARG BUILDVAR
 
-RUN if [ "$BUILDVAR" = "POW" ] || [ "$BUILDVAR" = "POS" ] ; then \
-	rm Explorer.js  ;\
-	rm Stat.js ;\
-	rm -r explorer ;\
-	rm iexplorer.js ;\
-	rm istat.js ;\
-	rm stakecalc.js ;\
-elif [ "$BUILDVAR" = "FULLNODE" ] ; then \
-	rm iminer.js ;\
-	rm Miner.js ;\
-	rm ilpos.js ;\
-    rm LPOS.js ;\
-fi
-
 #files in container
 RUN ls
 
