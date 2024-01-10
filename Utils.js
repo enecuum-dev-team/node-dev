@@ -1055,10 +1055,9 @@ let utils = {
 
 		let diff_bit_count = this.get_different_bits_count(condidate, target);
 		let t = curr_time - kblock_data.time;
-		if(diff_bit_count <= (100 + t*8))
+		if(t > 6) //limit 6 second
 			return true;
-		else
-			return false;
+		return diff_bit_count <= (92 + t * 8);
 	},
 	findAsyncIndex : async function (arr, asyncCallback) {
 		const promises = arr.map(asyncCallback);

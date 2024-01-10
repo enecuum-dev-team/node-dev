@@ -128,16 +128,30 @@ class PoAServer {
 		return clients[0];
 	}
 
+    async sleep(ms){
+        return new Promise(function(resolve, reject){
+            setTimeout(() => resolve(), ms)
+        });
+    }
+
     async choice_client(kblock_hash) {
         let kblock_data = (await this.db.get_kblock(kblock_hash))[0];
         let clients = this.clients.map(function(c) {
             return {token:c.token, stake:c.stake, key:c.key};
         });
         let client;
+        let i = clients.length;
+
         do {
-        	console.info()
             client = clients.splice(0, 1)[0];
             clients.push(client);
+            if(i === 0){
+                i = clients.length
+                await this.sleep(500);
+                console.silly(`---`);
+            }else {
+                i--;
+            }
         } while (!(await Utils.is_poa_publisher_valid(kblock_data, client.key)));
 
         return client;
@@ -247,13 +261,13 @@ class PoAServer {
 
 				if ((client.karma < rnd) || ((client.last_use === null) && this.cfg.first_message_always_probe)) {
 					console.trace(`Decision made to send a probe to ${client.id}@${client.ip}`);
-					probe = this.create_probe(client.key, height);
+					probe = this.create_probe(client.key, 1, height);
 				}
 
 				if (client.key === undefined && this.cfg.first_message_always_probe) {
 					client.karma /= this.karma_dec;
 					console.warn(`${client.id}@${client.ip} still not introduced, launching probe and decreasing karma to ${client.karma}`);
-					probe = this.create_probe(client.key, height);
+					probe = this.create_probe(client.key, 1, height);
 				}
 
 				if (client.karma < this.karma_min) {

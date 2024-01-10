@@ -1798,7 +1798,11 @@ class DB {
 													INNER JOIN mblocks AS M ON M.hash = T.mblocks_hash`, [hash,hash]));
 	}
 
-	async get_duplicates(hashes){
+    async get_raw_tx(hash){
+        return await this.request(mysql.format(`SELECT * FROM transactions WHERE hash = ?`, [hash]));
+    }
+
+    async get_duplicates(hashes){
 		if (hashes.length > 0) {
 			return await this.request(mysql.format('SELECT DISTINCT transactions.hash, mblocks.included AS included FROM transactions LEFT JOIN mblocks ON mblocks.hash = transactions.mblocks_hash WHERE transactions.`hash` IN (?) AND `calculated` = 1 GROUP BY transactions.hash', [hashes]));
 		} else {
