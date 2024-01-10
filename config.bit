@@ -81,8 +81,18 @@
 		"fork_block_000": 0,
 		"fork_block_001": 0,
 		"fork_block_002": 0,
-		"fork_block_003": 0
+		"fork_block_003": 0,
+		"fork_block_004": 0,
+		"fork_block_005": 0
 	},
+	"PROTOCOL_VERSIONS" : {
+        "fork_block_000" : 2,
+        "fork_block_001" : 2,
+        "fork_block_002" : 3,
+        "fork_block_003" : 3,
+        "fork_block_004" : 3,
+        "fork_block_005" : 3
+    },
 	"mblock_slots": {
 		"size": 2,
 		"count": 2,
@@ -105,12 +115,6 @@
 		"DEX_POOL_FEE": 35,
 		"DEX_TRUSTED_TOKENS": ["824e7b171c01e971337c1b25a055023dd53c003d4aa5aa8b58a503d7c622651e"]
 	},
-	"PROTOCOL_VERSIONS" : {
-      "fork_block_000" : 2,
-      "fork_block_001" : 2,
-      "fork_block_002" : 3,
-      "fork_block_003" : 3
-    },
     "tokens_white_list": [
     	"0000000000000000000000000000000000000000000000000000000000000001",
     	"824e7b171c01e971337c1b25a055023dd53c003d4aa5aa8b58a503d7c622651e"

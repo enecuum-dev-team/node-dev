@@ -100,7 +100,7 @@ class ContractFactory{
     }
 }
 function getContractMachine(forks, n){
-    let Contracts = [c0, c1, c2, c2, c3, c3];
+    let Contracts = [c0, c1, c2, c2, c3, c3, c3];
     let fork_keys = Object.keys(forks);
     let idx = fork_keys.length - 1;
     for(let i = 0; i < fork_keys.length; i++){
