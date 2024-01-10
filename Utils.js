@@ -1000,24 +1000,17 @@ let utils = {
 		let statblocks = await db.get_statblocks(succ_hash);
 		for (let i = 0; i < 6; i++) {
 			let block_data = await db.get_kblock(succ_hash);
-
 			succ_hash = block_data[0].link;
 			statblocks.concat(await db.get_statblocks(succ_hash));
-
 			if (i === 0)
 				prev_time = block_data[0].time;
 		}
-
 		let time_delta = curr_time - prev_time;
-
 		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
 		let x = new BigNumber('0x' + succ_hash, 16);
 		let seed = x.mod(65536).toNumber();
-
 		console.debug(`Shuffle seed = ${seed}`);
-
 		let shuffled = this.deterministic_shuffle(statblocks, seed);
-
 		let publisher_index = await this.findAsyncIndex(shuffled, async (item) => {
 			let info = (await db.get_pos_contract(item.publisher))
 			if(info !== undefined && info.length > 0){
@@ -1026,9 +1019,7 @@ let utils = {
 			}
 			return false;
 		})
-
 		console.debug(`publisher_index = ${publisher_index}`);
-
 		if (publisher_index < 0) {
 			console.warn(`pos owner publisher ${pos_owner} not found in shuffled list`);
 			return false;
