@@ -21,7 +21,7 @@ class NodeapiService {
         this.pending = new Pending(this.db);
     }
     async post_tx(tx){
-        let isValid = this.pending.validate(tx);
+        let isValid = await this.pending.validate(tx);
         if(isValid.err !== 0)
             return isValid;
         tx.from = tx.from.toLowerCase();

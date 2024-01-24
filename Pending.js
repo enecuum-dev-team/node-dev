@@ -36,13 +36,17 @@ class Pending {
 		return txs;
 	}
 
-	validate(tx){
+	async validate(tx){
 		let isValid = Validator.tx(tx);
 		if(isValid.err !== 0){
 			console.trace(isValid);
 			return isValid;
 		}
 		let hash = Utils.hash_tx_fields(tx);
+        let txs = await this.db.get_raw_tx(hash);
+        if(txs.length > 0){
+            return {err: 1, message: "Transactions already exist in blockchain"}
+        }
 		let verified = Utils.ecdsa_verify(tx.from, tx.sign, hash);
 		console.silly(`Signed message: ${hash} , verified: ${verified}`);
 

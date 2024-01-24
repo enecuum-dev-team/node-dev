@@ -83,17 +83,21 @@
             }
         }
     },
-	  "FORKS" : {
+	"FORKS" : {
         "fork_block_000" : 0,
         "fork_block_001" : 0,
         "fork_block_002" : 0,
-        "fork_block_003" : 0
+        "fork_block_003" : 0,
+        "fork_block_004" : 0,
+        "fork_block_005" : 0
     },
     "PROTOCOL_VERSIONS" : {
           "fork_block_000" : 2,
           "fork_block_001" : 3,
           "fork_block_002" : 4,
-          "fork_block_003" : 4
+          "fork_block_003" : 4,
+          "fork_block_004" : 5,
+          "fork_block_005" : 5
         },
 	  "mblock_slots": {
         "size": 2,

@@ -454,33 +454,39 @@ class Syncer {
 			if (remote.link !== tail.hash) {
 				console.silly(`remote.link !== tail.hash - ${remote.link !== tail.hash}`);
 				console.silly(`remote = ${JSON.stringify(remote)},  tail = ${JSON.stringify(tail)}`);
-				//check leader sign at fork block before removing chain tail
-				let {macroblock} = await this.transport.unicast(socket, "get_macroblock", {hash: fork_id});
-				if (macroblock === undefined) {
-					console.warn(`Empty response 'get_macroblock'`);
+
+				//get chain from fork block
+				let max = (remote.n - fork) > 1000 ? fork + 1000 : remote.n;
+				let range = await this.transport.unicast(socket, "peek", {min: fork, max:max});
+				let that = this;
+				let result = range.reduce(function (prev, current) {
+					current.hash = (Utils.hash_kblock(current, that.vm)).toString('hex');
+					let isValid_leader_sign = false;
+					if (current.n >= that.config.FORKS.fork_block_004)
+						isValid_leader_sign = Utils.ecdsa_verify(current.leader, current.leader_sign, current.m_root);
+					else if (current.n >= that.config.FORKS.fork_block_002)
+						isValid_leader_sign = Utils.valid_leader_sign_002(current.link, current.m_root, current.leader_sign, that.config.leader_id, that.ECC, that.config.ecc);
+					else
+						isValid_leader_sign = true; //check before fork_block_002 is disabled //Utils.valid_leader_sign_000(mblocks, this.config.leader_id, this.ECC, this.config.ecc);
+					if (!isValid_leader_sign) {
+						console.warn(`Sync aborted. Invalid leader sign`);
+						return;
+					}
+					return prev.hash === current.link ? current : null
+				},local);
+
+				if(result === null){
+					console.warn(`Invalid 'link' field is not equal`);
 					this.peers[peer_index].failures++;
 					return;
 				}
-				let {kblock, mblocks} = macroblock;
-				kblock.hash = (Utils.hash_kblock(kblock, this.vm)).toString('hex');
-				if (local === undefined && local.length === 0 && local[0].link !== kblock.hash) {
-					console.warn(`Invalid fork macroblock, 'link' field is not equal`);
-					console.silly(` local.link - ${local[0].link}, kblocks.hash - ${kblock.hash}`);
+
+				if(fork < tail.n - 256){
+					console.warn(`Sync aborted. Attempt to delete more than 256 blocks`);
 					this.peers[peer_index].failures++;
 					return;
 				}
-				let isValid_leader_sign = false;
-				if (fork >= this.config.FORKS.fork_block_004)
-					isValid_leader_sign = Utils.ecdsa_verify(kblock.leader, kblock.leader_sign, kblock.m_root);
-				else if (fork >= this.config.FORKS.fork_block_002)
-					isValid_leader_sign = Utils.valid_leader_sign_002(kblock.link, kblock.m_root, kblock.leader_sign, this.config.leader_id, this.ECC, this.config.ecc);
-				else
-					isValid_leader_sign = Utils.valid_leader_sign_000(mblocks, this.config.leader_id, this.ECC, this.config.ecc);
-				if (!isValid_leader_sign) {
-					console.warn(`Sync aborted. Invalid leader sign`);
-					this.peers[peer_index].failures++;
-					return;
-				}
+
 				//Remove transactions, mblocks, sblocks, snapshots and kblocks before fork
 				let result_delete = await this.db.delete_kblocks_after(fork - 1);
 				if (!result_delete) {

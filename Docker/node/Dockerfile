@@ -9,20 +9,6 @@ ADD /build /app
 
 ARG BUILDVAR
 
-RUN if [ "$BUILDVAR" = "POW" ] || [ "$BUILDVAR" = "POS" ] ; then \
-	rm Explorer.js  ;\
-	rm Stat.js ;\
-	rm -r explorer ;\
-	rm iexplorer.js ;\
-	rm istat.js ;\
-	rm stakecalc.js ;\
-elif [ "$BUILDVAR" = "FULLNODE" ] ; then \
-	rm iminer.js ;\
-	rm Miner.js ;\
-	rm ilpos.js ;\
-    rm LPOS.js ;\
-fi
-
 #files in container
 RUN ls
 
@@ -56,6 +42,8 @@ ENV POS_OWNER_PRV null
 
 ENV PEER '95.216.246.116:8000'
 ENV PORT 8000
+ENV POA_PORT null
+ENV EXPLORER_PORT null
 
 ENV B_VAR $BUILDVAR
 
@@ -75,6 +63,8 @@ elif [ "$B_VAR" = "POS" ] ; then \
 	pm2 start itransport.js --name "transport" -- --port=$PORT --peer=$PEER --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS --id=$POS_ID ;\
 	pm2 start ilpos.js --name "miner" -- --pos_share=$POS_SHARE --leader_socket=$PEER --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS --id=$POS_ID --pos_owner=$POS_OWNER_PUB --pos_owner_prv=$POS_OWNER_PRV;\
 	pm2 start inodeapi.js --name "nodeapi" -- --enable_post_tx=$POST_TX --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS --id=$POS_ID ;\
+	[ "$POA_PORT" != null ] && pm2 start ipoaserver.js --name "poaserver" -- --poa_port=$POA_PORT --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS --id=$POS_ID ;\
+	[ "$EXPLORER_PORT" != null ] && pm2 start iexplorer.js --name "explorer" -i $EXPLORER_INSTANCES -- --id=$POS_ID --explorer $EXPLORER_PORT --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS ;\
 	pm2-runtime icashier.js --name "cashier"  -- --cashier_interval_ms 10 --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS ;\
 elif [ "$B_VAR" = "FULLNODE" ] ; then \
 	pm2 start isyncer.js --name "syncer" -- --id='fullnode' --dbhost=$DB_HOST --dbport=$DB_PORT --dbpass=$DB_PASS --fastsync.lag_interval_b=$LAG_INTERVAL --fastsync.sync_interval_b=$SYNC_INTERVAL ;\
