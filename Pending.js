@@ -77,7 +77,11 @@ let Validator = {
 	hex_regexp : /^[A-Fa-f0-9]+$/,
 	name_regexp : /^[0-9a-zA-Z\/\+= _\-/.]{0,512}$/,
 	tx : function(tx){
-
+		if(Utils.BLACK_LIST.includes(tx.from))
+			return {err: 1, message: "FROM field in blacklist"};
+		if(Utils.LOCK_LIST.includes(tx.from))
+			if(tx.to !== Utils.GENESIS) //Genesis
+				return {err: 1, message: "FROM field in locklist"};
 		if(Array.isArray(tx))
 			return {err: 1, message: "Only 1 TX can be sent"};
 

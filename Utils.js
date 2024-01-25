@@ -110,6 +110,9 @@ let utils = {
 	SYNC_IGNORE_TIMEOUT : 7200000, //ms  2 hours
 	MAX_NONCE : 2147483647, //Maximum Value Signed Int
     ...config.bridge,
+	BLACK_LIST : config.blacklist ? config.blacklist : [],
+	LOCK_LIST : config.locklist ? config.locklist : [],
+	GENESIS : config.ORIGIN.publisher,
 
     pid_cached : 0,
 	lastTime : Date.now(),
@@ -703,6 +706,14 @@ let utils = {
 			}
 
 			mblock.txs = mblock.txs.filter((tx)=>{
+				if(this.BLACK_LIST.includes(tx.from) || this.BLACK_LIST.includes(tx.to)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} blacklisted address`);
+					return false;
+				}
+				if(this.LOCK_LIST.includes(tx.from) || this.LOCK_LIST.includes(tx.from)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} locklisted address`);
+					return false;
+				}
 				let hash = this.hash_tx_fields(tx);
 				if(!this.ecdsa_verify(tx.from, tx.sign, hash)){
 					console.warn(`Invalid sign (${tx.sign}) tx ${hash}`);
