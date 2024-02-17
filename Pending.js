@@ -36,13 +36,17 @@ class Pending {
 		return txs;
 	}
 
-	validate(tx){
+	async validate(tx){
 		let isValid = Validator.tx(tx);
 		if(isValid.err !== 0){
 			console.trace(isValid);
 			return isValid;
 		}
 		let hash = Utils.hash_tx_fields(tx);
+        let txs = await this.db.get_raw_tx(hash);
+        if(txs.length > 0){
+            return {err: 1, message: "Transactions already exist in blockchain"}
+        }
 		let verified = Utils.ecdsa_verify(tx.from, tx.sign, hash);
 		console.silly(`Signed message: ${hash} , verified: ${verified}`);
 
@@ -73,7 +77,11 @@ let Validator = {
 	hex_regexp : /^[A-Fa-f0-9]+$/,
 	name_regexp : /^[0-9a-zA-Z\/\+= _\-/.]{0,512}$/,
 	tx : function(tx){
-
+		if(Utils.BLACK_LIST.includes(tx.from))
+			return {err: 1, message: "FROM field in blacklist"};
+		if(Utils.LOCK_LIST.includes(tx.from))
+			if(tx.to !== Utils.GENESIS) //Genesis
+				return {err: 1, message: "FROM field in locklist"};
 		if(Array.isArray(tx))
 			return {err: 1, message: "Only 1 TX can be sent"};
 

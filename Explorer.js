@@ -400,14 +400,37 @@ class Explorer {
 		this.app.get('/api/v1/tx', async (req, res) => {
 			console.trace(`requested tx ${JSON.stringify(req.query)}`);
 			let tx = (await this.db.get_tx(req.query.hash))[0];
-			if(tx !== undefined && tx.fee_type !== null) {
-				let tokendata = { fee_type: tx.fee_type, fee_value: tx.fee_value, fee_min: tx.fee_min};
-				tx.fee = (Utils.calc_fee(tokendata, tx.total_amount));
-				tx.amount = (BigInt(tx.total_amount) - tx.fee).toString();
-				tx.fee = tx.fee.toString();
+			if(tx !== undefined){
+				if(tx.fee_type !== null) {
+					let tokendata = {fee_type: tx.fee_type, fee_value: tx.fee_value, fee_min: tx.fee_min};
+					tx.fee = (Utils.calc_fee(tokendata, tx.total_amount));
+					tx.amount = (BigInt(tx.total_amount) - tx.fee).toString();
+					tx.fee = tx.fee.toString();
+				}
+				if(tx.data !== undefined && tx.data.indexOf("compressed_data") !== -1){
+					let compressed = tx.data.substring(tx.data.indexOf("compressed_data") + 15 + 8);
+					let decompressed = zlib.brotliDecompressSync(Buffer.from(compressed, 'base64'));
+					tx.data_encode = JSON.parse(decompressed.toString())
+					let token_hash;
+					if(tx.data_encode.hasOwnProperty("ticket_hash")) {
+						if(tx.data_encode.hasOwnProperty("validator_id")){
+							tx.bridge_claim_transfers = (await this.db.get_bridge_claim_transfers_by_hashes([tx.data_encode.ticket_hash]))[0];
+							token_hash = tx.bridge_claim_transfers.origin_hash;
+						}
+						else{
+							token_hash = tx.data_encode.origin_hash;
+						}
+
+						//get minted token info
+						let minted = (await this.db.get_minted_by_origin_hash(token_hash))[0];
+						if(minted !== undefined && minted.length === 1)
+							tx.token_info = (await this.db.get_tokens_info(minted.wrapped_hash))[0];
+					}
+				}
 			}
 			res.send(tx);
 		});
+
 
 		this.app.get('/api/v1/success_tx_by_height', async (req, res) => {
 			console.trace(`requested success_tx_by_height ${JSON.stringify(req.query)}`);
@@ -475,7 +498,7 @@ class Explorer {
 		 	}
 
 		 	let pos = await this.db.get_pos_contract_info(req.query.value);
-		 	if (pos.length > 0 && pos[0].pos_id !== undefined) {
+			if (pos != undefined && pos.length > 0 && pos[0].pos_id !== undefined) {
 		 		resp.push({type:'pos', info:pos});
 		 	}
 

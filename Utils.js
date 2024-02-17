@@ -16,8 +16,10 @@ const crypto = require('crypto');
 const enq = require('./Enq');
 const config = require('./config.json');
 const rsasign = require('jsrsasign');
+const seedrandom = require('seedrandom');
 let rx = require('./node_modules/node-randomx/addon');
 const fs = require('fs');
+const BigNumber = require('bignumber.js');
 
 let KeyEncoder = require('key-encoder').default;
 let keyEncoder = new KeyEncoder('secp256k1');
@@ -108,6 +110,9 @@ let utils = {
 	SYNC_IGNORE_TIMEOUT : 7200000, //ms  2 hours
 	MAX_NONCE : 2147483647, //Maximum Value Signed Int
     ...config.bridge,
+	BLACK_LIST : config.blacklist ? config.blacklist : [],
+	LOCK_LIST : config.locklist ? config.locklist : [],
+	GENESIS : config.ORIGIN.publisher,
 
     pid_cached : 0,
 	lastTime : Date.now(),
@@ -668,9 +673,14 @@ let utils = {
 		console.trace(`total tx count = ${total_tx_count}`);
 		return mblocks;
 	},
-	valid_full_microblocks(mblocks, accounts, tokens, check_txs_sign){
+	valid_full_microblocks(mblocks, kblock_data, accounts, tokens, check_txs_sign){
 		let total_tx_count = 0;
+		if(kblock_data.length === 0)
+			return [];
 		mblocks = mblocks.filter((mblock)=>{
+			if(!this.is_poa_publisher_valid(kblock_data[0], mblock.publisher)){
+				return false;
+			}
 			let tok_idx = tokens.findIndex(t => t.hash === mblock.token);
 			if(tok_idx < 0){
 				console.trace(`ignoring mblock ${JSON.stringify(mblock)} : token not found`);
@@ -696,6 +706,14 @@ let utils = {
 			}
 
 			mblock.txs = mblock.txs.filter((tx)=>{
+				if(this.BLACK_LIST.includes(tx.from) || this.BLACK_LIST.includes(tx.to)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} blacklisted address`);
+					return false;
+				}
+				if(this.LOCK_LIST.includes(tx.from) || this.LOCK_LIST.includes(tx.from)){
+					console.trace(`ignoring tx ${JSON.stringify(tx)} in mblock ${JSON.stringify(mblock)} locklisted address`);
+					return false;
+				}
 				let hash = this.hash_tx_fields(tx);
 				if(!this.ecdsa_verify(tx.from, tx.sign, hash)){
 					console.warn(`Invalid sign (${tx.sign}) tx ${hash}`);
@@ -974,9 +992,82 @@ let utils = {
 			return newtonIteration(n, x1);
 		}
 		return newtonIteration(value, BigInt(1));
+	},
+	deterministic_shuffle : function(array, seed) {
+		const shuffledArray = [...array];
+		const random = seedrandom(seed);
+
+		for (let i = shuffledArray.length - 1; i > 0; i--) {
+			const j = Math.floor(random() * (i + 1));
+			[shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
+		}
+
+		return shuffledArray;
+	},
+	is_pos_publisher_valid : async function(db, kblock_hash, pos_owner) {
+		let succ_hash = kblock_hash;
+		let prev_time;
+		let curr_time = Math.floor(new Date() / 1000);
+		let statblocks = await db.get_statblocks(succ_hash);
+		for (let i = 0; i < 6; i++) {
+			let block_data = await db.get_kblock(succ_hash);
+			succ_hash = block_data[0].link;
+			statblocks.concat(await db.get_statblocks(succ_hash));
+			if (i === 0)
+				prev_time = block_data[0].time;
+		}
+		let time_delta = curr_time - prev_time;
+		console.debug(`Permanent block hash = ${succ_hash}, time_delta = ${time_delta}`);
+		let x = new BigNumber('0x' + succ_hash, 16);
+		let seed = x.mod(65536).toNumber();
+		console.debug(`Shuffle seed = ${seed}`);
+		let shuffled = this.deterministic_shuffle(statblocks, seed);
+		let publisher_index = await this.findAsyncIndex(shuffled, async (item) => {
+			let info = (await db.get_pos_contract(item.publisher))
+			if(info !== undefined && info.length > 0){
+				if(info[0].owner === pos_owner)
+					return true;
+			}
+			return false;
+		})
+		console.debug(`publisher_index = ${publisher_index}`);
+		if (publisher_index < 0) {
+			console.warn(`pos owner publisher ${pos_owner} not found in shuffled list`);
+			return false;
+		}
+		return publisher_index * 30 <= time_delta;
+	},
+	get_different_bits_count : function(hex1, hex2) {
+		const buf1 = Buffer.from(hex1, 'hex');
+		const buf2 = Buffer.from(hex2, 'hex');
+		let count = 0;
+
+		const bufResult = buf1.map((b, i) => b ^ buf2[i]);
+		bufResult.map((b, i) => {
+			for (let j = 7; j >= 0; j--) {
+				count += b & (1 << j) ? 1 : 0;
+			}
+		});
+		return count;//bufResult.toString('hex');
+	},
+	is_poa_publisher_valid : async function(kblock_data, publisher) {
+		let curr_time = Math.floor(new Date() / 1000);
+		let condidate = crypto.createHash('sha256').update(publisher).update(kblock_data.hash).digest('hex');
+		let target = crypto.createHash('sha256').update(kblock_data.hash).digest('hex');
+
+		let diff_bit_count = this.get_different_bits_count(condidate, target);
+		let t = curr_time - kblock_data.time;
+		if(t > 6) //limit 6 second
+			return true;
+		return diff_bit_count <= (92 + t * 8);
+	},
+	findAsyncIndex : async function (arr, asyncCallback) {
+		const promises = arr.map(asyncCallback);
+		const results = await Promise.all(promises);
+		const index = results.findIndex(result => result);
+		return index;
 	}
 };
-
 
 module.exports = utils;
 module.exports.ECC = ECC;
