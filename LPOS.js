@@ -15,8 +15,6 @@ class LPOS {
         if (this.config.pos_owner && this.config.pos_owner_prv) {
             this.transport.on('emit_m_root', this.on_emit_m_root.bind(this));
             this.timer_merkle_root = setTimeout(this.resend_m_root.bind(this), Utils.M_ROOT_RESEND_INTERVAL);
-        }
-        if (this.config.pos_share) {
             this.transport.on('emit_statblock', this.on_emit_statblock.bind(this));
             this.timer_resend_sblock = setTimeout(this.resend_sblock.bind(this), Utils.POS_MINER_RESEND_INTERVAL);
         } else {
